@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API = "https://easyhome-api.onrender.com";
+const API = "https://easyhome-back.onrender.com";
 
 function StarDisplay({ rating, count }) {
   const stars = Math.round(rating || 0);

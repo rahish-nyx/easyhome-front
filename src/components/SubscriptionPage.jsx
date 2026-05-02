@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API = "https://easyhome-api.onrender.com";
+const API = "https://easyhome-back.onrender.com";
 
 // ── Inject keyframe animations once into <head> ──────────
 const ANIM_CSS = `

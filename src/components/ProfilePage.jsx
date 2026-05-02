@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API = "https://easyhome-api.onrender.com";
+const API = "https://easyhome-back.onrender.com";
 
 export default function ProfilePage({ user, onLogout, onNameUpdate }) {
   const [tab, setTab] = useState("info");

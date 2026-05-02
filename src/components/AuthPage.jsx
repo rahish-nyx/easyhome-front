@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const API = "https://easyhome-api.onrender.com";
+const API = "https://easyhome-back.onrender.com";
 
 export default function AuthPage({ onLogin, isPopup = false }) {
   const [role, setRole] = useState("customer");

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { io } from "socket.io-client";
 
-const API = "https://easyhome-api.onrender.com";
+const API = "https://easyhome-back.onrender.com";
 let socket;
 
 export default function NotificationBell({ user }) {

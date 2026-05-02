@@ -20,7 +20,7 @@ import SubscriptionPage from "./components/SubscriptionPage";
 import EasyHomeLogo from "./components/EasyHomeLogo";
 import { Hand, MapPin, PhoneCall, User } from "lucide-react";
 
-const API = "https://easyhome-api.onrender.com";
+const API = "https://easyhome-back.onrender.com";
 
 if (
   typeof document !== "undefined" &&

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { MapPin } from "lucide-react";
 
-const API = "https://easyhome-api.onrender.com";
+const API = "https://easyhome-back.onrender.com";
 
 function distanceMeters(a, b) {
   const toRad = (v) => (v * Math.PI) / 180;

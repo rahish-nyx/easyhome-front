@@ -21,7 +21,7 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
-  if (e.request.url.includes("https://easyhome-api.onrender.com")) return;
+  if (e.request.url.includes("https://easyhome-back.onrender.com")) return;
   if (e.request.url.includes("socket.io")) return;
 
   e.respondWith(
