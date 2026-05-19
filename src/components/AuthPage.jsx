@@ -15,7 +15,7 @@ export default function AuthPage({ onLogin, isPopup = false }) {
   const [phone, setPhone] = useState("");
   const [service, setService] = useState("");
   const [location, setLocation] = useState("");
-  const [price, setPrice] = useState(100);
+  const [price, setPrice] = useState(200);
 
   // Register OTP steps
   const [regStep, setRegStep] = useState(1); // 1=form, 2=otp verify
@@ -524,10 +524,10 @@ export default function AuthPage({ onLogin, isPopup = false }) {
           />
           <input
             type="number"
-            placeholder="Price Per Hour (₹)"
-            min={100}
+            placeholder="Price Per Work (₹ min 200)"
+            min={200}
             value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            onChange={(e) => setPrice(Math.max(200, Number(e.target.value)))}
           />
           <div
             style={{
