@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 
-const API = "https://easyhome-back.onrender.com";
+const API =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
+    ? "http://localhost:5000"
+    : "https://easyhome-back.onrender.com";
 
 // ══════════════════════════════════════════════════════════
 // ADMIN CHAT
@@ -1441,14 +1445,31 @@ export default function AdminPanel() {
 
   function loadCities() {
     fetch(`${API}/admin/cities`, { headers })
-      .then((r) => r.json())
-      .then(setCities)
+      .then((r) => {
+        if (r.status === 401 || r.status === 403) {
+          handleLogout();
+          return [];
+        }
+        return r.json();
+      })
+      .then((d) => setCities(Array.isArray(d) ? d : []))
       .catch(() => {});
   }
   function loadUsers() {
     fetch(`${API}/admin/users`, { headers })
-      .then((r) => r.json())
-      .then(setUsers)
+      .then((r) => {
+        if (r.status === 401 || r.status === 403) {
+          handleLogout();
+          return { customers: [], workers: [] };
+        }
+        return r.json();
+      })
+      .then((d) =>
+        setUsers({
+          customers: Array.isArray(d?.customers) ? d.customers : [],
+          workers: Array.isArray(d?.workers) ? d.workers : [],
+        }),
+      )
       .catch(() => {});
   }
   function loadBookings() {

@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 
-const API = "https://easyhome-back.onrender.com";
+const API =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
+    ? "http://localhost:5000"
+    : "https://easyhome-back.onrender.com";
 let socket;
 
 export default function ChatPage({ user }) {

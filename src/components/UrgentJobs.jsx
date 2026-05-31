@@ -40,12 +40,14 @@ export default function UrgentJobs({
   onAcceptJob,
   onBookWorker,
 }) {
+  const jobs = Array.isArray(data) ? data : [];
+  const workers = Array.isArray(urgentWorkers) ? urgentWorkers : [];
   const [selected, setSelected] = useState(null);
 
   /* nothing to show for guest */
   const hasContent =
-    (role === "customer" && urgentWorkers?.length > 0) ||
-    (role === "worker" && data?.length > 0) ||
+    (role === "customer" && workers.length > 0) ||
+    (role === "worker" && jobs.length > 0) ||
     !role;
 
   return (
@@ -163,7 +165,7 @@ export default function UrgentJobs({
       {/* ── CUSTOMER VIEW: urgent available workers ── */}
       {role === "customer" && (
         <>
-          {urgentWorkers?.length === 0 ? (
+          {workers.length === 0 ? (
             <EmptyState msg="No urgent workers available right now." />
           ) : (
             <div
@@ -174,7 +176,7 @@ export default function UrgentJobs({
                 gap: "clamp(10px,1.8vw,18px)",
               }}
             >
-              {urgentWorkers.map((w, i) => (
+              {workers.map((w, i) => (
                 <WorkerUrgentCard
                   key={i}
                   worker={w}
@@ -190,7 +192,7 @@ export default function UrgentJobs({
       {/* ── WORKER VIEW: urgent jobs posted ── */}
       {role === "worker" && (
         <>
-          {data?.length === 0 ? (
+          {jobs.length === 0 ? (
             <EmptyState msg="No urgent jobs posted right now." />
           ) : (
             <div
@@ -201,7 +203,7 @@ export default function UrgentJobs({
                 gap: "clamp(10px,1.8vw,18px)",
               }}
             >
-              {data.map((job, i) => (
+              {jobs.map((job, i) => (
                 <JobUrgentCard
                   key={i}
                   job={job}

@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import { MapPin } from "lucide-react";
 
-const API = "https://easyhome-back.onrender.com";
+const API =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
+    ? "http://localhost:5000"
+    : "https://easyhome-back.onrender.com";
 
 function distanceMeters(a, b) {
   const toRad = (v) => (v * Math.PI) / 180;
@@ -31,8 +35,8 @@ export default function CitySelector({ onCitySet, currentCity }) {
   useEffect(() => {
     fetch(`${API}/cities`)
       .then((r) => r.json())
-      .then(setCities)
-      .catch(() => {});
+      .then((d) => setCities(Array.isArray(d) ? d : []))
+      .catch(() => setCities([]));
   }, []);
 
   function verifyAndSet(city, latitude, longitude) {

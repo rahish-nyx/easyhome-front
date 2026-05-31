@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 
-const API = "https://easyhome-back.onrender.com";
+const API =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
+    ? "http://localhost:5000"
+    : "https://easyhome-back.onrender.com";
 
 function StarDisplay({ rating, count }) {
   const stars = Math.round(rating || 0);
@@ -31,6 +35,7 @@ function StarDisplay({ rating, count }) {
 }
 
 export default function WorkersList({ data, role, onBookWorker, userCity }) {
+  const workers = Array.isArray(data) ? data : [];
   const [selected, setSelected] = useState(null);
   const [nearbyJobs, setNearbyJobs] = useState([]);
   const [selectedJob, setSelectedJob] = useState(null);
@@ -122,13 +127,13 @@ export default function WorkersList({ data, role, onBookWorker, userCity }) {
       <>
         <h3 style={{ marginTop: "20px" }}>👷🏻 Nearby Workers</h3>
 
-        {(!data || data.length === 0) && (
+        {workers.length === 0 && (
           <p style={{ color: "#aaa", fontSize: "13px", marginTop: "8px" }}>
             No workers available yet.
           </p>
         )}
 
-        {data?.map((w, i) => {
+        {workers.map((w, i) => {
           const rData = workerRatings[w._id];
           return (
             <div

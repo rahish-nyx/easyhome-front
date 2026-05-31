@@ -20,7 +20,20 @@ import SubscriptionPage from "./components/SubscriptionPage";
 import EasyHomeLogo from "./components/EasyHomeLogo";
 import { Hand, MapPin, PhoneCall, User } from "lucide-react";
 
-const API = "https://easyhome-back.onrender.com";
+const API =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
+    ? "http://localhost:5000"
+    : "https://easyhome-back.onrender.com";
+
+const DEFAULT_SERVICES = [
+  { name: "Plumber", icon: "🔧" },
+  { name: "Electrician", icon: "⚡" },
+  { name: "Tutor", icon: "📚" },
+  { name: "Cleaner", icon: "🧹" },
+  { name: "AC Repair", icon: "❄️" },
+  { name: "Carpenter", icon: "🔨" },
+];
 
 if (
   typeof document !== "undefined" &&
@@ -596,27 +609,27 @@ export default function App() {
   const fetchBookings = () =>
     authFetch(`${API}/bookings`)
       .then((r) => r.json())
-      .then(setBookings)
+      .then((d) => setBookings(Array.isArray(d) ? d : []))
       .catch(() => setBookings([]));
   const fetchServices = () =>
     fetch(`${API}/services`)
       .then((r) => r.json())
-      .then(setServices)
-      .catch(() => setServices([]));
+      .then((d) => setServices(Array.isArray(d) ? d : DEFAULT_SERVICES))
+      .catch(() => setServices(DEFAULT_SERVICES));
   const fetchWorkers = () =>
     fetch(`${API}/workers`)
       .then((r) => r.json())
-      .then(setWorkers)
+      .then((d) => setWorkers(Array.isArray(d) ? d : []))
       .catch(() => setWorkers([]));
   const fetchUrgentJobs = () =>
     fetch(`${API}/urgent`)
       .then((r) => r.json())
-      .then(setUrgentJobs)
+      .then((d) => setUrgentJobs(Array.isArray(d) ? d : []))
       .catch(() => setUrgentJobs([]));
   const fetchUrgentWorkers = () =>
     fetch(`${API}/urgent-workers`)
       .then((r) => r.json())
-      .then(setUrgentWorkers)
+      .then((d) => setUrgentWorkers(Array.isArray(d) ? d : []))
       .catch(() => setUrgentWorkers([]));
 
   function loadMySub() {
