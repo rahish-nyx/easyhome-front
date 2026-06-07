@@ -83,8 +83,12 @@ export default function CitySelector({ onCitySet, currentCity }) {
           }
         });
 
-        if (nearest && minDist <= radiusMeters(nearest)) {
-          onCitySet({ name: nearest.name, lat: latitude, lng: longitude });
+        if (nearest) {
+          onCitySet({
+            name: nearest.name,
+            lat: Number(nearest.lat),
+            lng: Number(nearest.lng),
+          });
           setShow(false);
         } else {
           setError("EasyHome is not available at your current location yet.");
@@ -101,23 +105,12 @@ export default function CitySelector({ onCitySet, currentCity }) {
 
   function selectCity(city) {
     setError("");
-
-    if (!navigator.geolocation) {
-      setError("GPS required to verify selected city.");
-      return;
-    }
-
-    setDetecting(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        verifyAndSet(city, pos.coords.latitude, pos.coords.longitude);
-        setDetecting(false);
-      },
-      () => {
-        setError("Could not verify your location. Please enable GPS.");
-        setDetecting(false);
-      },
-    );
+    onCitySet({
+      name: city.name,
+      lat: Number(city.lat),
+      lng: Number(city.lng),
+    });
+    setShow(false);
   }
 
   return (

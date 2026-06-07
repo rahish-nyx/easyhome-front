@@ -1324,6 +1324,7 @@ function BookingCard({ b, user, hideBooking, fetchBookings }) {
 // BOOKING FORM
 // ══════════════════════════════════════════════════════════
 function Booking({ goBack, refresh, prefilledWorker, userCity }) {
+  const MIN_WORK_PRICE = 200;
   const [desc, setDesc] = useState("");
   const [service, setService] = useState(prefilledWorker?.service || "");
   const [location, setLocation] = useState(userCity?.name || "");
@@ -1332,7 +1333,7 @@ function Booking({ goBack, refresh, prefilledWorker, userCity }) {
   const [preview, setPreview] = useState(null);
   // ✅ min 200, renamed to pricePerWork
   const [pricePerWork, setPricePerWork] = useState(
-    Math.max(200, prefilledWorker?.pricePerHour || 200),
+    Math.max(MIN_WORK_PRICE, prefilledWorker?.pricePerHour || MIN_WORK_PRICE),
   );
   const [urgency, setUrgency] = useState("normal");
   const [loading, setLoading] = useState(false);
@@ -1356,9 +1357,19 @@ function Booking({ goBack, refresh, prefilledWorker, userCity }) {
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      () => {
+      (pos) => {
         const locName = userCity?.name || "My Current Location";
         setLocation(locName);
+        if (!userCity?.lat || !userCity?.lng) {
+          localStorage.setItem(
+            "userCity",
+            JSON.stringify({
+              name: locName,
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+            }),
+          );
+        }
         setLocationSet(true);
         setDetectingLoc(false);
       },
@@ -1387,50 +1398,60 @@ function Booking({ goBack, refresh, prefilledWorker, userCity }) {
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
+    const price = Number(pricePerWork);
+    if (!Number.isFinite(price) || price < MIN_WORK_PRICE) {
+      alert(`Minimum price per work is ₹${MIN_WORK_PRICE}`);
+      setPricePerWork(MIN_WORK_PRICE);
+      return;
+    }
 
-        const formData = new FormData();
-        formData.append("description", desc);
-        formData.append("service", service);
-        formData.append("location", location);
-        formData.append("phone", phone);
-        formData.append("pricePerHour", Math.max(200, Number(pricePerWork)));
-        formData.append("urgency", urgency);
+    const submitBooking = (lat, lng) => {
+      const formData = new FormData();
+      formData.append("description", desc);
+      formData.append("service", service);
+      formData.append("location", location);
+      formData.append("phone", phone);
+      formData.append("pricePerHour", price);
+      formData.append("urgency", urgency);
 
-        if (image) formData.append("image", image);
-
-        // ✅ REAL USER LOCATION (IMPORTANT)
+      if (image) formData.append("image", image);
+      if (lat !== null && lng !== null) {
         formData.append("lat", lat);
         formData.append("lng", lng);
+      }
 
-        const token = localStorage.getItem("token");
-        setLoading(true);
+      const token = localStorage.getItem("token");
+      setLoading(true);
 
-        fetch(`${API}/booking`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
+      fetch(`${API}/booking`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.error) {
+            alert(data.error);
+            return;
+          }
+
+          alert("Service Booked ✅");
+          refresh();
+          goBack();
         })
-          .then((r) => r.json())
-          .then((data) => {
-            if (data.error) {
-              alert(data.error); // 🚫 shows if outside radius
-              return;
-            }
+        .catch(() => alert("Booking Failed ❌"))
+        .finally(() => setLoading(false));
+    };
 
-            alert("Service Booked ✅");
-            refresh();
-            goBack();
-          })
-          .catch(() => alert("Booking Failed ❌"))
-          .finally(() => setLoading(false));
-      },
-      () => {
-        alert("Please allow location access 🚫");
-      },
+    if (userCity?.lat && userCity?.lng) {
+      submitBooking(Number(userCity.lat), Number(userCity.lng));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) =>
+        submitBooking(position.coords.latitude, position.coords.longitude),
+      () => submitBooking(null, null),
     );
   }
   // ✅ per work pricing
@@ -1607,9 +1628,15 @@ function Booking({ goBack, refresh, prefilledWorker, userCity }) {
       <input
         type="number"
         value={pricePerWork}
-        min={200}
-        onChange={(e) => setPricePerWork(Math.max(200, Number(e.target.value)))}
-        placeholder="Your budget per work (₹ min 200)"
+        min={MIN_WORK_PRICE}
+        onBlur={() => {
+          const price = Number(pricePerWork);
+          if (!Number.isFinite(price) || price < MIN_WORK_PRICE) {
+            setPricePerWork(MIN_WORK_PRICE);
+          }
+        }}
+        onChange={(e) => setPricePerWork(e.target.value)}
+        placeholder={`Your budget per work (₹ min ${MIN_WORK_PRICE})`}
       />
 
       <div style={{ marginTop: "12px", display: "flex", gap: "10px" }}>

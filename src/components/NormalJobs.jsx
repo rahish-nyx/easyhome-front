@@ -226,7 +226,7 @@ export default function NormalJobs({
                   color: "#ff3c00",
                 }}
               >
-                ₹{job.finalPrice}/hr
+                ₹{job.finalPrice}/work
               </span>
             </div>
             <p style={{ fontSize: "13px", color: "#555", marginTop: "6px" }}>
@@ -275,7 +275,7 @@ export default function NormalJobs({
               </div>
               <div className="modal-row">
                 <span>💰 Price</span>
-                <strong>₹{selectedJob.finalPrice}/hr</strong>
+                <strong>₹{selectedJob.finalPrice}/work</strong>
               </div>
               <div className="modal-row">
                 <span>⚡ Type</span>

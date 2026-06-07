@@ -278,7 +278,7 @@ export default function UrgentJobs({
                     ["📍 Location", selected.data.location || "N/A"],
                     ["⭐ Rating", selected.data.rating || "New"],
                     ["💼 Jobs Done", selected.data.jobs || 0],
-                    ["💰 Price", `₹${selected.data.pricePerHour}/hr`],
+                    ["💰 Price", `₹${selected.data.pricePerHour}/work`],
                     ["📞 Phone", selected.data.phone],
                   ].map(([label, val]) => (
                     <div className="modal-row" key={label}>
@@ -577,7 +577,7 @@ function WorkerUrgentCard({ worker, delay, onClick }) {
               lineHeight: 1,
             }}
           >
-            ₹{worker.pricePerHour}/hr
+            ₹{worker.pricePerHour}/work
           </p>
         </div>
         <div

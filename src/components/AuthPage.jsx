@@ -6,6 +6,18 @@ const API =
     ? "http://localhost:5000"
     : "https://easyhome-back.onrender.com";
 
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function cleanPhone(value) {
+  return value.replace(/\D/g, "").slice(0, 10);
+}
+
+function isValidPhone(value) {
+  return /^[6-9]\d{9}$/.test(cleanPhone(value));
+}
+
 export default function AuthPage({ onLogin, isPopup = false }) {
   const [role, setRole] = useState("customer");
   const [mode, setMode] = useState("login");
@@ -42,6 +54,10 @@ export default function AuthPage({ onLogin, isPopup = false }) {
       setError("Email and password required");
       return;
     }
+    if (!isValidEmail(email)) {
+      setError("Enter a valid email address");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`${API}/customer/login`, {
@@ -76,12 +92,20 @@ export default function AuthPage({ onLogin, isPopup = false }) {
       setError("All fields required");
       return;
     }
+    if (!isValidEmail(email)) {
+      setError("Enter a valid email address");
+      return;
+    }
+    if (!isValidPhone(phone)) {
+      setError("Enter a valid 10-digit phone number");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`${API}/customer/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, forRegister: true }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), forRegister: true }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -122,7 +146,12 @@ export default function AuthPage({ onLogin, isPopup = false }) {
       const res = await fetch(`${API}/customer/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, phone }),
+        body: JSON.stringify({
+          name,
+          email: email.trim().toLowerCase(),
+          password,
+          phone: cleanPhone(phone),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -151,6 +180,14 @@ export default function AuthPage({ onLogin, isPopup = false }) {
       setError("All fields required");
       return;
     }
+    if (!isValidEmail(email)) {
+      setError("Enter a valid email address");
+      return;
+    }
+    if (!isValidPhone(phone)) {
+      setError("Enter a valid 10-digit phone number");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`${API}/worker/register`, {
@@ -158,9 +195,9 @@ export default function AuthPage({ onLogin, isPopup = false }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
-          email,
+          email: email.trim().toLowerCase(),
           password,
-          phone,
+          phone: cleanPhone(phone),
           service,
           location,
           pricePerHour: price,
@@ -184,6 +221,10 @@ export default function AuthPage({ onLogin, isPopup = false }) {
     setError("");
     if (!email || !password) {
       setError("Email and password required");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError("Enter a valid email address");
       return;
     }
     setLoading(true);
@@ -293,7 +334,7 @@ export default function AuthPage({ onLogin, isPopup = false }) {
                 padding: "10px",
               }}
             >
-              Demo OTP: {demoOtp}
+              Your OTP: {demoOtp}
             </p>
           )}
         </div>
@@ -438,15 +479,18 @@ export default function AuthPage({ onLogin, isPopup = false }) {
             onChange={(e) => setName(e.target.value)}
           />
           <input
-            placeholder="Phone Number"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-          <input
             placeholder="Email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+          />
+          <input
+            placeholder="Phone Number"
+            type="tel"
+            inputMode="numeric"
+            maxLength={10}
+            value={phone}
+            onChange={(e) => setPhone(cleanPhone(e.target.value))}
           />
           <input
             placeholder="Password"
@@ -516,15 +560,18 @@ export default function AuthPage({ onLogin, isPopup = false }) {
             onChange={(e) => setName(e.target.value)}
           />
           <input
-            placeholder="Phone Number"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-          <input
             placeholder="Email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+          />
+          <input
+            placeholder="Phone Number"
+            type="tel"
+            inputMode="numeric"
+            maxLength={10}
+            value={phone}
+            onChange={(e) => setPhone(cleanPhone(e.target.value))}
           />
           <input
             placeholder="Password"
@@ -551,7 +598,11 @@ export default function AuthPage({ onLogin, isPopup = false }) {
             placeholder="Price Per Work (₹ min 200)"
             min={200}
             value={price}
-            onChange={(e) => setPrice(Math.max(200, Number(e.target.value)))}
+            onBlur={() => {
+              const nextPrice = Number(price);
+              if (!Number.isFinite(nextPrice) || nextPrice < 200) setPrice(200);
+            }}
+            onChange={(e) => setPrice(e.target.value)}
           />
           <div
             style={{

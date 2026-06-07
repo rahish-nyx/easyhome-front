@@ -182,7 +182,7 @@ export default function SearchResults({
                     margin: 0,
                   }}
                 >
-                  ₹{w.pricePerHour}/hr
+                  ₹{w.pricePerHour}/work
                 </p>
                 <p style={{ fontSize: "11px", color: "#888", margin: "2px 0" }}>
                   {w.jobs || 0} jobs

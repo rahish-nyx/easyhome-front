@@ -16,7 +16,7 @@ export default function ProfilePage({ user, onLogout, onNameUpdate }) {
   const [phone, setPhone] = useState("");
   const [service, setService] = useState("");
   const [location, setLocation] = useState("");
-  const [pricePerHour, setPricePerHour] = useState(100);
+  const [pricePerHour, setPricePerHour] = useState(200);
   const [upiId, setUpiId] = useState("");
   const [isUrgent, setIsUrgent] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -51,7 +51,7 @@ export default function ProfilePage({ user, onLogout, onNameUpdate }) {
         setPhone(data.phone || "");
         setService(data.service || "");
         setLocation(data.location || "");
-        setPricePerHour(data.pricePerHour || 100);
+        setPricePerHour(data.pricePerHour || 200);
         setUpiId(data.upiId || "");
         setIsUrgent(data.isUrgent || false);
         setLoading(false);
@@ -498,9 +498,15 @@ export default function ProfilePage({ user, onLogout, onNameUpdate }) {
               />
               <input
                 type="number"
-                placeholder="Price per hour (₹)"
+                placeholder="Price per work (₹ min 200)"
                 value={pricePerHour}
-                min={100}
+                min={200}
+                onBlur={() => {
+                  const price = Number(pricePerHour);
+                  if (!Number.isFinite(price) || price < 200) {
+                    setPricePerHour(200);
+                  }
+                }}
                 onChange={(e) => setPricePerHour(e.target.value)}
               />
               <input

@@ -2269,7 +2269,7 @@ export default function AdminPanel() {
                       margin: "2px 0",
                     }}
                   >
-                    🔧 {w.service} • 📍 {w.location} • ₹{w.pricePerHour}/hr
+                    🔧 {w.service} • 📍 {w.location} • ₹{w.pricePerHour}/work
                   </p>
                   {rejectingId === w._id && (
                     <input

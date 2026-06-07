@@ -69,12 +69,12 @@ export default function LocationPicker({ onLocationSet }) {
             }
           });
 
-          if (nearest && minDist <= radiusMeters(nearest)) {
-            setSelected({ ...nearest, lat: latitude, lng: longitude });
+          if (nearest) {
+            setSelected(nearest);
             onLocationSet({
               city: nearest.name,
-              lat: latitude,
-              lng: longitude,
+              lat: Number(nearest.lat),
+              lng: Number(nearest.lng),
             });
           } else {
             // No city match — use raw coordinates
