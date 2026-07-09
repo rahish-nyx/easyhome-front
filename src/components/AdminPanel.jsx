@@ -6,6 +6,13 @@ const API =
     ? "http://localhost:5000"
     : "https://easyhome-back.onrender.com";
 
+function mediaSrc(value) {
+  if (!value) return "";
+  if (value.startsWith("data:") || value.startsWith("http")) return value;
+  if (value.startsWith("/uploads/")) return `${API}${value}`;
+  return `${API}/uploads/${value}`;
+}
+
 // ══════════════════════════════════════════════════════════
 // ADMIN CHAT
 // ══════════════════════════════════════════════════════════
@@ -3499,7 +3506,7 @@ export default function AdminPanel() {
                   {settings.qrCodeUrl && (
                     <div style={{ textAlign: "center", marginBottom: "12px" }}>
                       <img
-                        src={`${API}${settings.qrCodeUrl}`}
+                        src={mediaSrc(settings.qrCodeUrl)}
                         alt="QR"
                         style={{
                           width: "clamp(100px,14vw,160px)",

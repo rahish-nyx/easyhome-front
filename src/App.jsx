@@ -35,6 +35,13 @@ const DEFAULT_SERVICES = [
   { name: "Carpenter", icon: "🔨" },
 ];
 
+function mediaSrc(value) {
+  if (!value) return "";
+  if (value.startsWith("data:") || value.startsWith("http")) return value;
+  if (value.startsWith("/uploads/")) return `${API}${value}`;
+  return `${API}/uploads/${value}`;
+}
+
 if (
   typeof document !== "undefined" &&
   !document.getElementById("eh-logo-css")
@@ -344,7 +351,7 @@ function CommissionPayment({ job, adminUpi, qrCodeUrl, onDone }) {
           {qrCodeUrl && (
             <div style={{ textAlign: "center", marginBottom: "12px" }}>
               <img
-                src={`${API}${qrCodeUrl}`}
+                src={mediaSrc(qrCodeUrl)}
                 alt="Payment QR"
                 style={{
                   width: "clamp(120px,30vw,150px)",
@@ -1308,7 +1315,7 @@ function BookingCard({ b, user, hideBooking, fetchBookings }) {
       {b.worker && <p style={{ margin: "4px 0" }}>✅ Worker: {b.worker}</p>}
       {b.image && (
         <img
-          src={`${API}/uploads/${b.image}`}
+          src={mediaSrc(b.image)}
           className="job-img"
           alt="booking"
         />
@@ -2176,7 +2183,7 @@ function Worker({ goBack, refresh, user, userCity }) {
         ) : null}
         {job.image && (
           <img
-            src={`${API}/uploads/${job.image}`}
+            src={mediaSrc(job.image)}
             className="job-img"
             alt="job"
           />
