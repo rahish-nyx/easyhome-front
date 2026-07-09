@@ -586,12 +586,14 @@ export default function App() {
       authFetch(`${API}/bookings`)
         .then((r) => r.json())
         .then(async (all) => {
-          const match = all.find(
-            (b) =>
-              b.description === job.title &&
-              b.location === job.location &&
-              b.status === "pending",
-          );
+          const match = job.bookingId
+            ? all.find((b) => b._id === job.bookingId && b.status === "pending")
+            : all.find(
+                (b) =>
+                  b.description === job.title &&
+                  b.location === job.location &&
+                  b.status === "pending",
+              );
           if (match) {
             const token = localStorage.getItem("token");
             await fetch(`${API}/booking/${match._id}`, {
