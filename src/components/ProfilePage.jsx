@@ -125,13 +125,8 @@ export default function ProfilePage({ user, onLogout, onNameUpdate }) {
 
   async function resetForgotPassword() {
     setForgotMsg("");
-    const cleanedPhone = cleanPhone(forgotPhone);
     if (!profile?.email) {
       setForgotMsg("Profile email not loaded. Please refresh and try again.");
-      return;
-    }
-    if (cleanedPhone.length !== 10) {
-      setForgotMsg("Enter your 10 digit registered phone number");
       return;
     }
     if (!forgotPwd || forgotPwd.length < 6) {
@@ -139,13 +134,16 @@ export default function ProfilePage({ user, onLogout, onNameUpdate }) {
       return;
     }
 
+    const token = localStorage.getItem("token");
     const res = await fetch(`${API}/forgot-password`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({
         role: user.role,
         email: profile.email,
-        phone: cleanedPhone,
         newPassword: forgotPwd,
       }),
     });
@@ -153,6 +151,7 @@ export default function ProfilePage({ user, onLogout, onNameUpdate }) {
     if (res.ok) {
       setForgotMsg("Password reset successful. Use your new password next time.");
       setForgotPwd("");
+      setForgotPhone("");
       setOldPwd("");
       setNewPwd("");
     } else {
@@ -744,15 +743,8 @@ export default function ProfilePage({ user, onLogout, onNameUpdate }) {
               Forgot current password?
             </h4>
             <p style={{ margin: "0 0 12px", color: "#888", fontSize: "13px" }}>
-              Enter your registered phone number to reset this account password.
+              Reset your password directly while logged in.
             </p>
-            <input
-              type="tel"
-              inputMode="numeric"
-              placeholder="Registered Phone Number"
-              value={forgotPhone}
-              onChange={(e) => setForgotPhone(cleanPhone(e.target.value))}
-            />
             <input
               type="password"
               placeholder="New Password (min 6 chars)"
@@ -770,7 +762,7 @@ export default function ProfilePage({ user, onLogout, onNameUpdate }) {
               </p>
             )}
             <button className="btn dark" onClick={resetForgotPassword}>
-              Reset Using Phone Number
+              Reset Password
             </button>
           </div>
         </div>

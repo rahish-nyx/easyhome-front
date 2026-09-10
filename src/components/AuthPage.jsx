@@ -36,14 +36,12 @@ export default function AuthPage({ onLogin, isPopup = false }) {
   // Register OTP steps
   const [regStep, setRegStep] = useState(1); // 1=form, 2=otp verify
   const [regOtp, setRegOtp] = useState("");
-  const [demoOtp, setDemoOtp] = useState("");
   const [pendingApproval, setPendingApproval] = useState(false);
 
   function reset() {
     setError("");
     setRegStep(1);
     setRegOtp("");
-    setDemoOtp("");
     setPendingApproval(false);
   }
 
@@ -112,7 +110,6 @@ export default function AuthPage({ onLogin, isPopup = false }) {
         setError(data.error);
         return;
       }
-      setDemoOtp(data.demoOtp || "");
       setRegStep(2);
     } catch {
       setError("Server not reachable");
@@ -321,22 +318,6 @@ export default function AuthPage({ onLogin, isPopup = false }) {
           <p style={{ color: "#888", fontSize: "13px" }}>
             OTP sent to <strong>{email}</strong>
           </p>
-          {demoOtp && (
-            <p
-              style={{
-                background: "#fff8f0",
-                border: "1px solid #ffd0a0",
-                borderRadius: "10px",
-                color: "#ff3c00",
-                fontSize: "14px",
-                fontWeight: "700",
-                margin: "10px 0 0",
-                padding: "10px",
-              }}
-            >
-              Your OTP: {demoOtp}
-            </p>
-          )}
         </div>
         <input
           placeholder="Enter 6-digit OTP"
@@ -366,7 +347,6 @@ export default function AuthPage({ onLogin, isPopup = false }) {
           onClick={() => {
             setRegStep(1);
             setRegOtp("");
-            setDemoOtp("");
             setError("");
           }}
         >
