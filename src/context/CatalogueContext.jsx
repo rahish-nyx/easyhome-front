@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useLiveDoc, useLiveQuery } from "../hooks/useLive";
+import { api } from "../lib/api";
 import { appSettingsRef, qCities, qPromos, qServices } from "../lib/queries";
 import { FALLBACK_CITIES, FALLBACK_SERVICES } from "../lib/constants";
 
@@ -38,6 +39,44 @@ export function CatalogueProvider({ children }) {
   const promosState = useLiveQuery(promosQuery);
   const settingsState = useLiveDoc(settingsRef);
 
+  // If Firestore reads are still denied (rules not released yet) or the
+  // listener fails offline, use the API's index-free bootstrap as a
+  // read-only fallback. Live documents always win once they arrive.
+  const [bootstrap, setBootstrap] = useState(null);
+  const needsBootstrap = useMemo(
+    () =>
+      !bootstrap &&
+      Boolean(
+        servicesState.error ||
+          citiesState.error ||
+          promosState.error ||
+          settingsState.error,
+      ),
+    [
+      bootstrap,
+      servicesState.error,
+      citiesState.error,
+      promosState.error,
+      settingsState.error,
+    ],
+  );
+
+  useEffect(() => {
+    if (!needsBootstrap) return undefined;
+    let active = true;
+    api
+      .get("/public/bootstrap")
+      .then((data) => {
+        if (active && data) setBootstrap(data);
+      })
+      .catch(() => {
+        /* offline or API unavailable: hardcoded fallbacks still render */
+      });
+    return () => {
+      active = false;
+    };
+  }, [needsBootstrap]);
+
   // A stable clock keeps promo expiry deterministic during render while still
   // letting a banner roll over without a page reload.
   const [now, setNow] = useState(() => Date.now());
@@ -46,39 +85,47 @@ export function CatalogueProvider({ children }) {
     return () => window.clearInterval(timer);
   }, []);
 
-  const promos = useMemo(
-    () =>
-      promosState.data.filter((promo) => {
-        if (promo.active === false) return false;
-        const starts = promo.startsAt?.toDate?.() || (promo.startsAt ? new Date(promo.startsAt) : null);
-        const ends = promo.endsAt?.toDate?.() || (promo.endsAt ? new Date(promo.endsAt) : null);
-        if (starts && !Number.isNaN(starts.getTime()) && starts.getTime() > now) return false;
-        if (ends && !Number.isNaN(ends.getTime()) && ends.getTime() < now) return false;
-        return true;
-      }),
-    [promosState.data, now],
-  );
+  const promos = useMemo(() => {
+    const source = promosState.data.length
+      ? promosState.data
+      : promosState.error
+        ? bootstrap?.promos || []
+        : [];
+    return source.filter((promo) => {
+      if (promo.active === false) return false;
+      const starts = promo.startsAt?.toDate?.() || (promo.startsAt ? new Date(promo.startsAt) : null);
+      const ends = promo.endsAt?.toDate?.() || (promo.endsAt ? new Date(promo.endsAt) : null);
+      if (starts && !Number.isNaN(starts.getTime()) && starts.getTime() > now) return false;
+      if (ends && !Number.isNaN(ends.getTime()) && ends.getTime() < now) return false;
+      return true;
+    });
+  }, [promosState.data, promosState.error, bootstrap, now]);
 
   // Keep the storefront usable on a cold/offline start or if the ruleset is
   // still being deployed. Live documents always win once they arrive.
-  const services = useMemo(
-    () =>
-      servicesState.data.length
-        ? servicesState.data.filter((service) => service.active !== false)
-        : FALLBACK_SERVICES,
-    [servicesState.data],
-  );
-  const cities = useMemo(
-    () =>
-      citiesState.data.length
-        ? citiesState.data.filter((city) => city.active !== false)
-        : FALLBACK_CITIES,
-    [citiesState.data],
-  );
+  const services = useMemo(() => {
+    const source = servicesState.data.length
+      ? servicesState.data
+      : bootstrap?.services?.length
+        ? bootstrap.services
+        : FALLBACK_SERVICES;
+    return source.filter((service) => service.active !== false);
+  }, [servicesState.data, bootstrap]);
+  const cities = useMemo(() => {
+    const source = citiesState.data.length
+      ? citiesState.data
+      : bootstrap?.cities?.length
+        ? bootstrap.cities
+        : FALLBACK_CITIES;
+    return source.filter((city) => city.active !== false);
+  }, [citiesState.data, bootstrap]);
 
   const settings = useMemo(
-    () => ({ ...SETTINGS_DEFAULTS, ...(settingsState.data || {}) }),
-    [settingsState.data],
+    () => ({
+      ...SETTINGS_DEFAULTS,
+      ...(settingsState.data || (settingsState.error ? bootstrap?.settings : null) || {}),
+    }),
+    [settingsState.data, settingsState.error, bootstrap],
   );
 
   const value = useMemo(

@@ -2006,21 +2006,36 @@ ol {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  margin-top: 12px;
+  gap: 2px;
+  margin-top: 8px;
 }
 
+/* Keep a 26px hit area while drawing a small visual dot. */
 .promo-dots button {
-  width: 7px;
-  height: 7px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
   padding: 0;
   border: 0;
-  border-radius: 99px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.promo-dots button::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
   background: var(--line-strong);
   transition: width 0.25s var(--ease), background 0.25s;
 }
 
 .promo-dots button.is-active {
+  width: 34px;
+}
+
+.promo-dots button.is-active::before {
   width: 22px;
   background: var(--ink);
 }
