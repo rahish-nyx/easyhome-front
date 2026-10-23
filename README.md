@@ -116,6 +116,16 @@ Hosting is configured to publish `../easyhomes/dist`. Build the frontend first.
 - SPA routes rewrite to `index.html`.
 - Security headers are set in `backend/firebase.json`.
 
+### Hosting the API
+
+Firebase Hosting serves static files only; it does not run Express. Before a production build, deploy the API to a Node host such as Render, Railway, Fly.io or Cloud Run, then set:
+
+```env
+VITE_API_URL=https://your-api-host.example.com/api
+```
+
+Add `https://easyhome-bec14.web.app` to `CORS_ORIGINS` in the backend environment and rebuild the frontend. The default `/api` value only works with the Vite dev proxy or when a reverse proxy on the same domain forwards `/api` to the API. If you prefer Firebase-only infrastructure, wrap the Express app as a Cloud Function and add an `/api/**` Hosting rewrite.
+
 ## Project layout
 
 ```
