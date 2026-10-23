@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /worker
+Disallow: /api/
+Disallow: /__/
+
+Sitemap: https://easyhome-bec14.web.app/sitemap.xml

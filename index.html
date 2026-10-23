@@ -2,37 +2,58 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EasyHome</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>EasyHome — Trusted home services, on demand</title>
+    <meta
+      name="description"
+      content="Book verified cleaners, plumbers, electricians, AC technicians and more near you. Transparent prices, offline-ready, pay after the job."
+    />
+    <meta name="theme-color" content="#ffd60a" />
+    <meta name="color-scheme" content="light" />
 
     <link rel="icon" type="image/png" href="/icon-192.png" />
-    
-    <!-- ✅ PWA META TAGS -->
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#ff3c00" />
+
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="EasyHome" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="EasyHome" />
+    <meta property="og:title" content="EasyHome — Trusted home services, on demand" />
+    <meta
+      property="og:description"
+      content="Verified home-service professionals for cleaning, repairs, beauty and more. Book in under a minute."
+    />
+    <meta property="og:url" content="%VITE_APP_URL%" />
+    <meta property="og:image" content="%VITE_APP_URL%/icon-512.png" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="EasyHome — Trusted home services, on demand" />
+    <meta
+      name="twitter:description"
+      content="Verified home-service professionals for cleaning, repairs, beauty and more. Book in under a minute."
+    />
+    <meta name="twitter:image" content="%VITE_APP_URL%/icon-512.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <div style="max-width: 520px; margin: 15vh auto; padding: 24px; font-family: system-ui, sans-serif">
+        <h1 style="font-size: 24px; margin: 0 0 8px">EasyHome needs JavaScript</h1>
+        <p style="color: #555; line-height: 1.6; margin: 0">
+          Please enable JavaScript in your browser to book verified home-service professionals.
+        </p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
-
-    <!-- ✅ REGISTER SERVICE WORKER -->
-    <script>
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker
-            .register("/sw.js")
-            .then((reg) => console.log("✅ SW registered:", reg.scope))
-            .catch((err) => console.log("❌ SW failed:", err));
-        });
-      }
-    </script>
   </body>
 </html>

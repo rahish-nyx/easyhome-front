@@ -1,0 +1,351 @@
+import { useMemo } from "react";
+import { Link } from "react-router-dom";
+import {
+  ArrowRight,
+  BadgeCheck,
+  Bolt,
+  Clock3,
+  Crown,
+  MapPin,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Timer,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react";
+import { useCatalogue } from "../context/CatalogueContext";
+import { useLocation } from "../context/LocationContext";
+import { useLiveQuery } from "../hooks/useLive";
+import { qUrgent, qWorkers } from "../lib/queries";
+import { usePageMeta } from "../lib/usePageMeta";
+import { inr, timeAgo } from "../lib/format";
+import { distanceKm, distanceLabel } from "../lib/geo";
+import { SERVICE_META } from "../lib/constants";
+import { SectionHeader } from "../components/ui";
+import {
+  PromoCarousel,
+  SearchBar,
+  ServiceGrid,
+  WorkerCard,
+} from "../components/common";
+
+export default function Home() {
+  usePageMeta(
+    "Home services on demand",
+    "Book verified cleaners, plumbers, electricians, AC technicians and more near you. Transparent prices, pay after the job.",
+  );
+
+  const { services, promos, settings } = useCatalogue();
+  const { city } = useLocation();
+  const urgentQuery = useMemo(() => qUrgent(10), []);
+  const workersQuery = useMemo(() => qWorkers("", 24), []);
+  const urgent = useLiveQuery(urgentQuery);
+  const workers = useLiveQuery(workersQuery);
+
+  const nearby = useMemo(() => {
+    const all = workers.data.slice();
+    const withDistance = all.map((worker) => ({
+      ...worker,
+      distance:
+        city && city.lat && worker.lat
+          ? distanceKm(city, worker)
+          : null,
+    }));
+    const filtered = withDistance.filter((worker) => {
+      if (!city?.name) return true;
+      if (worker.distance !== null) {
+        return worker.distance <= (Number(city.radiusKm) || 25);
+      }
+      return String(worker.area || "").toLowerCase().includes(city.name.toLowerCase());
+    });
+    return (filtered.length ? filtered : withDistance)
+      .sort((a, b) => {
+        if (a.online !== b.online) return a.online ? -1 : 1;
+        return (b.rating || 0) - (a.rating || 0);
+      })
+      .slice(0, 6);
+  }, [workers.data, city]);
+
+  const popular = services.slice(0, 10);
+
+  return (
+    <>
+      <PromoCarousel promos={promos} />
+
+      <div className="page" style={{ paddingTop: 0 }}>
+        <section style={{ paddingTop: 30 }}>
+          <div
+            className="row row--between row--wrap"
+            style={{ alignItems: "flex-end", gap: 18 }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <p className="eyebrow">Home services, sorted</p>
+              <h1
+                style={{
+                  fontSize: "clamp(28px, 4.4vw, 46px)",
+                  maxWidth: "18ch",
+                  letterSpacing: "-0.05em",
+                }}
+              >
+                Good help is <span style={{ background: "var(--yellow)", padding: "0 5px" }}>closer</span>{" "}
+                than you think.
+              </h1>
+              <p className="muted" style={{ marginTop: 10, maxWidth: "54ch", fontSize: 14.5 }}>
+                Verified professionals for cleaning, repairs and upkeep — at your door in
+                minutes, with prices you agree before the work starts.
+              </p>
+            </div>
+            <div className="row row--wrap" style={{ gap: 16 }}>
+              <span className="row small" style={{ gap: 7 }}>
+                <ShieldCheck size={16} style={{ color: "var(--green)" }} /> ID-verified pros
+              </span>
+              <span className="row small" style={{ gap: 7 }}>
+                <Wallet size={16} style={{ color: "var(--green)" }} /> Pay after service
+              </span>
+              <span className="row small" style={{ gap: 7 }}>
+                <Clock3 size={16} style={{ color: "var(--green)" }} /> Same-day slots
+              </span>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 24, maxWidth: 720 }}>
+            <SearchBar autoFocus={false} />
+          </div>
+
+          <div className="row row--wrap" style={{ marginTop: 14, gap: 8 }}>
+            <span className="tiny muted">Popular:</span>
+            {services.slice(0, 5).map((service) => (
+              <Link
+                key={service.id || service.key}
+                to={`/services/${service.key}`}
+                className="badge badge--outline"
+                style={{ background: "#fff" }}
+              >
+                {service.name}
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="section">
+          <SectionHeader
+            eyebrow="What do you need?"
+            title="Book a trusted pro"
+            subtitle={`${services.length} service categories, one accountable platform.`}
+            action={
+              <Link to="/services" className="btn btn--outline btn--sm">
+                View all services <ArrowRight size={15} />
+              </Link>
+            }
+          />
+          <ServiceGrid services={popular} />
+        </section>
+
+        <section className="section">
+          <SectionHeader
+            eyebrow="Need it now?"
+            title="Urgent jobs near you"
+            subtitle="Live requests from homes around you — book an urgent visit and a pro is dispatched first."
+            action={
+              <Link to="/book?urgency=urgent" className="btn btn--dark btn--sm">
+                <Bolt size={15} /> Need help now
+              </Link>
+            }
+          />
+
+          {urgent.data.length ? (
+            <div className="urgent-track">
+              {urgent.data.slice(0, 8).map((job) => (
+                <article className="urgent-card" key={job.id}>
+                  <span className="urgent-card__bar" />
+                  <div className="urgent-card__top">
+                    <span className="urgent-card__pulse">Urgent now</span>
+                    <span className="tiny" style={{ color: "rgba(255,255,255,.5)" }}>
+                      {timeAgo(job.createdAt)}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="urgent-card__title">{job.service}</h3>
+                    <div className="urgent-card__meta">
+                      <span>
+                        <MapPin size={12} /> {job.area || city?.name || "Nearby"}
+                      </span>
+                      <span>
+                        <Timer size={12} /> ASAP
+                      </span>
+                    </div>
+                  </div>
+                  <div className="urgent-card__foot">
+                    <span className="urgent-card__budget">{inr(job.budget)}</span>
+                    <Link
+                      to={`/book?service=${encodeURIComponent(job.serviceKey || "")}&urgency=urgent`}
+                      className="urgent-card__cta"
+                    >
+                      Get help <ArrowRight size={13} />
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="urgent-placeholder">
+              {[
+                { icon: Bolt, title: "Power out?", body: "Urgent electricians are on standby." },
+                { icon: Sparkles, title: "Guests coming?", body: "Same-day deep cleaning slots." },
+                { icon: Clock3, title: "Leaking tap?", body: "Plumbers typically arrive in 60–90 min." },
+              ].map((item) => (
+                <Link
+                  key={item.title}
+                  to={`/book?urgency=urgent${item.title.includes("Power") ? "&service=electrical" : item.title.includes("Guests") ? "&service=cleaning" : "&service=plumbing"}`}
+                  className="urgent-mini"
+                >
+                  <span className="urgent-mini__icon">
+                    <item.icon size={20} />
+                  </span>
+                  <span className="grow">
+                    <strong>{item.title}</strong>
+                    <small>{item.body}</small>
+                  </span>
+                  <ArrowRight size={15} className="muted" />
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="section">
+          <SectionHeader
+            eyebrow="Around you"
+            title={
+              nearby.length
+                ? city?.name
+                  ? `Available pros in ${city.name}`
+                  : "Available near you"
+                : "Available services near you"
+            }
+            subtitle={
+              nearby.length
+                ? "Independent professionals with verified IDs, real ratings and transparent starting prices."
+                : "Pick a service and we will match a verified professional for your slot."
+            }
+            action={
+              <Link
+                to={nearby.length ? "/search?q=" : "/services"}
+                className="btn btn--outline btn--sm"
+              >
+                {nearby.length ? "Find a pro" : "Browse services"} <ArrowRight size={15} />
+              </Link>
+            }
+          />
+
+          {nearby.length ? (
+            <div className="worker-grid">
+              {nearby.map((worker) => (
+                <div key={worker.id}>
+                  <WorkerCard worker={worker} />
+                  {worker.distance !== null ? (
+                    <p className="tiny muted" style={{ marginTop: 6, paddingLeft: 4 }}>
+                      {distanceLabel(worker.distance)} from {city?.name}
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="urgent-placeholder">
+              {services.slice(0, 3).map((service) => (
+                <Link
+                  key={service.id || service.key}
+                  to={`/book?service=${service.key}`}
+                  className="urgent-mini"
+                >
+                  <span className="urgent-mini__icon">
+                    <TrendingUp size={20} />
+                  </span>
+                  <span className="grow">
+                    <strong>{service.name}</strong>
+                    <small>
+                      from {inr(service.fromPrice || SERVICE_META[service.key]?.from || 199)} · book in 1 min
+                    </small>
+                  </span>
+                  <ArrowRight size={15} className="muted" />
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="section">
+          <div className="membership">
+            <div>
+              <span className="badge badge--dark">
+                <Crown size={12} /> EasyHome Pro
+              </span>
+              <h2 className="membership__title" style={{ marginTop: 12 }}>
+                Priority help. Better prices. Zero guesswork.
+              </h2>
+              <p className="membership__sub">
+                One membership for the whole home. Get priority matching, discounted visits and
+                a dedicated support line for every booking.
+              </p>
+              <div className="membership__perks">
+                {(settings.customerBenefits || []).slice(0, 4).map((benefit) => (
+                  <span className="membership__perk" key={benefit}>
+                    <Star size={11} fill="currentColor" /> {benefit}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="membership__price">
+                <strong>{inr(settings.subscriptionPrice || 199)}</strong>
+                <small>/ month · cancel anytime</small>
+              </div>
+              <Link
+                to="/subscription"
+                className="btn btn--dark btn--lg"
+                style={{ marginTop: 14, width: "100%" }}
+              >
+                Explore membership
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="section">
+          <div className="grid grid--3">
+            {[
+              {
+                icon: BadgeCheck,
+                title: "Verified before they arrive",
+                body: "Every pro clears an ID and trade check. KYC documents stay private.",
+              },
+              {
+                icon: Users,
+                title: "Real ratings, real work",
+                body: "Reviews come only from completed jobs, so what you see is earned.",
+              },
+              {
+                icon: Wallet,
+                title: "No surprise invoices",
+                body: "Agree the final price in the app before work starts. Pay after it's done.",
+              },
+            ].map((item) => (
+              <div className="card card--pad" key={item.title}>
+                <span className="stat__icon" style={{ width: 42, height: 42 }}>
+                  <item.icon size={20} />
+                </span>
+                <h3 style={{ fontSize: 16, marginTop: 14 }}>{item.title}</h3>
+                <p className="small muted" style={{ marginTop: 6 }}>
+                  {item.body}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </>
+  );
+}

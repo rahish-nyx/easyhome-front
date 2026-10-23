@@ -1,0 +1,118 @@
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useLiveDoc, useLiveQuery } from "../hooks/useLive";
+import { appSettingsRef, qCities, qPromos, qServices } from "../lib/queries";
+import { FALLBACK_CITIES, FALLBACK_SERVICES } from "../lib/constants";
+
+const CatalogueContext = createContext(null);
+
+const SETTINGS_DEFAULTS = {
+  commissionPct: 10,
+  subscriptionPrice: 199,
+  customerBenefits: [
+    "Priority worker matching",
+    "Discounted service visits",
+    "24×7 priority support",
+    "Free cancellation up to 1 hour",
+  ],
+  workerBenefits: [
+    "0% commission on every job",
+    "Top placement in search",
+    "Free urgent-job priority",
+    "Verified Pro badge",
+  ],
+  upiId: "easyhome@upi",
+  qrImagePath: "",
+  supportPhone: "",
+  maintenanceMode: false,
+  announcement: { title: "", body: "", active: false },
+};
+
+export function CatalogueProvider({ children }) {
+  const servicesQuery = useMemo(() => qServices(), []);
+  const citiesQuery = useMemo(() => qCities(), []);
+  const promosQuery = useMemo(() => qPromos(), []);
+  const settingsRef = useMemo(() => appSettingsRef(), []);
+
+  const servicesState = useLiveQuery(servicesQuery);
+  const citiesState = useLiveQuery(citiesQuery);
+  const promosState = useLiveQuery(promosQuery);
+  const settingsState = useLiveDoc(settingsRef);
+
+  // A stable clock keeps promo expiry deterministic during render while still
+  // letting a banner roll over without a page reload.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const promos = useMemo(
+    () =>
+      promosState.data.filter((promo) => {
+        if (promo.active === false) return false;
+        const starts = promo.startsAt?.toDate?.() || (promo.startsAt ? new Date(promo.startsAt) : null);
+        const ends = promo.endsAt?.toDate?.() || (promo.endsAt ? new Date(promo.endsAt) : null);
+        if (starts && !Number.isNaN(starts.getTime()) && starts.getTime() > now) return false;
+        if (ends && !Number.isNaN(ends.getTime()) && ends.getTime() < now) return false;
+        return true;
+      }),
+    [promosState.data, now],
+  );
+
+  // Keep the storefront usable on a cold/offline start or if the ruleset is
+  // still being deployed. Live documents always win once they arrive.
+  const services = useMemo(
+    () =>
+      servicesState.data.length
+        ? servicesState.data.filter((service) => service.active !== false)
+        : FALLBACK_SERVICES,
+    [servicesState.data],
+  );
+  const cities = useMemo(
+    () =>
+      citiesState.data.length
+        ? citiesState.data.filter((city) => city.active !== false)
+        : FALLBACK_CITIES,
+    [citiesState.data],
+  );
+
+  const settings = useMemo(
+    () => ({ ...SETTINGS_DEFAULTS, ...(settingsState.data || {}) }),
+    [settingsState.data],
+  );
+
+  const value = useMemo(
+    () => ({
+      services,
+      servicesLoading: servicesState.loading,
+      servicesError: servicesState.error,
+      cities,
+      citiesLoading: citiesState.loading,
+      promos,
+      promosLoading: promosState.loading,
+      settings,
+      settingsLoading: settingsState.loading,
+    }),
+    [
+      services,
+      servicesState.loading,
+      servicesState.error,
+      cities,
+      citiesState.loading,
+      promos,
+      promosState.loading,
+      settings,
+      settingsState.loading,
+    ],
+  );
+
+  return (
+    <CatalogueContext.Provider value={value}>{children}</CatalogueContext.Provider>
+  );
+}
+
+export function useCatalogue() {
+  const context = useContext(CatalogueContext);
+  if (!context) throw new Error("useCatalogue must be used inside CatalogueProvider");
+  return context;
+}

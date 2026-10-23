@@ -1,0 +1,278 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  ArrowRight,
+  BadgeCheck,
+  BriefcaseBusiness,
+  CheckCircle2,
+  Crosshair,
+  IndianRupee,
+  MapPin,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { useCatalogue } from "../context/CatalogueContext";
+import { useLocation } from "../context/LocationContext";
+import { useToast } from "../context/ToastContext";
+import { api } from "../lib/api";
+import { SERVICE_META } from "../lib/constants";
+import { Button, Field, Input, Select, Textarea } from "../components/ui";
+
+export default function WorkerApply({ existing, onCancel }) {
+  const { profile, refreshClaims } = useAuth();
+  const { services } = useCatalogue();
+  const { city } = useLocation();
+  const toast = useToast();
+
+  const base = existing || profile || {};
+  const [form, setForm] = useState({
+    name: base.name || "",
+    phone: base.phone || "",
+    serviceKey: "",
+    area: city?.name || "",
+    pricePerWork: "",
+    bio: "",
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [coords, setCoords] = useState(null);
+  const [locating, setLocating] = useState(false);
+
+  useEffect(() => {
+    if (!form.serviceKey && services.length) {
+      setForm((prev) => ({ ...prev, serviceKey: services[0].key }));
+    }
+  }, [services, form.serviceKey]);
+
+  useEffect(() => {
+    if (!form.area && city?.name) setForm((prev) => ({ ...prev, area: city.name }));
+  }, [city?.name, form.area]);
+
+  const set = (field) => (event) =>
+    setForm((prev) => ({ ...prev, [field]: event.target.value }));
+
+  const capture = async () => {
+    if (!navigator.geolocation) {
+      toast.error("This device does not support location.");
+      return;
+    }
+    setLocating(true);
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 12000,
+        });
+      });
+      setCoords({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      });
+      toast.success("Location captured. This helps match nearby jobs.");
+    } catch {
+      toast.error("Location permission was not granted. You can still apply.");
+    } finally {
+      setLocating(false);
+    }
+  };
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setError("");
+
+    if (form.name.trim().length < 2) {
+      setError("Enter your full name.");
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(form.phone)) {
+      setError("Enter a valid 10-digit Indian mobile number.");
+      return;
+    }
+    if (!form.serviceKey) {
+      setError("Choose your trade.");
+      return;
+    }
+    if (form.area.trim().length < 2) {
+      setError("Tell us the area you can serve.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const service = services.find((item) => item.key === form.serviceKey);
+      await api.post("/auth/worker/apply", {
+        name: form.name.trim(),
+        phone: form.phone,
+        service: service?.name || SERVICE_META[form.serviceKey]?.name || form.serviceKey,
+        serviceKey: form.serviceKey,
+        area: form.area.trim(),
+        pricePerWork: Number(form.pricePerWork) || 199,
+        bio: form.bio.trim(),
+        lat: coords?.lat ?? city?.lat ?? null,
+        lng: coords?.lng ?? city?.lng ?? null,
+      });
+      await refreshClaims();
+      toast.success("Application submitted. We will review it shortly.");
+      onCancel?.();
+    } catch (submitError) {
+      setError(submitError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="wk-panel wk-panel--apply">
+      <div className="wk-panel__head">
+        <p className="wk-eyebrow">
+          <Sparkles size={13} /> Worker application
+        </p>
+        <h2>Apply in two minutes.</h2>
+        <p>
+          Tell us your trade and the area you serve. Our team reviews every application before
+          your profile goes live.
+        </p>
+      </div>
+
+      <div className="wk-apply-steps">
+        <span className="is-done">
+          <BadgeCheck size={14} /> Account created
+        </span>
+        <span>
+          <BriefcaseBusiness size={14} /> Trade details
+        </span>
+        <span>
+          <ShieldCheck size={14} /> Team review
+        </span>
+      </div>
+
+      {error ? (
+        <div className="wk-alert wk-alert--error" role="alert">
+          {error}
+        </div>
+      ) : null}
+
+      <form className="wk-form" onSubmit={submit}>
+        <div className="wk-form-grid">
+          <Field label="Full name" htmlFor="apply-name" required>
+            <Input
+              id="apply-name"
+              value={form.name}
+              maxLength={80}
+              onChange={set("name")}
+              placeholder="Raees Khan"
+              required
+            />
+          </Field>
+          <Field label="Mobile number" htmlFor="apply-phone" required>
+            <Input
+              id="apply-phone"
+              type="tel"
+              inputMode="numeric"
+              maxLength={10}
+              value={form.phone}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  phone: event.target.value.replace(/\D/g, "").slice(0, 10),
+                }))
+              }
+              placeholder="9876543210"
+              required
+            />
+          </Field>
+          <Field label="Your trade" htmlFor="apply-service" required>
+            <Select id="apply-service" value={form.serviceKey} onChange={set("serviceKey")}>
+              {services.map((service) => (
+                <option key={service.key} value={service.key}>
+                  {service.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Starting price (₹)" htmlFor="apply-price">
+            <Input
+              id="apply-price"
+              type="number"
+              min={0}
+              max={100000}
+              value={form.pricePerWork}
+              onChange={set("pricePerWork")}
+              placeholder="299"
+            />
+          </Field>
+          <Field
+            label="Service area"
+            htmlFor="apply-area"
+            hint="Locality, neighbourhood or city you can reach."
+            required
+            className="wk-span-2"
+          >
+            <Input
+              id="apply-area"
+              value={form.area}
+              maxLength={120}
+              onChange={set("area")}
+              placeholder="Indiranagar, Bengaluru"
+              required
+            />
+          </Field>
+          <Field
+            label="Short bio (optional)"
+            htmlFor="apply-bio"
+            hint={`${form.bio.length}/400 — experience, specialties, languages`}
+            className="wk-span-2"
+          >
+            <Textarea
+              id="apply-bio"
+              rows={3}
+              maxLength={400}
+              value={form.bio}
+              onChange={set("bio")}
+              placeholder="8 years of plumbing experience. Specialise in leak detection and bathroom fittings. Hindi and English."
+            />
+          </Field>
+        </div>
+
+        <button type="button" className="wk-location-btn" onClick={capture} disabled={locating}>
+          <Crosshair size={16} />
+          {locating
+            ? "Capturing location…"
+            : coords
+              ? `Location pinned · ${coords.lat.toFixed(3)}, ${coords.lng.toFixed(3)}`
+              : "Pin my location (optional)"}
+        </button>
+
+        <div className="wk-apply-perks">
+          <span>
+            <CheckCircle2 size={14} /> Keep more of every job
+          </span>
+          <span>
+            <MapPin size={14} /> Local jobs near you
+          </span>
+          <span>
+            <IndianRupee size={14} /> Transparent payouts
+          </span>
+        </div>
+
+        <Button type="submit" size="lg" className="wk-btn wk-btn--primary wk-btn--block" loading={busy}>
+          Submit application <ArrowRight size={17} />
+        </Button>
+
+        <p className="wk-fineprint">
+          Applying does not guarantee work. EasyHome reviews identity and trade details before
+          activating an account. You can upload a government ID after applying.
+        </p>
+      </form>
+
+      <p className="wk-fineprint">
+        Have an account?{" "}
+        <Link to="/auth?next=%2Fworker" style={{ color: "#7aa2ff" }}>
+          Sign in as a worker
+        </Link>
+        .
+      </p>
+    </div>
+  );
+}
