@@ -147,7 +147,7 @@ async function staleWhileRevalidate(event, cacheName) {
   if (response) return response;
 
   return (
-    (await caches.match("/offline.html")) ||
+    (await caches.match("/offline.html", { ignoreVary: true })) ||
     new Response("Offline", { status: 503, statusText: "Offline" })
   );
 }
