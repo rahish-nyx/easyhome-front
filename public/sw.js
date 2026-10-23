@@ -2,7 +2,7 @@
  * Firebase Auth/Firestore/Storage and the API are deliberately never cached.
  */
 
-const VERSION = "easyhome-v5";
+const VERSION = "easyhome-v7";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const CURRENT_CACHES = new Set([SHELL_CACHE, ASSET_CACHE]);
@@ -17,14 +17,43 @@ const SHELL = [
   "/icon-512.png",
 ];
 
+/**
+ * Store a clean copy of a response. Browsers expose the decoded body through
+ * the Fetch API but keep the original Content-Encoding header; replaying that
+ * pair from the Cache API makes stylesheets and scripts fail to parse offline.
+ */
+async function putClean(cache, request, response) {
+  try {
+    const headers = new Headers(response.headers);
+    headers.delete("content-encoding");
+    headers.delete("content-length");
+    // Static assets are origin-independent once cached; Vary can otherwise
+    // make a cached stylesheet miss when the offline request omits Origin.
+    headers.delete("vary");
+    const body = await response.clone().arrayBuffer();
+    await cache.put(
+      request,
+      new Response(body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      }),
+    );
+  } catch {
+    /* cache quota or opaque response — the network path still works */
+  }
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(SHELL_CACHE);
       await Promise.allSettled(
-        SHELL.map((url) =>
-          cache.add(new Request(url, { cache: "reload" })),
-        ),
+        SHELL.map(async (url) => {
+          const request = new Request(url, { cache: "reload" });
+          const response = await fetch(request);
+          if (response.ok) await putClean(cache, request, response);
+        }),
       );
     })(),
   );
@@ -76,7 +105,7 @@ async function networkFirstNavigation(request) {
     const response = await fetch(request);
     if (response && response.ok) {
       const cache = await caches.open(SHELL_CACHE);
-      cache.put("/index.html", response.clone()).catch(() => {});
+      await putClean(cache, "/index.html", response);
       return response;
     }
   } catch {
@@ -84,9 +113,9 @@ async function networkFirstNavigation(request) {
   }
 
   const cached =
-    (await caches.match(request, { ignoreSearch: true })) ||
-    (await caches.match("/index.html")) ||
-    (await caches.match("/offline.html"));
+    (await caches.match(request, { ignoreSearch: true, ignoreVary: true })) ||
+    (await caches.match("/index.html", { ignoreVary: true })) ||
+    (await caches.match("/offline.html", { ignoreVary: true }));
   return (
     cached ||
     new Response(
@@ -98,12 +127,12 @@ async function networkFirstNavigation(request) {
 
 async function staleWhileRevalidate(event, cacheName) {
   const cache = await caches.open(cacheName);
-  const cached = await cache.match(event.request);
+  const cached = await cache.match(event.request, { ignoreVary: true });
 
   const update = fetch(event.request)
     .then((response) => {
       if (response && (response.ok || response.type === "opaque")) {
-        cache.put(event.request, response.clone()).catch(() => {});
+        event.waitUntil(putClean(cache, event.request, response));
       }
       return response;
     })
@@ -124,13 +153,13 @@ async function staleWhileRevalidate(event, cacheName) {
 }
 
 async function cacheFirst(event, cacheName) {
-  const cached = await caches.match(event.request);
+  const cached = await caches.match(event.request, { ignoreVary: true });
   if (cached) return cached;
 
   const response = await fetch(event.request);
   if (response && response.ok) {
     const cache = await caches.open(cacheName);
-    cache.put(event.request, response.clone()).catch(() => {});
+    event.waitUntil(putClean(cache, event.request, response));
   }
   return response;
 }
