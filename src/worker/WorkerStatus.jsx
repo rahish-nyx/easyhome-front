@@ -148,7 +148,7 @@ export default function WorkerStatus({ worker }) {
               {worker.kycStatus === "verified"
                 ? "ID verified."
                 : worker.kycStatus === "pending"
-                  ? "ID waiting for review."
+                  ? "ID sent securely; waiting for review."
                   : "Upload a government ID below to speed this up."}
             </small>
           </div>
@@ -232,7 +232,7 @@ export function KycCard({ worker, compact = false }) {
       const form = new FormData();
       form.append("image", file);
       await api.upload("/worker/kyc", form);
-      toast.success("ID uploaded. Our team will review it.");
+      toast.success("ID sent securely to our verification team.");
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -279,8 +279,8 @@ export function KycCard({ worker, compact = false }) {
               ? worker?.kycRejectionReason ||
                 "The document could not be read. Upload a clearer photo."
               : status === "pending"
-                ? "Your document is with the review team. No action needed right now."
-                : "Upload a clear photo of your Aadhaar, PAN or driving licence. It is stored privately and only reviewed by authorised admins."}
+                ? "Your document was sent securely to the review team. No action needed right now."
+                : "Upload a clear photo of your Aadhaar, PAN or driving licence. It is sent directly to our verification team and is never stored in app storage."}
         </p>
         <input
           ref={inputRef}

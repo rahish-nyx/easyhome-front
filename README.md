@@ -50,7 +50,7 @@ The app reads Firestore directly, so these must be enabled for the target projec
 
 1. **Authentication** - enable Email/Password and Google. Email verification is required before a customer can create a booking.
 2. **Cloud Firestore** - database in the region you want (the current project uses `asia-south1`).
-3. **Storage** - default bucket for profile photos, service images and KYC files.
+3. **Media** - public images are uploaded to Cloudinary by the API. KYC documents go directly to the admin Telegram chat, so Firebase Storage is only needed for legacy records.
 4. **Rules** - deploy `../backend/firestore.rules`. Client writes are denied; all mutations go through the API.
 5. **Indexes** - deploy `../backend/firestore.indexes.json` for the booking, feed, chat and admin queries.
 

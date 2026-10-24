@@ -24,6 +24,7 @@ import { useLocation as useCity } from "../context/LocationContext";
 import { useCatalogue } from "../context/CatalogueContext";
 import { useOnline } from "../hooks/useDevice";
 import { Avatar, Badge, Button, IconButton, Modal, Spinner } from "./ui";
+import { NotificationBell } from "./common";
 import { OutOfZoneModal } from "./geofence";
 import { cx } from "../lib/format";
 import { cityZone } from "../lib/zones";

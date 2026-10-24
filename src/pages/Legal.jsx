@@ -107,7 +107,7 @@ const PAGES = {
         heading: "What we collect",
         body: [
           "Account data: name, email, phone, role and profile photo. Booking data: service, description, area, budget, urgency, optional photo and location coordinates.",
-          "Worker data: trade, service area, pricing, UPI ID for commission settlement, ratings and KYC status. KYC images are stored privately and are visible only to authorised administrators.",
+          "Worker data: trade, service area, pricing, UPI ID for commission settlement, ratings and KYC status. KYC images are sent directly to a private admin Telegram chat and are visible only to authorised administrators.",
         ],
       },
       {

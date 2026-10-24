@@ -2,7 +2,7 @@
  * Firebase Auth/Firestore/Storage and the API are deliberately never cached.
  */
 
-const VERSION = "easyhome-v7";
+const VERSION = "easyhome-v8";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const CURRENT_CACHES = new Set([SHELL_CACHE, ASSET_CACHE]);

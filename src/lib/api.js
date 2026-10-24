@@ -95,7 +95,11 @@ export const api = {
     const headers = await authHeaders();
     const response = await fetch(`${API_BASE}${path}`, { headers });
     if (!response.ok) {
-      throw new ApiError("Could not load this file.", { status: response.status });
+      const data = await response.json().catch(() => null);
+      throw new ApiError(data?.error || "Could not load this file.", {
+        status: response.status,
+        code: data?.code || "BLOB_FAILED",
+      });
     }
     return URL.createObjectURL(await response.blob());
   },

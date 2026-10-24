@@ -332,6 +332,7 @@ function WorkerDetail({
   const approved = worker.status === "approved";
   const rejected = worker.status === "rejected";
   const suspended = worker.status === "suspended";
+  const hasKyc = Boolean(worker.kycPath || worker.kycTelegramFileId);
   const coords =
     Number.isFinite(Number(worker.lat)) && Number.isFinite(Number(worker.lng))
       ? mapsUrl(worker.lat, worker.lng, worker.area)
@@ -408,13 +409,17 @@ function WorkerDetail({
         <div className="adm-detail-section__head">
           <div>
             <h3>Identity document</h3>
-            <p>Stored privately. Only admins can view this file.</p>
+            <p>
+              {worker.kycTelegramFileId
+                ? "Sent directly to the admin Telegram chat. Only admins can open it here."
+                : "Stored privately. Only admins can view this file."}
+            </p>
           </div>
           <StatusPill status={worker.kycStatus} />
         </div>
         <div className="adm-kyc">
           <AuthedImage
-            path={worker.kycPath ? worker.id : ""}
+            path={hasKyc ? worker.id : ""}
             alt={`${worker.name} identity document`}
             className="adm-kyc__image"
           />
@@ -427,7 +432,7 @@ function WorkerDetail({
                 not expired.
               </p>
             )}
-            {worker.kycPath && worker.kycStatus !== "verified" ? (
+            {hasKyc && worker.kycStatus !== "verified" ? (
               <div className="adm-inline-actions">
                 <Button
                   size="sm"
@@ -447,7 +452,7 @@ function WorkerDetail({
                   Reject ID
                 </Button>
               </div>
-            ) : worker.kycPath ? (
+            ) : hasKyc ? (
               <p className="adm-ok-line">
                 <ShieldCheck size={14} /> Identity verified
                 {worker.kycReviewedAt ? ` · ${formatDate(worker.kycReviewedAt)}` : ""}
