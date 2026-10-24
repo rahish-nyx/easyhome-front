@@ -1,0 +1,442 @@
+/* ==========================================================================
+   Worker accountability — GPS status, phase controls and 10-minute buzzer
+   ========================================================================== */
+
+.wk-gps-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 6px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.wk-gps-pill.is-on {
+  border-color: #b7e7d8;
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.wk-gps-pill.is-on svg {
+  animation: wkGpsPulse 1.8s ease-in-out infinite;
+}
+
+.wk-phase-track {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 14px 0 4px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--paper-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.wk-phase-track::-webkit-scrollbar {
+  display: none;
+}
+
+.wk-phase-track > span {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  min-width: max-content;
+  padding-right: 10px;
+  color: var(--muted-2);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.wk-phase-track > span:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: calc(100% - 6px);
+  width: 9px;
+  height: 1px;
+  background: var(--line-strong);
+}
+
+.wk-phase-track i {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: var(--muted);
+  font-style: normal;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.wk-phase-track > span.is-done {
+  color: var(--green);
+}
+
+.wk-phase-track > span.is-done i {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+}
+
+.wk-phase-track > span.is-current {
+  color: var(--ink);
+}
+
+.wk-phase-track > span.is-current i {
+  border-color: var(--yellow-strong);
+  background: var(--yellow);
+  color: var(--ink);
+  box-shadow: 0 0 0 4px var(--yellow-soft);
+}
+
+.wk-phase-btn {
+  justify-content: flex-start !important;
+  gap: 12px !important;
+  min-height: 66px;
+  padding: 13px 16px !important;
+  text-align: left;
+  border-radius: 16px !important;
+}
+
+.wk-phase-btn > svg {
+  flex-shrink: 0;
+}
+
+.wk-phase-btn > span {
+  display: grid;
+  gap: 1px;
+  flex: 1;
+}
+
+.wk-phase-btn strong {
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.wk-phase-btn small {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.wk-phase-btn.wk-btn--complete small {
+  color: rgba(255, 255, 255, 0.76);
+}
+
+/* --------------------------------- Buzzer --------------------------------- */
+
+.wk-buzzer {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  display: none;
+  place-items: center;
+  padding: 20px;
+  overflow-y: auto;
+  background:
+    radial-gradient(720px 440px at 50% 10%, rgba(220, 38, 38, 0.28), transparent 62%),
+    rgba(10, 7, 7, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.wk-buzzer.is-open {
+  display: grid;
+  animation: wkBuzzerFade 0.2s ease;
+}
+
+.wk-buzzer__card {
+  position: relative;
+  width: min(100%, 590px);
+  margin: auto;
+  padding: clamp(24px, 4vw, 36px);
+  border-radius: 26px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow:
+    0 34px 100px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  animation: wkBuzzerRise 0.28s ease;
+}
+
+.wk-buzzer__pulse {
+  position: relative;
+  width: 66px;
+  height: 66px;
+  margin-bottom: 16px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  background: var(--red);
+  color: #fff;
+  box-shadow: 0 14px 34px rgba(220, 38, 38, 0.3);
+}
+
+.wk-buzzer__pulse span {
+  position: absolute;
+  inset: -8px;
+  border: 2px solid rgba(220, 38, 38, 0.4);
+  border-radius: 24px;
+  animation: wkBuzzerPing 1.6s ease-out infinite;
+}
+
+.wk-buzzer__eyebrow {
+  margin: 0 0 7px;
+  color: var(--red);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.wk-buzzer h2 {
+  margin: 0;
+  font-size: clamp(25px, 4.4vw, 36px);
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+}
+
+.wk-buzzer__body {
+  margin: 14px 0 16px;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.wk-buzzer__body strong {
+  color: var(--ink);
+}
+
+.wk-buzzer__job {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper-2);
+}
+
+.wk-buzzer__job > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wk-buzzer__job span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.wk-buzzer__job strong {
+  font-size: 14px;
+  text-align: right;
+}
+
+.wk-buzzer__job > div:last-child {
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+}
+
+.wk-buzzer__phase {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.wk-buzzer__phase strong {
+  color: var(--ink);
+}
+
+.wk-buzzer__gps {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--paper-3);
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.wk-buzzer__gps--sharing {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.wk-buzzer__gps-error {
+  margin: 9px 0 0;
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.wk-buzzer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 18px;
+}
+
+.wk-buzzer__btn {
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.wk-buzzer__btn:hover {
+  background: var(--paper-2);
+}
+
+.wk-buzzer__btn--primary {
+  flex: 1;
+  min-width: 220px;
+  border-color: var(--red);
+  background: var(--red);
+  color: #fff;
+  box-shadow: 0 10px 26px rgba(220, 38, 38, 0.22);
+}
+
+.wk-buzzer__btn--primary:hover {
+  background: #b91c1c;
+}
+
+.wk-buzzer__enable {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--amber);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.wk-buzzer__fine {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--muted-2);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+@keyframes wkGpsPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+@keyframes wkBuzzerFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes wkBuzzerRise {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes wkBuzzerPing {
+  0% { transform: scale(0.9); opacity: 0.9; }
+  75% { transform: scale(1.18); opacity: 0; }
+  100% { transform: scale(1.18); opacity: 0; }
+}
+
+@media (max-width: 640px) {
+  .wk-buzzer {
+    padding: 10px;
+    align-items: end;
+  }
+
+  .wk-buzzer__card {
+    width: 100%;
+    max-height: 94dvh;
+    overflow-y: auto;
+    border-radius: 24px 24px 0 0;
+    padding: 24px 20px calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .wk-buzzer__actions {
+    flex-direction: column;
+  }
+
+  .wk-buzzer__btn,
+  .wk-buzzer__btn--primary {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .wk-buzzer__job > div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .wk-buzzer__job strong {
+    text-align: left;
+  }
+
+  .wk-buzzer__gps {
+    margin-left: 0;
+  }
+
+  .wk-phase-track {
+    padding: 9px 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wk-buzzer,
+  .wk-buzzer__card,
+  .wk-buzzer__pulse span,
+  .wk-gps-pill.is-on svg {
+    animation: none;
+  }
+}

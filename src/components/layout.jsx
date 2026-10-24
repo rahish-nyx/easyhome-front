@@ -24,7 +24,9 @@ import { useLocation as useCity } from "../context/LocationContext";
 import { useCatalogue } from "../context/CatalogueContext";
 import { useOnline } from "../hooks/useDevice";
 import { Avatar, Badge, Button, IconButton, Modal, Spinner } from "./ui";
+import { OutOfZoneModal } from "./geofence";
 import { cx } from "../lib/format";
+import { cityZone } from "../lib/zones";
 
 /* --------------------------------- Brand --------------------------------- */
 
@@ -60,8 +62,7 @@ export function OfflineBanner() {
 
 export function SiteHeader() {
   const { profile, fbUser, isAdmin, isWorker, isPremium, logout } = useAuth();
-  const { city } = useCity();
-  const [cityOpen, setCityOpen] = useState(false);
+  const { city, openPicker } = useCity();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
@@ -87,7 +88,7 @@ export function SiteHeader() {
         <div className="header-inner">
           <Logo />
           <span className="header-divider" />
-          <button type="button" className="city-btn" onClick={() => setCityOpen(true)}>
+          <button type="button" className="city-btn" onClick={openPicker}>
             <span className="city-btn__icon">
               <MapPin size={17} />
             </span>
@@ -188,8 +189,6 @@ export function SiteHeader() {
           </div>
         </div>
       </header>
-
-      <CityModal open={cityOpen} onClose={() => setCityOpen(false)} />
     </>
   );
 }
@@ -197,7 +196,7 @@ export function SiteHeader() {
 /* -------------------------------- City modal ------------------------------ */
 
 export function CityModal({ open, onClose }) {
-  const { city, cities, setCity, detectLocation, detecting, error } = useCity();
+  const { city, cities, zones, setCity, detectLocation, detecting, error } = useCity();
   const [localError, setLocalError] = useState("");
 
   const handleDetect = async () => {
@@ -215,7 +214,7 @@ export function CityModal({ open, onClose }) {
       open={open}
       onClose={onClose}
       title="Choose your city"
-      subtitle="We match verified pros inside your service area."
+      subtitle="We match verified pros inside your live service zone."
       size="sm"
     >
       <button type="button" className="city-detect" onClick={handleDetect} disabled={detecting}>
@@ -233,20 +232,36 @@ export function CityModal({ open, onClose }) {
 
       {cities.length ? (
         <div className="city-list">
-          {cities.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={cx("city-option", city?.name === item.name && "is-active")}
-              onClick={() => {
-                setCity(item);
-                onClose?.();
-              }}
-            >
-              <span>{item.name}</span>
-              {city?.name === item.name ? <span aria-hidden="true">✓</span> : null}
-            </button>
-          ))}
+          {cities.map((item) => {
+            const live = cityZone(zones, item);
+            const status = zones.length === 0 ? null : live ? "Live" : "Coming soon";
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={cx(
+                  "city-option",
+                  city?.name === item.name && "is-active",
+                  status === "Coming soon" && "is-soon",
+                )}
+                onClick={() => {
+                  setCity(item);
+                  onClose?.();
+                }}
+              >
+                <span className="city-option__name">{item.name}</span>
+                <span
+                  className={cx(
+                    "city-option__status",
+                    status === "Live" && "is-live",
+                    status === "Coming soon" && "is-soon",
+                  )}
+                >
+                  {status || (city?.name === item.name ? "✓" : "")}
+                </span>
+              </button>
+            );
+          })}
         </div>
       ) : (
         <p className="small muted">
@@ -372,6 +387,13 @@ export function SiteFooter() {
 
 export function CustomerLayout() {
   const location = useLocation();
+  const {
+    pickerOpen,
+    closePicker,
+    zoneNotice,
+    dismissZoneNotice,
+    openPicker,
+  } = useCity();
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -386,6 +408,17 @@ export function CustomerLayout() {
       </main>
       <SiteFooter />
       <BottomNav />
+      <CityModal open={pickerOpen} onClose={closePicker} />
+      <OutOfZoneModal
+        open={Boolean(zoneNotice?.open)}
+        onClose={dismissZoneNotice}
+        onChangeLocation={openPicker}
+        cityName={zoneNotice?.cityName || ""}
+        state={zoneNotice?.state || ""}
+        nearestZone={zoneNotice?.nearestZone || ""}
+        distanceMeters={zoneNotice?.distanceMeters ?? null}
+        coords={zoneNotice?.coords || null}
+      />
     </>
   );
 }

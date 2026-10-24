@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useLiveDoc, useLiveQuery } from "../hooks/useLive";
 import { api } from "../lib/api";
-import { appSettingsRef, qCities, qPromos, qServices } from "../lib/queries";
+import { appSettingsRef, qCities, qPromos, qServiceZones, qServices } from "../lib/queries";
 import { FALLBACK_CITIES, FALLBACK_SERVICES } from "../lib/constants";
 
 const CatalogueContext = createContext(null);
@@ -21,8 +21,6 @@ const SETTINGS_DEFAULTS = {
     "Free urgent-job priority",
     "Verified Pro badge",
   ],
-  upiId: "easyhome@upi",
-  qrImagePath: "",
   supportPhone: "",
   maintenanceMode: false,
   announcement: { title: "", body: "", active: false },
@@ -31,11 +29,13 @@ const SETTINGS_DEFAULTS = {
 export function CatalogueProvider({ children }) {
   const servicesQuery = useMemo(() => qServices(), []);
   const citiesQuery = useMemo(() => qCities(), []);
+  const zonesQuery = useMemo(() => qServiceZones(), []);
   const promosQuery = useMemo(() => qPromos(), []);
   const settingsRef = useMemo(() => appSettingsRef(), []);
 
   const servicesState = useLiveQuery(servicesQuery);
   const citiesState = useLiveQuery(citiesQuery);
+  const zonesState = useLiveQuery(zonesQuery);
   const promosState = useLiveQuery(promosQuery);
   const settingsState = useLiveDoc(settingsRef);
 
@@ -49,6 +49,7 @@ export function CatalogueProvider({ children }) {
       Boolean(
         servicesState.error ||
           citiesState.error ||
+          zonesState.error ||
           promosState.error ||
           settingsState.error,
       ),
@@ -56,6 +57,7 @@ export function CatalogueProvider({ children }) {
       bootstrap,
       servicesState.error,
       citiesState.error,
+      zonesState.error,
       promosState.error,
       settingsState.error,
     ],
@@ -120,6 +122,15 @@ export function CatalogueProvider({ children }) {
     return source.filter((city) => city.active !== false);
   }, [citiesState.data, bootstrap]);
 
+  const zones = useMemo(() => {
+    const source = zonesState.data.length
+      ? zonesState.data
+      : zonesState.error
+        ? bootstrap?.zones || []
+        : [];
+    return source.filter((zone) => zone && zone.isActive !== false);
+  }, [zonesState.data, zonesState.error, bootstrap]);
+
   const settings = useMemo(
     () => ({
       ...SETTINGS_DEFAULTS,
@@ -135,6 +146,8 @@ export function CatalogueProvider({ children }) {
       servicesError: servicesState.error,
       cities,
       citiesLoading: citiesState.loading,
+      zones,
+      zonesLoading: zonesState.loading,
       promos,
       promosLoading: promosState.loading,
       settings,
@@ -146,6 +159,8 @@ export function CatalogueProvider({ children }) {
       servicesState.error,
       cities,
       citiesState.loading,
+      zones,
+      zonesState.loading,
       promos,
       promosState.loading,
       settings,

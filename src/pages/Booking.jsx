@@ -27,6 +27,7 @@ import { useLiveDoc } from "../hooks/useLive";
 import { api } from "../lib/api";
 import { inr } from "../lib/format";
 import { SERVICE_META } from "../lib/constants";
+import { OUT_OF_ZONE_MESSAGE, evaluateZones } from "../lib/zones";
 import { usePageMeta } from "../lib/usePageMeta";
 import {
   Avatar,
@@ -49,7 +50,14 @@ export default function Booking() {
   const navigate = useNavigate();
   const toast = useToast();
   const { services } = useCatalogue();
-  const { city } = useLocation();
+  const {
+    city,
+    zones,
+    coords: savedCoords,
+    setCoords: setGlobalCoords,
+    showZoneNotice,
+    openPicker,
+  } = useLocation();
   const { profile, fbUser, emailVerified, resendVerification } = useAuth();
 
   const initialKey = params.get("service") || "";
@@ -122,11 +130,25 @@ export default function Booking() {
           timeout: 12000,
         });
       });
-      setCoords({
+      const point = {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
         accuracy: Math.round(position.coords.accuracy || 0),
+      };
+      setCoords(point);
+      setGlobalCoords(point, "gps");
+
+      const check = evaluateZones(zones, {
+        lat: point.lat,
+        lng: point.lng,
+        cityName: city?.name,
+        state: city?.state,
       });
+      if (check.configured && !check.allowed) {
+        showZoneNotice(check, point);
+        toast.error(OUT_OF_ZONE_MESSAGE);
+        return;
+      }
       toast.success("Location pinned. We will match pros around you.");
     } catch (error) {
       toast.error(
@@ -138,6 +160,28 @@ export default function Booking() {
       setLocating(false);
     }
   };
+
+  const clearLocation = () => {
+    setCoords(null);
+    setGlobalCoords(null);
+  };
+
+  const bookingPoint =
+    coords ||
+    (savedCoords?.source === "gps" && Number.isFinite(Number(savedCoords.lat))
+      ? savedCoords
+      : null);
+
+  const currentZoneCheck = useMemo(
+    () =>
+      evaluateZones(zones, {
+        lat: bookingPoint?.lat ?? city?.lat,
+        lng: bookingPoint?.lng ?? city?.lng,
+        cityName: city?.name,
+        state: city?.state,
+      }),
+    [zones, bookingPoint?.lat, bookingPoint?.lng, city?.lat, city?.lng, city?.name, city?.state],
+  );
 
   const validate = () => {
     const next = {};
@@ -169,6 +213,12 @@ export default function Booking() {
       return;
     }
 
+    if (currentZoneCheck.configured && !currentZoneCheck.allowed) {
+      showZoneNotice(currentZoneCheck, bookingPoint || city);
+      toast.error(OUT_OF_ZONE_MESSAGE);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const form = new FormData();
@@ -182,9 +232,10 @@ export default function Booking() {
       form.append("addressLabel", addressLabel);
       if (preferredWorkerId) form.append("preferredWorkerId", preferredWorkerId);
       if (city?.name) form.append("city", city.name);
-      if (coords) {
-        form.append("lat", String(coords.lat));
-        form.append("lng", String(coords.lng));
+      if (city?.state) form.append("state", city.state);
+      if (bookingPoint) {
+        form.append("lat", String(bookingPoint.lat));
+        form.append("lng", String(bookingPoint.lng));
       }
       if (image) form.append("image", image);
 
@@ -246,6 +297,40 @@ export default function Booking() {
             Resend
           </Button>
         </div>
+      ) : null}
+
+      {currentZoneCheck.configured ? (
+        currentZoneCheck.allowed ? (
+          <div className="service-zone-banner is-live">
+            <ShieldCheck size={19} />
+            <div className="grow">
+              <strong>
+                Live in {currentZoneCheck.zone?.cityName || city?.name || "your area"}
+              </strong>
+              <p>Verified professionals are available around this location.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="service-zone-banner is-blocked">
+            <AlertTriangle size={20} />
+            <div className="grow">
+              <strong>We are not live in this location yet</strong>
+              <p>{OUT_OF_ZONE_MESSAGE}</p>
+            </div>
+            <div className="service-zone-banner__actions">
+              <button
+                type="button"
+                className="btn btn--primary btn--sm"
+                onClick={() => showZoneNotice(currentZoneCheck, bookingPoint || city)}
+              >
+                Join waitlist
+              </button>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={openPicker}>
+                Change location
+              </button>
+            </div>
+          </div>
+        )
       ) : null}
 
       <form onSubmit={submit} className="booking-layout">
@@ -311,18 +396,18 @@ export default function Booking() {
             <div className="location-capture" style={{ marginTop: 12 }}>
               <MapPin size={15} />
               <span className="grow">
-                {coords
-                  ? `Pinned ±${coords.accuracy || 0} m · ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`
+                {bookingPoint
+                  ? `Pinned${
+                      Number.isFinite(Number(bookingPoint.accuracy))
+                        ? ` ±${Math.round(bookingPoint.accuracy)} m`
+                        : ""
+                    } · ${Number(bookingPoint.lat).toFixed(4)}, ${Number(bookingPoint.lng).toFixed(4)}`
                   : city?.name
                     ? `Serving in ${city.name}. Pin your exact location for faster matching.`
                     : "Pin your exact location for faster matching."}
               </span>
-              {coords ? (
-                <button
-                  type="button"
-                  className="btn btn--ghost btn--sm"
-                  onClick={() => setCoords(null)}
-                >
+              {bookingPoint ? (
+                <button type="button" className="btn btn--ghost btn--sm" onClick={clearLocation}>
                   <X size={14} /> Clear
                 </button>
               ) : null}
@@ -334,7 +419,7 @@ export default function Booking() {
                 onClick={captureLocation}
                 icon={Crosshair}
               >
-                {coords ? "Update location" : "Use my location"}
+                {bookingPoint ? "Update location" : "Use my location"}
               </Button>
             </div>
           </div>
@@ -473,6 +558,20 @@ export default function Booking() {
               <strong style={{ maxWidth: "60%", textAlign: "right" }}>{area || "—"}</strong>
             </div>
             <div className="summary-row">
+              <span>Coverage</span>
+              <strong
+                style={{
+                  color: currentZoneCheck.allowed ? "var(--green)" : "var(--red)",
+                }}
+              >
+                {currentZoneCheck.configured
+                  ? currentZoneCheck.allowed
+                    ? "Live"
+                    : "Not yet"
+                  : "Available"}
+              </strong>
+            </div>
+            <div className="summary-row">
               <span>Urgency</span>
               <strong>{urgency === "urgent" ? "ASAP" : "Within 24h"}</strong>
             </div>
@@ -502,7 +601,10 @@ export default function Booking() {
             size="lg"
             className="btn--block"
             loading={submitting}
-            disabled={!emailVerified}
+            disabled={
+              !emailVerified ||
+              (currentZoneCheck.configured && !currentZoneCheck.allowed)
+            }
             icon={Send}
             style={{ marginTop: 14 }}
           >
@@ -512,6 +614,10 @@ export default function Booking() {
           {!emailVerified ? (
             <p className="tiny muted" style={{ marginTop: 8, textAlign: "center" }}>
               Verify your email above to enable booking.
+            </p>
+          ) : currentZoneCheck.configured && !currentZoneCheck.allowed ? (
+            <p className="tiny muted" style={{ marginTop: 8, textAlign: "center" }}>
+              Booking is blocked until you choose a live service location.
             </p>
           ) : (
             <p className="tiny muted" style={{ marginTop: 8, textAlign: "center" }}>

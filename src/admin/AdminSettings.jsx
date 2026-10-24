@@ -22,9 +22,7 @@ import { useToast } from "../context/ToastContext";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../lib/api";
 import { formatDateTime, timeAgo } from "../lib/format";
-import { mediaUrl } from "../lib/media";
 import { Avatar, Button, Field, Input, Modal, Textarea } from "../components/ui";
-import { ImageUpload } from "../components/common";
 import {
   AdminPage,
   ConfirmModal,
@@ -40,7 +38,6 @@ import {
 const EMPTY_SETTINGS = {
   commissionPct: 10,
   subscriptionPrice: 199,
-  upiId: "",
   supportPhone: "",
   maintenanceMode: false,
   customerBenefits: "",
@@ -66,7 +63,6 @@ export default function AdminSettings() {
   const { fbUser } = useAuth();
   const [tab, setTab] = useState("general");
   const [form, setForm] = useState(EMPTY_SETTINGS);
-  const [qrFile, setQrFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [announcement, setAnnouncement] = useState({
     title: "",
@@ -85,7 +81,6 @@ export default function AdminSettings() {
   const adminsState = useAsync(() => api.get("/admin/admins"), []);
   const auditState = useAsync(() => api.get("/admin/audit"), []);
 
-  const settings = settingsState.data?.settings || {};
   const admins = adminsState.data?.admins || [];
   const audit = auditState.data?.audit || [];
 
@@ -95,7 +90,6 @@ export default function AdminSettings() {
     setForm({
       commissionPct: fresh.commissionPct ?? 10,
       subscriptionPrice: fresh.subscriptionPrice ?? 199,
-      upiId: fresh.upiId || "",
       supportPhone: fresh.supportPhone || "",
       maintenanceMode: Boolean(fresh.maintenanceMode),
       customerBenefits: (fresh.customerBenefits || []).join("\n"),
@@ -128,30 +122,15 @@ export default function AdminSettings() {
       const payload = {
         commissionPct: Number(form.commissionPct) || 0,
         subscriptionPrice: Number(form.subscriptionPrice) || 0,
-        upiId: form.upiId.trim(),
         supportPhone: form.supportPhone.trim(),
         maintenanceMode: Boolean(form.maintenanceMode),
         customerBenefits: splitLines(form.customerBenefits),
         workerBenefits: splitLines(form.workerBenefits),
       };
 
-      if (qrFile) {
-        const data = new FormData();
-        data.append("commissionPct", String(payload.commissionPct));
-        data.append("subscriptionPrice", String(payload.subscriptionPrice));
-        data.append("upiId", payload.upiId);
-        data.append("supportPhone", payload.supportPhone);
-        data.append("maintenanceMode", String(payload.maintenanceMode));
-        data.append("customerBenefits", payload.customerBenefits.join("\n"));
-        data.append("workerBenefits", payload.workerBenefits.join("\n"));
-        data.append("qr", qrFile);
-        await api.uploadPatch("/admin/settings", data);
-      } else {
-        await api.patch("/admin/settings", payload);
-      }
+      await api.patch("/admin/settings", payload);
 
       toast.success("Business settings saved.");
-      setQrFile(null);
       await settingsState.run();
     } catch (error) {
       toast.error(error.message);
@@ -303,20 +282,6 @@ export default function AdminSettings() {
                   />
                 </Field>
                 <Field
-                  label="UPI ID for manual payments"
-                  htmlFor="set-upi"
-                  hint="Customers and workers see this on payment screens."
-                  className="adm-span-2"
-                >
-                  <Input
-                    id="set-upi"
-                    value={form.upiId}
-                    maxLength={100}
-                    onChange={set("upiId")}
-                    placeholder="easyhome@upi"
-                  />
-                </Field>
-                <Field
                   label="Support phone"
                   htmlFor="set-phone"
                   hint="Shown in the app footer and help screens."
@@ -380,29 +345,6 @@ export default function AdminSettings() {
                 </Field>
               </div>
 
-              <div className="adm-settings-qr">
-                <div>
-                  <h3>Payment QR code</h3>
-                  <p>
-                    Customers and workers scan this to pay memberships and commission. Keep it
-                    scannable and up to date.
-                  </p>
-                </div>
-                {settings.qrImagePath ? (
-                  <img
-                    className="adm-qr-preview"
-                    src={mediaUrl(settings.qrImagePath)}
-                    alt="Payment QR code"
-                  />
-                ) : null}
-                <ImageUpload
-                  value={qrFile}
-                  onChange={setQrFile}
-                  label="Upload a new QR image"
-                  hint="PNG or JPG, square, up to 5 MB."
-                />
-              </div>
-
               <div className="adm-settings-actions">
                 <Button loading={saving} onClick={saveSettings}>
                   Save membership content
@@ -453,15 +395,11 @@ export default function AdminSettings() {
                 </div>
                 <div>
                   <span>Payment mode</span>
-                  <StatusPill status="pending" label="Manual UPI" />
+                  <StatusPill status="active" label="Razorpay · auto" />
                 </div>
                 <div>
                   <span>Support phone</span>
                   <strong>{form.supportPhone || "Not set"}</strong>
-                </div>
-                <div>
-                  <span>UPI ID</span>
-                  <strong>{form.upiId || "Not set"}</strong>
                 </div>
               </div>
             </Panel>

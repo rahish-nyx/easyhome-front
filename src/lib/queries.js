@@ -16,6 +16,9 @@ export const qServices = () =>
 export const qCities = () =>
   ready() ? query(collection(db, "cities"), orderBy("name", "asc")) : null;
 
+export const qServiceZones = () =>
+  ready() ? query(collection(db, "service_zones")) : null;
+
 export const qPromos = () =>
   ready() ? query(collection(db, "promos"), orderBy("order", "asc")) : null;
 

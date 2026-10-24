@@ -1,0 +1,431 @@
+/* Coverage banner used on the booking form and service pages. */
+.service-zone-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: var(--shadow-xs);
+}
+
+.service-zone-banner strong {
+  display: block;
+  font-size: 13.5px;
+}
+
+.service-zone-banner p {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.service-zone-banner.is-live {
+  border-color: #bfe9d9;
+  background: linear-gradient(180deg, #f4fffa, #ffffff);
+}
+
+.service-zone-banner.is-live > svg {
+  color: var(--green);
+  flex-shrink: 0;
+}
+
+.service-zone-banner.is-blocked {
+  border-color: #ffd9a8;
+  background: linear-gradient(180deg, var(--amber-soft), #ffffff);
+}
+
+.service-zone-banner.is-blocked > svg {
+  color: var(--amber);
+  flex-shrink: 0;
+}
+
+.service-zone-banner.is-blocked p {
+  color: #7a4a08;
+  font-weight: 600;
+}
+
+.service-zone-banner__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 720px) {
+  .service-zone-banner {
+    flex-wrap: wrap;
+  }
+
+  .service-zone-banner__actions {
+    width: 100%;
+  }
+
+  .service-zone-banner__actions .btn {
+    flex: 1;
+  }
+}
+
+/* ==========================================================================
+   Geofencing — coverage gate + city availability
+   ========================================================================== */
+
+.city-option__status {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.city-option__status.is-live {
+  color: var(--green);
+}
+
+.city-option__status.is-soon {
+  color: var(--amber);
+}
+
+.city-option.is-soon .city-option__name {
+  color: var(--muted);
+}
+
+.zone-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  overflow-y: auto;
+  background:
+    radial-gradient(620px 420px at 18% 8%, rgba(255, 214, 10, 0.18), transparent 62%),
+    radial-gradient(620px 460px at 92% 100%, rgba(47, 107, 255, 0.16), transparent 64%),
+    rgba(6, 8, 14, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: zoneFade 0.2s var(--ease, ease);
+}
+
+.zone-gate__glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(circle at 50% 40%, #000, transparent 72%);
+}
+
+.zone-gate__card {
+  position: relative;
+  width: min(100%, 600px);
+  margin: auto;
+  padding: clamp(24px, 4vw, 38px);
+  border-radius: 28px;
+  background: #ffffff;
+  color: var(--ink);
+  box-shadow:
+    0 32px 90px rgba(0, 0, 0, 0.38),
+    0 2px 0 rgba(255, 255, 255, 0.6) inset;
+  animation: zoneRise 0.28s var(--ease, ease);
+}
+
+.zone-gate__close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--paper-2);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.zone-gate__close:hover {
+  color: var(--ink);
+  background: var(--paper-3);
+}
+
+.zone-gate__mark {
+  position: relative;
+  width: 62px;
+  height: 62px;
+  margin-bottom: 18px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  background: var(--yellow);
+  color: var(--ink);
+  box-shadow: 0 12px 30px rgba(255, 214, 10, 0.34);
+}
+
+.zone-gate__ping {
+  position: absolute;
+  inset: -7px;
+  border-radius: 24px;
+  border: 2px solid rgba(255, 214, 10, 0.48);
+  animation: zonePing 2.2s ease-out infinite;
+}
+
+.zone-gate__eyebrow {
+  margin: 0 0 8px;
+  color: var(--amber);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.zone-gate h2 {
+  margin: 0;
+  max-width: 460px;
+  font-size: clamp(25px, 4.4vw, 36px);
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+}
+
+.zone-gate__message {
+  margin: 16px 0 8px;
+  padding: 14px 16px;
+  border-left: 4px solid var(--yellow-strong);
+  border-radius: 0 14px 14px 0;
+  background: var(--yellow-soft);
+  color: #463600;
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.zone-gate__sub {
+  margin: 0 0 22px;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.zone-gate__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.zone-btn {
+  min-height: 48px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.zone-btn:hover {
+  transform: translateY(-1px);
+}
+
+.zone-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  transform: none;
+}
+
+.zone-btn--primary {
+  background: var(--ink);
+  color: #fff;
+  box-shadow: 0 10px 26px rgba(10, 10, 10, 0.2);
+}
+
+.zone-btn--primary:hover {
+  background: var(--ink-2);
+}
+
+.zone-btn--ghost {
+  background: var(--paper-2);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.zone-gate__browse {
+  display: inline-flex;
+  margin-top: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.zone-gate__fineprint {
+  margin: 20px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: var(--muted-2);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+.zone-waitlist {
+  display: grid;
+  gap: 12px;
+  animation: zoneFade 0.2s ease;
+}
+
+.zone-waitlist__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.zone-waitlist label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.zone-waitlist label em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--muted-2);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.zone-waitlist input,
+.zone-waitlist textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--paper-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: 0;
+  outline: none;
+  resize: vertical;
+}
+
+.zone-waitlist input:focus,
+.zone-waitlist textarea:focus {
+  border-color: var(--yellow-strong);
+  background: #fff;
+  box-shadow: 0 0 0 4px var(--yellow-soft);
+}
+
+.zone-waitlist__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.zone-gate__error {
+  margin: 0;
+  color: var(--red);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.zone-gate__done {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 18px;
+  border-radius: 18px;
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.zone-gate__done strong {
+  display: block;
+  font-size: 15px;
+}
+
+.zone-gate__done p {
+  margin: 4px 0 0;
+  color: #075f43;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+@keyframes zoneFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes zoneRise {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes zonePing {
+  0% { transform: scale(0.92); opacity: 0.9; }
+  70% { transform: scale(1.12); opacity: 0; }
+  100% { transform: scale(1.12); opacity: 0; }
+}
+
+@media (max-width: 680px) {
+  .zone-gate {
+    padding: 12px;
+    align-items: end;
+  }
+
+  .zone-gate__card {
+    width: 100%;
+    max-height: 94dvh;
+    overflow-y: auto;
+    border-radius: 24px 24px 0 0;
+    padding: 24px 20px calc(22px + env(safe-area-inset-bottom));
+  }
+
+  .zone-waitlist__row {
+    grid-template-columns: 1fr;
+  }
+
+  .zone-gate__actions {
+    flex-direction: column;
+  }
+
+  .zone-btn {
+    width: 100%;
+  }
+
+  .zone-waitlist__actions .zone-btn {
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zone-gate,
+  .zone-gate__card,
+  .zone-gate__ping,
+  .zone-waitlist {
+    animation: none;
+  }
+}

@@ -12,6 +12,7 @@ import {
   IndianRupee,
   MapPin,
   MessageSquare,
+  Navigation,
   ReceiptText,
   Star,
   Timer,
@@ -427,6 +428,12 @@ function BookingCard({ booking, busy, onAccept, onCancel, onOffer, onPay, onRevi
           <Badge tone="green">
             <Star size={11} /> Reviewed
           </Badge>
+        ) : null}
+
+        {booking.status === "accepted" || booking.status === "ongoing" ? (
+          <Link to={`/bookings/${booking.id}/track`} className="btn btn--dark btn--sm">
+            <Navigation size={14} /> Live tracking
+          </Link>
         ) : null}
 
         {booking.status === "accepted" || booking.status === "ongoing" ? (

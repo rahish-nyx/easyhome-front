@@ -135,6 +135,42 @@ export const STATUS_META = {
   },
 };
 
+export const TRACKING_PHASES = [
+  { id: "assigned", label: "Assigned", short: "Assigned" },
+  { id: "en_route", label: "En route", short: "En route" },
+  { id: "arrived", label: "Arrived", short: "Arrived" },
+  { id: "working", label: "Work in progress", short: "Working" },
+  { id: "completed", label: "Completed", short: "Completed" },
+];
+
+export const TRACKING_META = {
+  requested: { label: "Requested", tone: "amber", hint: "Waiting for a professional to accept." },
+  assigned: { label: "Assigned", tone: "blue", hint: "A professional has accepted your job." },
+  en_route: { label: "En route", tone: "blue", hint: "Your professional is on the way." },
+  arrived: { label: "Arrived", tone: "blue", hint: "Your professional has reached the location." },
+  working: { label: "Work in progress", tone: "blue", hint: "The job is in progress." },
+  completed: { label: "Completed", tone: "green", hint: "The job is complete." },
+  cancelled: { label: "Cancelled", tone: "red", hint: "This job was cancelled." },
+};
+
+export const INACTIVITY_MS = 10 * 60 * 1000;
+
+export function trackingMeta(phase, status = "") {
+  return (
+    TRACKING_META[phase] ||
+    STATUS_META[status] || {
+      label: status || "Pending",
+      tone: "amber",
+      hint: "",
+    }
+  );
+}
+
+export function trackingIndex(phase) {
+  const index = TRACKING_PHASES.findIndex((item) => item.id === phase);
+  return index < 0 ? 0 : index;
+}
+
 export const URGENCY = {
   normal: { label: "Normal", hint: "Within 24 hours" },
   urgent: { label: "Urgent", hint: "As soon as possible" },
@@ -172,7 +208,9 @@ export const ADMIN_NAV = [
   { to: "/admin/approvals", label: "Approvals", icon: "shield-check" },
   { to: "/admin/users", label: "Users", icon: "users" },
   { to: "/admin/bookings", label: "Bookings", icon: "calendar-check" },
+  { to: "/admin/tracking", label: "Live tracking", icon: "navigation" },
   { to: "/admin/catalog", label: "Catalogue", icon: "layers" },
+  { to: "/admin/zones", label: "Service zones", icon: "map-pin" },
   { to: "/admin/revenue", label: "Revenue", icon: "wallet" },
   { to: "/admin/promos", label: "Promos", icon: "megaphone" },
   { to: "/admin/chats", label: "Support", icon: "messages-square" },

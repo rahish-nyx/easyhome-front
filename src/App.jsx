@@ -19,6 +19,7 @@ import Services from "./pages/Services";
 import SearchPage from "./pages/Search";
 import Booking from "./pages/Booking";
 import Bookings from "./pages/Bookings";
+import Tracking from "./pages/Tracking";
 import Profile from "./pages/Profile";
 import Subscription from "./pages/Subscription";
 import Chat from "./pages/Chat";
@@ -32,6 +33,8 @@ const AdminDashboard = lazy(() => import("./admin/AdminDashboard"));
 const AdminApprovals = lazy(() => import("./admin/AdminApprovals"));
 const AdminUsers = lazy(() => import("./admin/AdminUsers"));
 const AdminBookings = lazy(() => import("./admin/AdminBookings"));
+const AdminTracking = lazy(() => import("./admin/AdminTracking"));
+const AdminZones = lazy(() => import("./admin/AdminZones"));
 const AdminCatalog = lazy(() => import("./admin/AdminCatalog"));
 const AdminRevenue = lazy(() => import("./admin/AdminRevenue"));
 const AdminPromos = lazy(() => import("./admin/AdminPromos"));
@@ -99,6 +102,8 @@ export default function App() {
                     <Route path="approvals" element={<AdminApprovals />} />
                     <Route path="users" element={<AdminUsers />} />
                     <Route path="bookings" element={<AdminBookings />} />
+                    <Route path="tracking" element={<AdminTracking />} />
+                    <Route path="zones" element={<AdminZones />} />
                     <Route path="catalog" element={<AdminCatalog />} />
                     <Route path="revenue" element={<AdminRevenue />} />
                     <Route path="promos" element={<AdminPromos />} />
@@ -128,6 +133,14 @@ export default function App() {
                       element={
                         <Protect>
                           <Bookings />
+                        </Protect>
+                      }
+                    />
+                    <Route
+                      path="bookings/:id/track"
+                      element={
+                        <Protect>
+                          <Tracking />
                         </Protect>
                       }
                     />

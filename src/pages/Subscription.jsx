@@ -4,10 +4,8 @@ import {
   BadgeCheck,
   Check,
   CheckCircle2,
-  Clock3,
   Crown,
   ExternalLink,
-  QrCode,
   ShieldCheck,
   Sparkles,
   Star,
@@ -17,8 +15,6 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useCatalogue } from "../context/CatalogueContext";
 import { useToast } from "../context/ToastContext";
-import { api } from "../lib/api";
-import { mediaUrl } from "../lib/media";
 import {
   daysLeft,
   formatDate,
@@ -30,12 +26,10 @@ import { PLANS } from "../lib/constants";
 import { usePageMeta } from "../lib/usePageMeta";
 import {
   Badge,
-  Button,
   Card,
-  Field,
-  Input,
   SectionHeader,
 } from "../components/ui";
+import RazorpayPayment from "../components/RazorpayPayment";
 
 export default function Subscription() {
   usePageMeta(
@@ -47,8 +41,6 @@ export default function Subscription() {
   const { settings } = useCatalogue();
   const toast = useToast();
   const [plan, setPlan] = useState("monthly");
-  const [note, setNote] = useState("");
-  const [busy, setBusy] = useState(false);
 
   const monthly = Number(settings.subscriptionPrice) || 199;
   const plans = PLANS.map((item) => ({
@@ -70,25 +62,11 @@ export default function Subscription() {
   const benefits = isWorker
     ? settings.workerBenefits || []
     : settings.customerBenefits || [];
-  const pending = profile?.subscription?.status === "pending";
   const active = isActiveUntil(premiumUntil || profile?.subscription?.endAt);
 
-  const submit = async () => {
-    if (pending) {
-      toast.info("Your previous payment is still under review.");
-      return;
-    }
-    setBusy(true);
-    try {
-      await api.post("/subscriptions", { plan, note: note.trim() });
-      await refreshProfile();
-      setNote("");
-      toast.success("Payment submitted. We will verify it and activate your Pro plan.");
-    } catch (error) {
-      toast.error(error.message);
-    } finally {
-      setBusy(false);
-    }
+  const onPaid = async () => {
+    await refreshProfile();
+    toast.success("Payment successful. Your Pro membership is active.");
   };
 
   return (
@@ -106,10 +84,6 @@ export default function Subscription() {
         {active ? (
           <Badge tone="yellow">
             <Crown size={12} /> Active until {formatDate(premiumUntil || profile?.subscription?.endAt)}
-          </Badge>
-        ) : pending ? (
-          <Badge tone="amber">
-            <Clock3 size={12} /> Verification pending
           </Badge>
         ) : (
           <Badge tone="outline">Free account</Badge>
@@ -153,22 +127,6 @@ export default function Subscription() {
             <div>
               <strong>{isWorker ? "0%" : "Priority"}</strong>
               <small>{isWorker ? "Commission" : "Support"}</small>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {pending ? (
-        <div className="card card--pad" style={{ background: "var(--amber-soft)", borderColor: "transparent", marginBottom: 22 }}>
-          <div className="row" style={{ gap: 12, alignItems: "flex-start" }}>
-            <Clock3 size={20} style={{ color: "var(--amber)", flexShrink: 0 }} />
-            <div>
-              <strong style={{ fontSize: 14 }}>We are verifying your payment</strong>
-              <p className="small" style={{ color: "var(--amber)" }}>
-                {planLabel(profile?.subscription?.plan)} · {inr(profile?.subscription?.amount || 0)}.
-                Membership activates as soon as the UPI reference is confirmed. You will get a
-                notification and an email.
-              </p>
             </div>
           </div>
         </div>
@@ -233,82 +191,31 @@ export default function Subscription() {
             </ul>
           </div>
 
-          {!active && !pending ? (
-            <div className="pay-box" style={{ marginTop: 20 }}>
-              <div>
-                <p className="eyebrow" style={{ marginBottom: 4 }}>
-                  Pay via UPI
-                </p>
-                <p className="small" style={{ color: "var(--yellow-ink)" }}>
-                  Send <strong>{inr(selected.amount)}</strong> to the UPI ID below, then submit
-                  your reference. Activation is manual and usually within a few hours.
-                </p>
-                <code style={{ marginTop: 8 }}>{settings.upiId || "easyhome@upi"}</code>
-                <p className="tiny" style={{ color: "var(--yellow-ink)", marginTop: 8 }}>
-                  Plan: {selected.label} · {selected.months} month{selected.months > 1 ? "s" : ""}
-                </p>
-              </div>
-              {settings.qrImagePath ? (
-                <img
-                  className="pay-box__qr"
-                  src={mediaUrl(settings.qrImagePath)}
-                  alt="EasyHome UPI QR code"
-                />
-              ) : (
-                <div className="pay-box__qr pay-box__qr--empty">
-                  <span>
-                    <QrCode size={26} />
-                    <br />
-                    QR not uploaded
-                  </span>
-                </div>
-              )}
-            </div>
-          ) : null}
         </Card>
 
         <div className="stack">
-          <Card className="card--pad">
-            <SectionHeader
-              eyebrow="After payment"
-              title="Submit your reference"
-              subtitle="This lets our team match your payment to your account quickly."
-            />
-            <fieldset disabled={pending || busy} style={{ border: 0, padding: 0, margin: 0 }}>
-              <Field
-                label="UPI reference / UTR"
-                htmlFor="sub-note"
-                hint="Add the 12-digit UTR or any note that helps us identify the payment."
-              >
-                <Input
-                  id="sub-note"
-                  value={note}
-                  maxLength={200}
-                  onChange={(event) => setNote(event.target.value)}
-                  placeholder="e.g. 420918273645"
-                />
-              </Field>
-              <div className="summary-total" style={{ marginTop: 14 }}>
-                <span>Total</span>
-                <span>{inr(selected.amount)}</span>
-              </div>
-              <Button
-                className="btn--block"
-                size="lg"
-                loading={busy}
-                disabled={pending || active}
-                onClick={submit}
-                icon={Crown}
-                style={{ marginTop: 14 }}
-              >
-                {active ? "Already active" : pending ? "Awaiting verification" : "I have paid"}
-              </Button>
-            </fieldset>
-            <p className="tiny muted" style={{ marginTop: 10 }}>
-              No auto-renewal. Your plan simply ends on the date shown. We never charge your
-              card automatically.
-            </p>
-          </Card>
+          {!active ? (
+            <Card className="card--pad">
+              <SectionHeader
+                eyebrow="Secure checkout"
+                title="Activate Pro instantly"
+                subtitle={`${selected.label} · ${selected.months} month${selected.months > 1 ? "s" : ""} · ${inr(selected.amount)}`}
+              />
+              <RazorpayPayment
+                amount={selected.amount}
+                description={`EasyHome Pro · ${selected.label}`}
+                orderEndpoint="/payment/subscription/order"
+                verifyEndpoint="/payment/subscription/verify"
+                orderBody={{ plan: selected.id }}
+                onSuccess={onPaid}
+                buttonLabel={`Pay ${inr(selected.amount)} & activate`}
+              />
+              <p className="tiny muted" style={{ marginTop: 10 }}>
+                No auto-renewal. Your plan simply ends on the date shown. We never charge your
+                card automatically.
+              </p>
+            </Card>
+          ) : null}
 
           <Card className="card--pad">
             <h3 style={{ fontSize: 15, marginBottom: 10 }}>Why members stay</h3>
@@ -349,7 +256,7 @@ export default function Subscription() {
               <div>
                 <strong style={{ fontSize: 13 }}>Prefer to talk first?</strong>
                 <p className="tiny muted" style={{ marginTop: 3 }}>
-                  Support can explain the plans and help with a manual payment.
+                  Support can explain the plans and help if a payment needs review.
                 </p>
                 <Link to="/chat" className="btn btn--outline btn--sm" style={{ marginTop: 10 }}>
                   Chat with support <ExternalLink size={13} />

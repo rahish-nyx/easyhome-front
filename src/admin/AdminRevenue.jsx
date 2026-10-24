@@ -5,6 +5,7 @@ import {
   Banknote,
   CalendarClock,
   CheckCircle2,
+  Copy,
   Crown,
   IndianRupee,
   RefreshCw,
@@ -50,8 +51,8 @@ export default function AdminRevenue() {
   const { refreshShell } = useOutletContext();
   const toast = useToast();
   const [tab, setTab] = useState("memberships");
-  const [subStatus, setSubStatus] = useState("pending");
-  const [comStatus, setComStatus] = useState("paid");
+  const [subStatus, setSubStatus] = useState("active");
+  const [comStatus, setComStatus] = useState("approved");
   const [busy, setBusy] = useState("");
   const [rejectSub, setRejectSub] = useState(null);
   const [rejectSubReason, setRejectSubReason] = useState("");
@@ -82,6 +83,25 @@ export default function AdminRevenue() {
       refreshShell(),
     ]);
   };
+
+  const copyReference = async (value) => {
+    const reference = String(value || "").trim();
+    if (!reference) return;
+    try {
+      await navigator.clipboard.writeText(reference);
+      toast.success("Payment reference copied.");
+    } catch {
+      toast.error("Could not copy the reference. Select it manually.");
+    }
+  };
+
+  const paymentReference = (record) =>
+    record.paymentId ||
+    record.razorpayOrderId ||
+    record.utrId ||
+    record.paymentNote ||
+    record.note ||
+    "";
 
   const approveSubscription = async (subscription) => {
     setBusy(`sub-approve:${subscription.id}`);
@@ -179,7 +199,7 @@ export default function AdminRevenue() {
     <AdminPage
       eyebrow="Money"
       title="Revenue & approvals"
-      subtitle="Membership payments, worker commissions and the numbers behind the marketplace."
+      subtitle="Razorpay payments verify automatically. Use this ledger for revenue and legacy exceptions."
       actions={
         <>
           <Button
@@ -323,10 +343,17 @@ export default function AdminRevenue() {
                           {subscription.userRole === "worker" ? "Worker" : "Customer"} ·{" "}
                           {timeAgo(subscription.createdAt)}
                         </p>
-                        {subscription.paymentNote ? (
-                          <small className="adm-note-inline">
-                            Payment note: {subscription.paymentNote}
-                          </small>
+                        {paymentReference(subscription) ? (
+                          <div className="adm-utr">
+                            <span>{subscription.paymentId ? "Payment ID" : "Legacy ref"}</span>
+                            <code>{paymentReference(subscription)}</code>
+                            <button
+                              type="button"
+                              onClick={() => copyReference(paymentReference(subscription))}
+                            >
+                              <Copy size={12} /> Copy
+                            </button>
+                          </div>
                         ) : null}
                         {subscription.rejectionReason ? (
                           <small className="adm-note-inline is-danger">
@@ -376,7 +403,7 @@ export default function AdminRevenue() {
                   title="No memberships in this state"
                   body={
                     subStatus === "pending"
-                      ? "All membership payments have been reviewed."
+                      ? "All membership payments have been reviewed. Razorpay activations appear automatically."
                       : "Nothing to show for this filter."
                   }
                 />
@@ -416,10 +443,17 @@ export default function AdminRevenue() {
                           {commission.service || "Job"} · {timeAgo(commission.createdAt)} ·{" "}
                           <span className="adm-mono">{commission.bookingId?.slice(0, 12)}…</span>
                         </p>
-                        {commission.note ? (
-                          <small className="adm-note-inline">
-                            Worker reference: {commission.note}
-                          </small>
+                        {paymentReference(commission) ? (
+                          <div className="adm-utr">
+                            <span>{commission.paymentId ? "Payment ID" : "Legacy ref"}</span>
+                            <code>{paymentReference(commission)}</code>
+                            <button
+                              type="button"
+                              onClick={() => copyReference(paymentReference(commission))}
+                            >
+                              <Copy size={12} /> Copy
+                            </button>
+                          </div>
                         ) : null}
                         {commission.rejectionReason ? (
                           <small className="adm-note-inline is-danger">
@@ -468,7 +502,7 @@ export default function AdminRevenue() {
                   title="No commissions in this state"
                   body={
                     comStatus === "paid"
-                      ? "Workers have no payments waiting for verification."
+                      ? "Razorpay commission clearances appear here automatically."
                       : "Nothing to show for this filter."
                   }
                 />
@@ -484,7 +518,7 @@ export default function AdminRevenue() {
         title="Reject membership payment"
         subtitle={rejectSub ? `${rejectSub.userName} · ${inr(rejectSub.amount)}` : ""}
         label="Reason"
-        placeholder="e.g. UPI reference did not match any received payment."
+        placeholder="e.g. Legacy payment could not be matched to the bank ledger."
         value={rejectSubReason}
         onChange={setRejectSubReason}
         loading={busy === `sub-reject:${rejectSub?.id}`}
@@ -502,7 +536,7 @@ export default function AdminRevenue() {
             : ""
         }
         label="Reason"
-        placeholder="e.g. UTR not found in the EasyHome account."
+        placeholder="e.g. Legacy commission reference could not be verified."
         value={rejectCommissionReason}
         onChange={setRejectCommissionReason}
         loading={busy === `com-reject:${rejectCommissionTarget?.id}`}

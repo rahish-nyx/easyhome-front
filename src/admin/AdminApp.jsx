@@ -6,9 +6,11 @@ import {
   LayoutDashboard,
   Layers,
   LogOut,
+  MapPin,
   Megaphone,
   Menu,
   MessagesSquare,
+  Navigation,
   RefreshCw,
   Settings,
   ShieldAlert,
@@ -40,6 +42,8 @@ const ICONS = {
   megaphone: Megaphone,
   "messages-square": MessagesSquare,
   settings: Settings,
+  navigation: Navigation,
+  "map-pin": MapPin,
 };
 
 export default function AdminApp() {

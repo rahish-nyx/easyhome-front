@@ -168,8 +168,8 @@ const PAGES = {
       {
         heading: "Pro membership",
         body: [
-          "Membership is a digital subscription activated after manual payment verification. Because access begins immediately, fees are generally non-refundable once activated.",
-          "If you were charged in error or the membership was not activated, contact support with the UPI reference. Unused full months may be considered at our discretion.",
+          "Membership is a digital subscription activated automatically after a successful Razorpay payment. Because access begins immediately, fees are generally non-refundable once activated.",
+          "If you were charged in error or the membership was not activated, contact support with the Razorpay payment ID. Unused full months may be considered at our discretion.",
         ],
       },
       {

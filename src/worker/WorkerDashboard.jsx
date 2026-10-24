@@ -21,6 +21,7 @@ import {
   Percent,
   Phone,
   Power,
+  Radio,
   ReceiptText,
   RefreshCw,
   ShieldCheck,
@@ -45,7 +46,7 @@ import {
   inr,
   timeAgo,
 } from "../lib/format";
-import { SERVICE_META } from "../lib/constants";
+import { SERVICE_META, TRACKING_PHASES, trackingMeta } from "../lib/constants";
 import { usePageMeta } from "../lib/usePageMeta";
 import {
   Avatar,
@@ -58,12 +59,14 @@ import {
   Textarea,
 } from "../components/ui";
 import { Logo } from "../components/layout";
+import RazorpayPayment from "../components/RazorpayPayment";
 import {
   NotificationBell,
   RatingStars,
   ServiceIcon,
 } from "../components/common";
 import { KycCard } from "./WorkerStatus";
+import { TrackingBuzzer, useGpsBroadcast, useTrackingAlert } from "./tracking";
 
 const TABS = [
   { id: "home", label: "Home", icon: Home },
@@ -71,6 +74,12 @@ const TABS = [
   { id: "earnings", label: "Earnings", icon: Wallet },
   { id: "profile", label: "Profile", icon: UserRound },
 ];
+
+const PHASE_TOAST = {
+  [TRACKING_PHASES.EN_ROUTE]: "Customer notified — you are on the way.",
+  [TRACKING_PHASES.ARRIVED]: "Arrival recorded. The customer can see you are on site.",
+  [TRACKING_PHASES.WORKING]: "Work started. Keep your status and GPS fresh.",
+};
 
 const EMPTY_EARNINGS = {
   today: 0,
@@ -95,6 +104,7 @@ export default function WorkerDashboard() {
     worker,
     isPremium,
     logout,
+    refreshProfile,
   } = useAuth();
   const { settings } = useCatalogue();
   const toast = useToast();
@@ -106,7 +116,6 @@ export default function WorkerDashboard() {
   const [onlineSaving, setOnlineSaving] = useState(false);
   const [priceTarget, setPriceTarget] = useState(null);
   const [confirmTarget, setConfirmTarget] = useState(null);
-  const [startTarget, setStartTarget] = useState(null);
   const [completeTarget, setCompleteTarget] = useState(null);
   const [commissionTarget, setCommissionTarget] = useState(null);
 
@@ -141,6 +150,10 @@ export default function WorkerDashboard() {
     () => myBookings.filter((job) => job.status === "completed").slice(0, 20),
     [myBookings],
   );
+
+  const gps = useGpsBroadcast(activeJobs);
+  const trackingAlert = useTrackingAlert(activeJobs);
+  const supportPhone = settings?.supportPhone || "";
 
   const available = useMemo(() => {
     if (!worker) return [];
@@ -197,12 +210,22 @@ export default function WorkerDashboard() {
   };
 
   const acceptJob = async (job) => {
+    if (!worker?.online) {
+      toast.error("Go online first to accept jobs.");
+      return;
+    }
     if (!canAccept) {
-      toast.error(
-        !worker?.online
-          ? "Go online first to accept jobs."
-          : "Clear your commission dues to accept new jobs.",
+      const payable = commissions.find((item) =>
+        ["pending", "rejected"].includes(item.status),
       );
+      if (payable) {
+        setCommissionTarget(payable);
+        toast.info("Pay your commission due to unlock new jobs.");
+      } else {
+        toast.error(
+          "Your commission is still pending. Open Earnings to complete the secure checkout.",
+        );
+      }
       return;
     }
     setBusy(`accept:${job.id}`);
@@ -245,18 +268,25 @@ export default function WorkerDashboard() {
     }
   };
 
-  const submitStart = async (job) => {
-    setBusy(`start:${job.id}`);
+  const submitPhase = async (job, phase) => {
+    setBusy(`phase:${job.id}:${phase}`);
     try {
-      await api.patch(`/worker/jobs/${job.id}/start`);
-      toast.success("Job marked as started.");
-      setStartTarget(null);
+      await api.patch(`/worker/jobs/${job.id}/phase`, { phase });
+      toast.success(PHASE_TOAST[phase] || "Job status updated.");
     } catch (error) {
       toast.error(error.message);
       throw error;
     } finally {
       setBusy("");
     }
+  };
+
+  const advanceJob = (job, phase) => {
+    if (phase === TRACKING_PHASES.COMPLETED) {
+      setCompleteTarget(job);
+      return;
+    }
+    submitPhase(job, phase).catch(() => {});
   };
 
   const submitComplete = async (job) => {
@@ -275,19 +305,10 @@ export default function WorkerDashboard() {
     }
   };
 
-  const submitCommission = async (commission, note) => {
-    setBusy(`commission:${commission.id}`);
-    try {
-      await api.post(`/worker/commission/${commission.bookingId}/paid`, { note });
-      toast.success("Payment submitted. Admin will verify it.");
-      setCommissionTarget(null);
-      await refreshMoney();
-    } catch (error) {
-      toast.error(error.message);
-      throw error;
-    } finally {
-      setBusy("");
-    }
+  const handleCommissionPaid = async () => {
+    setCommissionTarget(null);
+    toast.success("Commission verified automatically. New jobs are unlocked.");
+    await Promise.allSettled([refreshMoney(), refreshProfile()]);
   };
 
   if (!worker) {
@@ -393,8 +414,9 @@ export default function WorkerDashboard() {
             onTab={setTab}
             onQuote={setPriceTarget}
             onConfirm={setConfirmTarget}
-            onStart={setStartTarget}
+            onPhase={advanceJob}
             onComplete={setCompleteTarget}
+            gps={gps}
             onAccept={acceptJob}
           />
         ) : null}
@@ -412,8 +434,9 @@ export default function WorkerDashboard() {
             focusJobId={focusJobId}
             onQuote={setPriceTarget}
             onConfirm={setConfirmTarget}
-            onStart={setStartTarget}
+            onPhase={advanceJob}
             onComplete={setCompleteTarget}
+            gps={gps}
             onAccept={acceptJob}
             onGoOnline={toggleOnline}
           />
@@ -468,12 +491,6 @@ export default function WorkerDashboard() {
         onClose={() => setConfirmTarget(null)}
         onSubmit={(price) => submitConfirm(confirmTarget, price)}
       />
-      <StartModal
-        job={startTarget}
-        busy={Boolean(busy)}
-        onClose={() => setStartTarget(null)}
-        onConfirm={() => submitStart(startTarget)}
-      />
       <CompleteModal
         job={completeTarget}
         busy={Boolean(busy)}
@@ -482,9 +499,20 @@ export default function WorkerDashboard() {
       />
       <CommissionModal
         commission={commissionTarget}
-        busy={Boolean(busy)}
         onClose={() => setCommissionTarget(null)}
-        onSubmit={(note) => submitCommission(commissionTarget, note)}
+        onPaid={handleCommissionPaid}
+      />
+
+      <TrackingBuzzer
+        alert={trackingAlert}
+        gps={gps}
+        supportPhone={supportPhone}
+        onUpdate={(job) => {
+          const search = new URLSearchParams(params);
+          search.set("tab", "jobs");
+          search.set("job", job.id);
+          setParams(search, { replace: true });
+        }}
       />
     </div>
   );
@@ -555,9 +583,10 @@ function HomeTab({
   onTab,
   onQuote,
   onConfirm,
-  onStart,
+  onPhase,
   onComplete,
   onAccept,
+  gps,
 }) {
   return (
     <>
@@ -602,8 +631,9 @@ function HomeTab({
         focusJobId={focusJobId}
         onQuote={onQuote}
         onConfirm={onConfirm}
-        onStart={onStart}
+        onPhase={onPhase}
         onComplete={onComplete}
+        gps={gps}
         onSeeAll={() => onTab("jobs")}
       />
 
@@ -666,10 +696,11 @@ function JobsTab({
   focusJobId,
   onQuote,
   onConfirm,
-  onStart,
+  onPhase,
   onComplete,
   onAccept,
   onGoOnline,
+  gps,
 }) {
   return (
     <>
@@ -715,8 +746,9 @@ function JobsTab({
         focusJobId={focusJobId}
         onQuote={onQuote}
         onConfirm={onConfirm}
-        onStart={onStart}
+        onPhase={onPhase}
         onComplete={onComplete}
+        gps={gps}
       />
 
       <AvailableJobsSection
@@ -779,8 +811,9 @@ function ActiveJobsSection({
   focusJobId,
   onQuote,
   onConfirm,
-  onStart,
+  onPhase,
   onComplete,
+  gps,
   onSeeAll,
 }) {
   return (
@@ -807,8 +840,9 @@ function ActiveJobsSection({
               highlight={focusJobId === job.id}
               onQuote={() => onQuote(job)}
               onConfirm={() => onConfirm(job)}
-              onStart={() => onStart(job)}
+              onPhase={(phase) => onPhase(job, phase)}
               onComplete={() => onComplete(job)}
+              gps={gps?.jobId === job.id ? gps : null}
             />
           ))}
         </div>
@@ -927,13 +961,13 @@ function AvailableJobCard({ job, busy, canAccept, onAccept }) {
 
       <div className="wk-job__actions">
         <span className="wk-job__note">
-          {canAccept ? "One tap accepts this job." : "Go online / clear dues to accept."}
+          {canAccept ? "One tap accepts this job." : "Tap accept to clear dues or go online."}
         </span>
         <button
           type="button"
           className="wk-btn wk-btn--primary"
           onClick={onAccept}
-          disabled={busy || !canAccept}
+          disabled={busy}
         >
           {busy ? <Spinner size={16} /> : <Zap size={16} />}
           {busy ? "Accepting…" : "Accept job"}
@@ -949,8 +983,9 @@ function ActiveJobCard({
   highlight,
   onQuote,
   onConfirm,
-  onStart,
+  onPhase,
   onComplete,
+  gps,
 }) {
   const [phone, setPhone] = useState("");
   const [loadingPhone, setLoadingPhone] = useState(false);
@@ -959,6 +994,26 @@ function ActiveJobCard({
     job.pricing?.finalPrice || job.pricing?.workerPrice || job.pricing?.customerOffer || job.budget;
   const lat = job.location?.lat;
   const lng = job.location?.lng;
+  const phase =
+    job.trackingPhase ||
+    (job.status === "ongoing" ? TRACKING_PHASES.WORKING : TRACKING_PHASES.ASSIGNED);
+  const meta = trackingMeta(phase, job.status);
+  const phaseIndex = Math.max(
+    0,
+    TRACKING_PHASES.findIndex((item) => item.id === phase),
+  );
+  const nextAction =
+    phase === TRACKING_PHASES.ASSIGNED
+      ? { phase: TRACKING_PHASES.EN_ROUTE, label: "Start journey", hint: "Notify customer you are on the way", icon: Navigation }
+      : phase === TRACKING_PHASES.EN_ROUTE
+        ? { phase: TRACKING_PHASES.ARRIVED, label: "I've arrived", hint: "Confirm you reached the location", icon: MapPin }
+        : phase === TRACKING_PHASES.ARRIVED
+          ? { phase: TRACKING_PHASES.WORKING, label: "Start work", hint: "Begin the job and keep GPS on", icon: Zap }
+          : phase === TRACKING_PHASES.WORKING
+            ? { phase: TRACKING_PHASES.COMPLETED, label: "Mark job completed", hint: "Only after the customer inspects the work", icon: CheckCircle2 }
+            : null;
+  const gpsLive = gps?.status === "sharing";
+  const NextIcon = nextAction?.icon;
 
   useEffect(() => {
     let active = true;
@@ -987,15 +1042,50 @@ function ActiveJobCard({
         <span className={`wk-status-dot wk-status-dot--${job.status}`} />
         <div className="grow">
           <span className="wk-active__status">
-            {job.status === "ongoing" ? "In progress" : "Accepted — agree the price"}
+            {meta.label}
+            {confirmed ? "" : " · agree the price"}
           </span>
           <h3>{job.service}</h3>
         </div>
+        {gps ? (
+          <span className={`wk-gps-pill${gpsLive ? " is-on" : ""}`}>
+            <Radio size={12} />
+            {gpsLive ? "GPS live" : gps.status === "denied" ? "GPS blocked" : "GPS waiting"}
+          </span>
+        ) : null}
         <div className="wk-active__money">
           <strong>{inr(price)}</strong>
           <span>{confirmed ? "Agreed" : "Budget / quote"}</span>
         </div>
       </div>
+
+      <div className="wk-phase-track" aria-label={`Job phase: ${meta.label}`}>
+        {TRACKING_PHASES.map((item, index) => (
+          <span
+            key={item.id}
+            className={
+              index < phaseIndex || phase === TRACKING_PHASES.COMPLETED
+                ? "is-done"
+                : index === phaseIndex
+                  ? "is-current"
+                  : ""
+            }
+          >
+            <i>{index + 1}</i>
+            {item.short}
+          </span>
+        ))}
+      </div>
+
+      {job.trackingAlert ? (
+        <div className="wk-alert wk-alert--warn">
+          <Clock3 size={16} />
+          <span>
+            No update recorded recently. Customer tracking is waiting — update your phase or
+            refresh GPS.
+          </span>
+        </div>
+      ) : null}
 
       <div className="wk-active__customer">
         <Avatar name={job.customerName} path={job.customerPhotoPath} size={44} />
@@ -1087,25 +1177,36 @@ function ActiveJobCard({
           </>
         ) : null}
 
-        {confirmed && job.status === "accepted" ? (
+        {confirmed && nextAction ? (
           <button
             type="button"
-            className="wk-btn wk-btn--primary wk-btn--block"
-            onClick={onStart}
+            className={`wk-btn wk-btn--block wk-phase-btn${
+              nextAction.phase === TRACKING_PHASES.COMPLETED ? " wk-btn--complete" : ""
+            }`}
+            onClick={() =>
+              nextAction.phase === TRACKING_PHASES.COMPLETED
+                ? onComplete()
+                : onPhase(nextAction.phase)
+            }
             disabled={busy}
           >
-            <Zap size={17} /> Start this job
+            <NextIcon size={22} />
+            <span>
+              <strong>{nextAction.label}</strong>
+              <small>{nextAction.hint}</small>
+            </span>
+            <ChevronRight size={18} />
           </button>
         ) : null}
 
-        {job.status === "ongoing" ? (
+        {confirmed && gps && !gpsLive ? (
           <button
             type="button"
-            className="wk-btn wk-btn--complete wk-btn--block"
-            onClick={onComplete}
+            className="wk-btn wk-btn--outline"
+            onClick={gps.sendNow}
             disabled={busy}
           >
-            <CheckCircle2 size={20} /> Mark job completed
+            <Radio size={16} /> Refresh GPS
           </button>
         ) : null}
       </div>
@@ -1236,9 +1337,7 @@ function EarningsTab({
             <p className="wk-eyebrow">Commission</p>
             <h2>Payments &amp; dues</h2>
           </div>
-          <span className="wk-badge wk-badge--muted">
-            UPI · {worker.upiId || "Add UPI in profile"}
-          </span>
+          <span className="wk-badge wk-badge--muted">Razorpay · automatic</span>
         </div>
 
         {pending.length ? (
@@ -1264,10 +1363,10 @@ function EarningsTab({
                   <strong>{inr(commission.amount)}</strong>
                   {commission.status === "pending" || commission.status === "rejected" ? (
                     <button type="button" onClick={() => onCommission(commission)}>
-                      Mark paid
+                      Pay now
                     </button>
                   ) : (
-                    <span>{commission.status === "paid" ? "Awaiting approval" : "Approved"}</span>
+                    <span>{commission.status === "paid" ? "Verifying…" : "Approved"}</span>
                   )}
                 </div>
               </div>
@@ -1285,9 +1384,8 @@ function EarningsTab({
           <div>
             <p className="wk-eyebrow">How to pay</p>
             <p>
-              Pay commission to <strong>{worker.upiId || "the EasyHome UPI ID"}</strong>, then
-              tap <strong>Mark paid</strong> and enter the UTR. Admin verification usually takes
-              a few hours.
+              Pay securely through Razorpay. Commission clears and new jobs unlock
+              automatically as soon as the payment is verified.
             </p>
           </div>
           {!isPremium ? (
@@ -1568,9 +1666,9 @@ function ProfileTab({ worker, onLogout }) {
                 <Input id="wk-area" value={form.area} maxLength={120} onChange={set("area")} />
               </Field>
               <Field
-                label="UPI ID for commission"
+                label="UPI ID for payouts"
                 htmlFor="wk-upi"
-                hint="Shown to EasyHome only for verifying commission payments."
+                hint="Used for any manual settlement or refund processed by EasyHome."
                 className="wk-span-2"
               >
                 <Input
@@ -1783,39 +1881,6 @@ function ConfirmPriceModal({ job, busy, onClose, onSubmit }) {
   );
 }
 
-function StartModal({ job, busy, onClose, onConfirm }) {
-  return (
-    <Modal
-      open={Boolean(job)}
-      onClose={onClose}
-      title="Start this job?"
-      subtitle={job ? `${job.service} · ${job.area}` : ""}
-      size="sm"
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button loading={busy} onClick={onConfirm} icon={Zap}>
-            Start job
-          </Button>
-        </>
-      }
-    >
-      <div className="stack">
-        <p className="small">
-          The customer will be notified that you are on the way. Only start when you are at or
-          heading to the job.
-        </p>
-        <div className="wk-confirm-amount">
-          <span>Agreed price</span>
-          <strong>{inr(job?.pricing?.finalPrice || 0)}</strong>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
 function CompleteModal({ job, busy, onClose, onConfirm }) {
   return (
     <Modal
@@ -1861,32 +1926,12 @@ function CompleteModal({ job, busy, onClose, onConfirm }) {
   );
 }
 
-function CommissionModal({ commission, busy, onClose, onSubmit }) {
-  const [note, setNote] = useState("");
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (commission) setNote("");
-  }, [commission]);
-
-  const submit = async () => {
-    if (note.trim().length < 3) {
-      setError("Enter the UPI reference or a payment note.");
-      return;
-    }
-    setError("");
-    try {
-      await onSubmit(note.trim());
-    } catch (submitError) {
-      setError(submitError.message);
-    }
-  };
-
+function CommissionModal({ commission, onClose, onPaid }) {
   return (
     <Modal
       open={Boolean(commission)}
       onClose={onClose}
-      title="Mark commission paid"
+      title="Pay commission"
       subtitle={
         commission
           ? `${commission.service} · ${inr(commission.amount)}`
@@ -1894,33 +1939,25 @@ function CommissionModal({ commission, busy, onClose, onSubmit }) {
       }
       size="sm"
       footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button loading={busy} onClick={submit}>
-            Submit payment
-          </Button>
-        </>
+        <Button variant="ghost" onClick={onClose}>
+          Cancel
+        </Button>
       }
     >
       <div className="stack">
-        <Field
-          label="UPI reference / UTR"
-          htmlFor="wk-commission-note"
-          hint="Admin uses this to match your payment."
-          error={error}
-        >
-          <Input
-            id="wk-commission-note"
-            value={note}
-            maxLength={200}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder="e.g. 420918273645"
+        {commission ? (
+          <RazorpayPayment
+            amount={commission.amount || 0}
+            description={`EasyHome commission · ${commission.service || "Job"}`}
+            orderEndpoint="/payment/commission/order"
+            verifyEndpoint="/payment/commission/verify"
+            orderBody={{ commissionId: commission.id }}
+            onSuccess={onPaid}
+            buttonLabel="Pay & clear commission"
           />
-        </Field>
+        ) : null}
         <p className="tiny muted">
-          Only submit after paying. False submissions can lead to account review.
+          Verified automatically. EasyHome never sees your card or UPI credentials.
         </p>
       </div>
     </Modal>
