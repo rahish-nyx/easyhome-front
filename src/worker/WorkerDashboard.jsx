@@ -326,6 +326,22 @@ export default function WorkerDashboard() {
       <header className="worker-top">
         <div className="worker-top__inner">
           <Logo dark />
+          <nav className="worker-top__links" aria-label="Worker sections">
+            {TABS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={tab === item.id ? "is-active" : ""}
+                onClick={() => setTab(item.id)}
+              >
+                <item.icon size={16} />
+                {item.label}
+                {item.id === "jobs" && activeJobs.length ? (
+                  <em className="worker-nav__count">{activeJobs.length}</em>
+                ) : null}
+              </button>
+            ))}
+          </nav>
           <div className="worker-top__right">
             <button
               type="button"

@@ -48,7 +48,8 @@ export default function Auth() {
   const [params, setParams] = useSearchParams();
   const nextParam = params.get("next") || "";
   const next = nextParam.startsWith("/") ? nextParam : "";
-  const roleParam = params.get("role") === "worker" ? "worker" : "customer";
+  const rawRole = params.get("role");
+  const roleParam = rawRole === "worker" ? "worker" : rawRole === "customer" ? "customer" : "";
   const modeParam = params.get("mode") === "signup" ? "signup" : "signin";
 
   const {
@@ -111,8 +112,7 @@ export default function Auth() {
     setRole(nextRole);
     setError("");
     const nextParams = new URLSearchParams(params);
-    if (nextRole === "worker") nextParams.set("role", "worker");
-    else nextParams.delete("role");
+    nextParams.set("role", nextRole);
     setParams(nextParams, { replace: true });
   };
 
@@ -282,6 +282,25 @@ export default function Auth() {
   };
 
   if (loading) return <PageLoader label="Preparing sign in…" />;
+
+  // Universal guest entry point: force an explicit role selection before
+  // showing any auth form. This keeps customer and professional flows strictly
+  // isolated from the very first tap.
+  if (!fbUser && !role) {
+    return (
+      <AuthShell>
+        <RoleSelectionScreen
+          next={next}
+          onPick={(picked) => {
+            const search = new URLSearchParams(params);
+            search.set("role", picked);
+            if (params.get("mode") === "signup") search.set("mode", "signup");
+            setParams(search, { replace: true });
+          }}
+        />
+      </AuthShell>
+    );
+  }
 
   if (fbUser && !justSignedUp) {
     return (
@@ -822,6 +841,50 @@ function AuthShell({ children, role = "customer" }) {
       </aside>
 
       <main className="auth-panel">{children}</main>
+    </div>
+  );
+}
+
+function RoleSelectionScreen({ onPick, next }) {
+  return (
+    <div className="auth-card auth-role-select">
+      <div className="auth-card__head">
+        <h2>Choose your account type</h2>
+        <p>
+          Pick how you want to use EasyHome. Customer and professional accounts
+          stay completely separate.
+        </p>
+      </div>
+
+      <div className="auth-role-select__grid">
+        <button type="button" className="auth-role-select__card" onClick={() => onPick("customer")}>
+          <span className="auth-role-select__icon">
+            <UserRound size={26} />
+          </span>
+          <strong>Sign in / Register as Customer</strong>
+          <small>
+            Book home services, track visits, chat and pay after the job.
+          </small>
+          <span className="auth-role-select__cta">Continue as customer <ArrowRight size={15} /></span>
+        </button>
+
+        <button type="button" className="auth-role-select__card auth-role-select__card--worker" onClick={() => onPick("worker")}>
+          <span className="auth-role-select__icon">
+            <BriefcaseBusiness size={26} />
+          </span>
+          <strong>Sign in / Register as Professional / Worker</strong>
+          <small>
+            Receive local jobs, manage your availability and payouts.
+          </small>
+          <span className="auth-role-select__cta">Continue as professional <ArrowRight size={15} /></span>
+        </button>
+      </div>
+
+      {next ? (
+        <p className="auth-note" style={{ textAlign: "center", marginTop: 14 }}>
+          After signing in you will return to the page you came from.
+        </p>
+      ) : null}
     </div>
   );
 }

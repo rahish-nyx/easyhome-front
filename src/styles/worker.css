@@ -752,12 +752,28 @@
   border-radius: 16px;
   border: 1px solid var(--wk-line);
   background: var(--wk-panel);
-  transition: 0.16s ease;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .wk-job:hover {
   border-color: var(--wk-line-strong);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
+}
+
+.wk-job::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: 16px 0 0 16px;
+  background: linear-gradient(180deg, var(--wk-blue-2), transparent 80%);
+  opacity: 0.55;
+  transition: opacity 0.18s ease;
+}
+
+.wk-job:hover::before {
+  opacity: 1;
 }
 
 .wk-job--urgent {
@@ -765,6 +781,10 @@
   background:
     linear-gradient(150deg, rgba(255, 92, 92, 0.1), transparent 55%),
     var(--wk-panel);
+}
+
+.wk-job--urgent::before {
+  background: linear-gradient(180deg, #ff5c5c, transparent 80%);
 }
 
 .wk-job__top {
@@ -1598,8 +1618,49 @@
   color: var(--wk-muted-2);
 }
 
-/* ------------------------------- Bottom nav ------------------------------ */
+/* ------------------------------- Navigation ------------------------------ */
 
+/* Desktop top navigation links — hidden on mobile, shown on wide screens */
+.worker-top__links {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  margin-left: 22px;
+}
+
+.worker-top__links button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--wk-muted);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+
+.worker-top__links button:hover {
+  color: var(--wk-text);
+  background: var(--wk-blue-soft);
+}
+
+.worker-top__links button.is-active {
+  background: var(--wk-blue);
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(47, 107, 255, 0.28);
+}
+
+.worker-top__links button.is-active:hover {
+  background: var(--wk-blue-2);
+}
+
+/* Mobile bottom nav — hidden on desktop viewports */
 .worker-nav {
   position: fixed;
   left: 50%;
@@ -1617,6 +1678,20 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 16px 45px rgba(0, 0, 0, 0.5);
+}
+
+@media (min-width: 900px) {
+  .worker-nav {
+    display: none;
+  }
+
+  .worker-app {
+    padding-bottom: 0;
+  }
+
+  .worker-top__links {
+    display: inline-flex;
+  }
 }
 
 .worker-nav button {
