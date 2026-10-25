@@ -348,6 +348,13 @@ function BookingCard({ booking, busy, onAccept, onCancel, onOffer, onPay, onRevi
                 ? "Agreed price"
                 : "Budget / quote"}
           </small>
+          {booking.urgency === "urgent" ? (
+            <small style={{ display: "block", marginTop: 3 }}>
+              {booking.urgentFee
+                ? `+ ${inr(booking.urgentFee)} priority fee`
+                : "Priority fee waived"}
+            </small>
+          ) : null}
         </div>
       </div>
 

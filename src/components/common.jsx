@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createElement, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -12,13 +12,8 @@ import {
   Clock3,
   CloudUpload,
   Crown,
-  GraduationCap,
-  Hammer,
-  ImageOff,
   IndianRupee,
-  Loader2,
   MapPin,
-  PlugZap,
   Search,
   ShieldCheck,
   Sparkles,
@@ -26,13 +21,8 @@ import {
   Tag,
   Ticket,
   Trash2,
-  Truck,
   Wrench,
   X,
-  Zap,
-  Bug,
-  Paintbrush,
-  Scissors,
   Users,
   Wallet,
 } from "lucide-react";
@@ -41,6 +31,7 @@ import { api } from "../lib/api";
 import { mediaUrl } from "../lib/media";
 import { cx, inr, timeAgo } from "../lib/format";
 import { STATUS_META, SERVICE_META } from "../lib/constants";
+import { iconFor } from "../lib/iconMap";
 import { useAuth } from "../context/AuthContext";
 import { useCatalogue } from "../context/CatalogueContext";
 import { useToast } from "../context/ToastContext";
@@ -52,22 +43,6 @@ import logo from "../assets/logo.png";
 
 /* ------------------------------- Service icon ----------------------------- */
 
-const ICONS = {
-  sparkles: Sparkles,
-  wrench: Wrench,
-  zap: Zap,
-  hammer: Hammer,
-  "plug-zap": PlugZap,
-  scissors: Scissors,
-  paintbrush: Paintbrush,
-  bug: Bug,
-  truck: Truck,
-  "graduation-cap": GraduationCap,
-  airvent: Sparkles,
-  fridge: PlugZap,
-  washing: PlugZap,
-};
-
 export function ServiceIcon({
   service,
   icon,
@@ -77,7 +52,6 @@ export function ServiceIcon({
   iconSize,
 }) {
   const key = icon || service?.icon || SERVICE_META[service?.key]?.icon || "wrench";
-  const Icon = ICONS[key] || Wrench;
   const tint =
     service?.tint || SERVICE_META[service?.key]?.tint || "var(--yellow-soft)";
   const ink = service?.ink || SERVICE_META[service?.key]?.ink || "var(--yellow-ink)";
@@ -97,7 +71,10 @@ export function ServiceIcon({
       }}
       aria-hidden="true"
     >
-      <Icon size={iconSize || Math.round(size * 0.5)} strokeWidth={1.8} />
+      {createElement(iconFor(key), {
+        size: iconSize || Math.round(size * 0.5),
+        strokeWidth: 1.8,
+      })}
     </span>
   );
 }
@@ -467,6 +444,16 @@ export function NotificationBell() {
     }
   };
 
+  const removeNotification = async (event, id) => {
+    event.stopPropagation();
+    event.preventDefault();
+    try {
+      await api.del(`/notifications/${id}`);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
   if (!fbUser) return null;
 
   return (
@@ -516,11 +503,18 @@ export function NotificationBell() {
               items.map((item) => {
                 const Icon = NOTIF_ICONS[item.type] || Bell;
                 return (
-                  <button
+                  <div
                     key={item.id}
-                    type="button"
-                    className="list-row list-row--button"
+                    role="button"
+                    tabIndex={0}
+                    className="list-row list-row--button notif-row"
                     onClick={() => {
+                      setOpen(false);
+                      if (item.link?.startsWith("/")) navigate(item.link);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter" && event.key !== " ") return;
+                      event.preventDefault();
                       setOpen(false);
                       if (item.link?.startsWith("/")) navigate(item.link);
                     }}
@@ -538,7 +532,16 @@ export function NotificationBell() {
                         {timeAgo(item.createdAt)}
                       </span>
                     </span>
-                  </button>
+                    <button
+                      type="button"
+                      className="notif-row__remove"
+                      aria-label={`Remove notification: ${item.title}`}
+                      title="Remove"
+                      onClick={(event) => removeNotification(event, item.id)}
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
                 );
               })
             ) : (
@@ -738,8 +741,8 @@ export function ImageUpload({
 
 /* ------------------------------ Protected route --------------------------- */
 
-export function ProtectedRoute({ children, adminOnly = false }) {
-  const { fbUser, isAdmin, loading } = useAuth();
+export function ProtectedRoute({ children, adminOnly = false, role }) {
+  const { fbUser, isAdmin, isWorker, loading } = useAuth();
   const location = useLocation();
 
   if (loading) return <PageLoader />;
@@ -748,75 +751,9 @@ export function ProtectedRoute({ children, adminOnly = false }) {
     return <Navigate to={`/auth?next=${next}`} replace />;
   }
   if (adminOnly && !isAdmin) return <Navigate to="/" replace />;
+  if (role === "customer" && isWorker) return <Navigate to="/worker" replace />;
+  if (role === "worker" && !isWorker) return <Navigate to="/" replace />;
   return children;
-}
-
-/* ------------------------------- Authed image ----------------------------- */
-
-export function AuthedImage({ path, alt = "Private document", className = "", style }) {
-  const [url, setUrl] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(Boolean(path));
-
-  useEffect(() => {
-    let active = true;
-    let objectUrl = "";
-    setUrl("");
-    setError("");
-    setLoading(Boolean(path));
-    if (!path) return undefined;
-
-    api
-      .blob(`/admin/workers/${path}/kyc-file`)
-      .then((next) => {
-        if (!active) {
-          URL.revokeObjectURL(next);
-          return;
-        }
-        objectUrl = next;
-        setUrl(next);
-      })
-      .catch((loadError) => {
-        if (active) setError(loadError.message);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [path]);
-
-  if (!path) {
-    return (
-      <span className={cx("empty", className)} style={{ padding: 18, ...style }}>
-        <ImageOff size={20} />
-        <span className="tiny muted">No document uploaded</span>
-      </span>
-    );
-  }
-
-  if (loading) {
-    return (
-      <span className={cx("empty", className)} style={{ padding: 18, ...style }}>
-        <Loader2 className="spin" size={20} />
-        <span className="tiny muted">Loading secure document…</span>
-      </span>
-    );
-  }
-
-  if (error) {
-    return (
-      <span className={cx("empty", className)} style={{ padding: 18, ...style, color: "var(--red)" }}>
-        <CircleAlert size={20} />
-        <span className="tiny">{error}</span>
-      </span>
-    );
-  }
-
-  return <img src={url} alt={alt} className={className} style={style} />;
 }
 
 /* -------------------------------- Install --------------------------------- */

@@ -26,8 +26,10 @@ import Chat from "./pages/Chat";
 import WorkerPublic from "./pages/WorkerPublic";
 import Auth from "./pages/Auth";
 import Legal from "./pages/Legal";
+import Faq from "./pages/Faq";
 import { NotFound, Offline } from "./pages/Fallback";
 const WorkerApp = lazy(() => import("./worker/WorkerApp"));
+const WorkerSupport = lazy(() => import("./worker/WorkerSupport"));
 const AdminApp = lazy(() => import("./admin/AdminApp"));
 const AdminDashboard = lazy(() => import("./admin/AdminDashboard"));
 const AdminApprovals = lazy(() => import("./admin/AdminApprovals"));
@@ -38,6 +40,7 @@ const AdminZones = lazy(() => import("./admin/AdminZones"));
 const AdminCatalog = lazy(() => import("./admin/AdminCatalog"));
 const AdminRevenue = lazy(() => import("./admin/AdminRevenue"));
 const AdminPromos = lazy(() => import("./admin/AdminPromos"));
+const AdminBroadcast = lazy(() => import("./admin/AdminBroadcast"));
 const AdminChats = lazy(() => import("./admin/AdminChats"));
 const AdminSettings = lazy(() => import("./admin/AdminSettings"));
 
@@ -53,6 +56,10 @@ function ScrollToTop() {
 
 function Protect({ children }) {
   return <ProtectedRoute>{children}</ProtectedRoute>;
+}
+
+function ProtectCustomer({ children }) {
+  return <ProtectedRoute role="customer">{children}</ProtectedRoute>;
 }
 
 export default function App() {
@@ -86,6 +93,14 @@ export default function App() {
                     }
                   />
                   <Route
+                    path="/worker/support"
+                    element={
+                      <Suspense fallback={<PageLoader label="Opening support…" />}>
+                        <WorkerSupport />
+                      </Suspense>
+                    }
+                  />
+                  <Route
                     path="/worker/*"
                     element={<Navigate to="/worker" replace />}
                   />
@@ -107,6 +122,7 @@ export default function App() {
                     <Route path="catalog" element={<AdminCatalog />} />
                     <Route path="revenue" element={<AdminRevenue />} />
                     <Route path="promos" element={<AdminPromos />} />
+                    <Route path="broadcast" element={<AdminBroadcast />} />
                     <Route path="chats" element={<AdminChats />} />
                     <Route path="settings" element={<AdminSettings />} />
                     <Route
@@ -123,41 +139,41 @@ export default function App() {
                     <Route
                       path="book"
                       element={
-                        <Protect>
+                        <ProtectCustomer>
                           <Booking />
-                        </Protect>
+                        </ProtectCustomer>
                       }
                     />
                     <Route
                       path="bookings"
                       element={
-                        <Protect>
+                        <ProtectCustomer>
                           <Bookings />
-                        </Protect>
+                        </ProtectCustomer>
                       }
                     />
                     <Route
                       path="bookings/:id/track"
                       element={
-                        <Protect>
+                        <ProtectCustomer>
                           <Tracking />
-                        </Protect>
+                        </ProtectCustomer>
                       }
                     />
                     <Route
                       path="profile"
                       element={
-                        <Protect>
+                        <ProtectCustomer>
                           <Profile />
-                        </Protect>
+                        </ProtectCustomer>
                       }
                     />
                     <Route
                       path="subscription"
                       element={
-                        <Protect>
+                        <ProtectCustomer>
                           <Subscription />
-                        </Protect>
+                        </ProtectCustomer>
                       }
                     />
                     <Route
@@ -169,6 +185,7 @@ export default function App() {
                       }
                     />
                     <Route path="workers/:id" element={<WorkerPublic />} />
+                    <Route path="faq" element={<Faq />} />
                     <Route path="legal/:slug" element={<Legal />} />
                     <Route
                       path="become-a-worker"

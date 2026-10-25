@@ -10,7 +10,7 @@ import WorkerApply from "./WorkerApply";
 import WorkerStatus from "./WorkerStatus";
 
 export default function WorkerApp() {
-  const { fbUser, worker, profile, loading, isWorker, refreshClaims } = useAuth();
+  const { fbUser, worker, profile, loading, isWorker, logout, refreshClaims } = useAuth();
 
   useEffect(() => {
     if (worker?.status === "approved") refreshClaims().catch(() => {});
@@ -25,7 +25,12 @@ export default function WorkerApp() {
   }
 
   if (!fbUser) {
-    return <Navigate to={`/auth?next=${encodeURIComponent("/worker")}`} replace />;
+    return (
+      <Navigate
+        to={`/auth?role=worker&next=${encodeURIComponent("/worker")}`}
+        replace
+      />
+    );
   }
 
   // Avoid flashing the application form while the worker listener warms up.
@@ -34,6 +39,42 @@ export default function WorkerApp() {
       <div className="worker-app">
         <PageLoader label="Loading your worker profile…" />
       </div>
+    );
+  }
+
+  // Customer accounts stay in the customer app. Professional access is a
+  // separate account path, never an in-place role switch.
+  if (!isWorker && profile?.role !== "worker" && !worker) {
+    return (
+      <WorkerGate profile={profile}>
+        <div className="worker-role-gate">
+          <span className="worker-role-gate__icon">
+            <ShieldCheck size={24} />
+          </span>
+          <h2>This is a customer account</h2>
+          <p>
+            The worker console is only for professional accounts. Sign in with a
+            professional account, or create a separate one to start receiving jobs.
+          </p>
+          <div className="worker-role-gate__actions">
+            <Link
+              to="/auth?role=worker&mode=signup"
+              className="btn btn--primary btn--sm"
+            >
+              Create a professional account
+            </Link>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={async () => {
+                await logout();
+              }}
+            >
+              Use a different account
+            </button>
+          </div>
+        </div>
+      </WorkerGate>
     );
   }
 
@@ -61,7 +102,7 @@ function WorkerGate({ profile, children }) {
         <Logo dark />
         <div className="worker-top__right">
           <Link
-            to="/chat"
+            to="/worker/support"
             className="wk-icon-link"
             aria-label="Support"
             title="Support"
@@ -103,11 +144,11 @@ function WorkerGate({ profile, children }) {
           {children}
 
           <p className="worker-gate__foot">
-            <Link to="/">Back to EasyHome</Link>
-            <span>·</span>
-            <Link to="/chat">Support</Link>
+            <Link to="/worker/support">Support</Link>
             <span>·</span>
             <Link to="/legal/terms">Terms</Link>
+            <span>·</span>
+            <Link to="/legal/privacy">Privacy</Link>
           </p>
         </div>
       </main>
@@ -118,11 +159,11 @@ function WorkerGate({ profile, children }) {
 export function WorkerGateActions() {
   return (
     <div className="wk-gate-actions">
-      <Link to="/chat" className="btn btn--outline btn--sm">
+      <Link to="/worker/support" className="btn btn--outline btn--sm">
         Contact support
       </Link>
-      <Link to="/" className="btn btn--ghost btn--sm">
-        Back home
+      <Link to="/worker" className="btn btn--ghost btn--sm">
+        Worker dashboard
       </Link>
     </div>
   );

@@ -22,7 +22,7 @@ import { Button, Field, Input, Select, Textarea } from "../components/ui";
 export default function WorkerApply({ existing, onCancel }) {
   const { profile, refreshClaims } = useAuth();
   const { services } = useCatalogue();
-  const { city } = useLocation();
+  const { city, cities, states, citiesForState } = useLocation();
   const toast = useToast();
 
   const base = existing || profile || {};
@@ -30,7 +30,9 @@ export default function WorkerApply({ existing, onCancel }) {
     name: base.name || "",
     phone: base.phone || "",
     serviceKey: "",
-    area: city?.name || "",
+    state: base.state || city?.state || "",
+    city: base.city || city?.name || "",
+    areaName: base.areaName || city?.areaName || "",
     pricePerWork: "",
     bio: "",
   });
@@ -45,12 +47,46 @@ export default function WorkerApply({ existing, onCancel }) {
     }
   }, [services, form.serviceKey]);
 
-  useEffect(() => {
-    if (!form.area && city?.name) setForm((prev) => ({ ...prev, area: city.name }));
-  }, [city?.name, form.area]);
+  const stateCities = citiesForState(form.state);
+  const selectedCity = cities.find(
+    (item) =>
+      item.name === form.city &&
+      (!form.state ||
+        !item.state ||
+        item.state.toLowerCase() === String(form.state).toLowerCase()),
+  );
+  const areaOptions = (selectedCity?.localAreas || [])
+    .map((area) => (typeof area === "string" ? area : area?.name))
+    .filter(Boolean);
 
   const set = (field) => (event) =>
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
+
+  const chooseState = (state) => {
+    const nextCity = citiesForState(state)[0];
+    const nextArea = (nextCity?.localAreas || [])
+      .map((area) => (typeof area === "string" ? area : area?.name))
+      .filter(Boolean)[0];
+    setForm((prev) => ({
+      ...prev,
+      state,
+      city: nextCity?.name || "",
+      areaName: nextArea || "",
+    }));
+  };
+
+  const chooseCity = (name) => {
+    const nextCity = cities.find((item) => item.name === name);
+    const nextArea = (nextCity?.localAreas || [])
+      .map((area) => (typeof area === "string" ? area : area?.name))
+      .filter(Boolean)[0];
+    setForm((prev) => ({
+      ...prev,
+      city: name,
+      state: nextCity?.state || prev.state,
+      areaName: nextArea || "",
+    }));
+  };
 
   const capture = async () => {
     if (!navigator.geolocation) {
@@ -93,8 +129,8 @@ export default function WorkerApply({ existing, onCancel }) {
       setError("Choose your trade.");
       return;
     }
-    if (form.area.trim().length < 2) {
-      setError("Tell us the area you can serve.");
+    if (!form.state.trim() || !form.city.trim() || !form.areaName.trim()) {
+      setError("Choose your state, city and local area.");
       return;
     }
 
@@ -106,11 +142,14 @@ export default function WorkerApply({ existing, onCancel }) {
         phone: form.phone,
         service: service?.name || SERVICE_META[form.serviceKey]?.name || form.serviceKey,
         serviceKey: form.serviceKey,
-        area: form.area.trim(),
+        area: `${form.areaName.trim()}, ${form.city.trim()}`,
+        areaName: form.areaName.trim(),
+        city: form.city.trim(),
+        state: form.state.trim(),
         pricePerWork: Number(form.pricePerWork) || 199,
         bio: form.bio.trim(),
-        lat: coords?.lat ?? city?.lat ?? null,
-        lng: coords?.lng ?? city?.lng ?? null,
+        lat: coords?.lat ?? selectedCity?.lat ?? city?.lat ?? null,
+        lng: coords?.lng ?? selectedCity?.lng ?? city?.lng ?? null,
       });
       await refreshClaims();
       toast.success("Application submitted. We will review it shortly.");
@@ -202,21 +241,54 @@ export default function WorkerApply({ existing, onCancel }) {
               placeholder="299"
             />
           </Field>
+          <Field label="State" htmlFor="apply-state" required>
+            <Select id="apply-state" value={form.state} onChange={(event) => chooseState(event.target.value)}>
+              <option value="">Select a state…</option>
+              {states.map((state) => (
+                <option key={state} value={state}>
+                  {state}
+                </option>
+              ))}
+              {form.state && !states.includes(form.state) ? (
+                <option value={form.state}>{form.state}</option>
+              ) : null}
+            </Select>
+          </Field>
+          <Field label="City" htmlFor="apply-city" required>
+            <Select id="apply-city" value={form.city} onChange={(event) => chooseCity(event.target.value)}>
+              <option value="">Select a city…</option>
+              {stateCities.map((item) => (
+                <option key={item.id || item.name} value={item.name}>
+                  {item.name}
+                </option>
+              ))}
+              {form.city && !stateCities.some((item) => item.name === form.city) ? (
+                <option value={form.city}>{form.city}</option>
+              ) : null}
+            </Select>
+          </Field>
           <Field
-            label="Service area"
+            label="Local area"
             htmlFor="apply-area"
-            hint="Locality, neighbourhood or city you can reach."
+            hint="The neighbourhood you can reach for jobs."
             required
             className="wk-span-2"
           >
-            <Input
+            <Select
               id="apply-area"
-              value={form.area}
-              maxLength={120}
-              onChange={set("area")}
-              placeholder="Indiranagar, Bengaluru"
-              required
-            />
+              value={form.areaName}
+              onChange={set("areaName")}
+            >
+              <option value="">Select a local area…</option>
+              {areaOptions.map((area) => (
+                <option key={area} value={area}>
+                  {area}
+                </option>
+              ))}
+              {form.areaName && !areaOptions.includes(form.areaName) ? (
+                <option value={form.areaName}>{form.areaName}</option>
+              ) : null}
+            </Select>
           </Field>
           <Field
             label="Short bio (optional)"

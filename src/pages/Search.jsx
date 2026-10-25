@@ -13,6 +13,7 @@ import { useLocation } from "../context/LocationContext";
 import { useLiveQuery } from "../hooks/useLive";
 import { qWorkers } from "../lib/queries";
 import { usePageMeta } from "../lib/usePageMeta";
+import { workerInServiceArea } from "../lib/geo";
 import { SERVICE_META } from "../lib/constants";
 import { EmptyState, SectionHeader } from "../components/ui";
 import { SearchBar, ServiceGrid, WorkerCard } from "../components/common";
@@ -44,7 +45,9 @@ export default function SearchPage() {
   }, [services, term]);
 
   const workerMatches = useMemo(() => {
-    const pool = workers.map((worker) => ({ ...worker }));
+    const pool = workers
+      .filter((worker) => workerInServiceArea(worker, city))
+      .map((worker) => ({ ...worker }));
     if (!term) return pool.slice(0, 8);
     return pool
       .filter((worker) => {
@@ -56,7 +59,7 @@ export default function SearchPage() {
         return haystack.includes(term) || String(meta.name || "").toLowerCase().includes(term);
       })
       .slice(0, 12);
-  }, [workers, term]);
+  }, [workers, term, city]);
 
   const total = serviceMatches.length + workerMatches.length;
 

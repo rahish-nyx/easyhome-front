@@ -171,10 +171,28 @@ export function AuthProvider({ children }) {
             }
 
             if (!snapshot.exists() && !signupInProgress.current) {
-              await api.post("/auth/session", {
-                name: user.displayName || "",
-                role: "customer",
-              });
+              const workerSnap = await getDoc(doc(db, "workers", user.uid));
+              if (workerSnap.exists()) {
+                const worker = workerSnap.data();
+                await api.post("/auth/session", {
+                  name: user.displayName || worker.name || "",
+                  role: "worker",
+                  service: worker.service,
+                  serviceKey: worker.serviceKey,
+                  area: worker.area,
+                  areaName: worker.areaName,
+                  city: worker.city,
+                  state: worker.state,
+                  pricePerWork: worker.pricePerWork,
+                  lat: worker.lat,
+                  lng: worker.lng,
+                });
+              } else {
+                await api.post("/auth/session", {
+                  name: user.displayName || "",
+                  role: "customer",
+                });
+              }
             }
           }
 
@@ -233,29 +251,66 @@ export function AuthProvider({ children }) {
     [attach, refreshClaims],
   );
 
+  const loadAccount = useCallback(async (user) => {
+    await refreshClaims();
+    try {
+      const account = await api.get("/auth/me");
+      if (mounted.current) {
+        setProfile(account.profile || null);
+        setWorker(account.worker || null);
+      }
+      const role =
+        account.profile?.role === "worker" || account.worker
+          ? "worker"
+          : "customer";
+      return { user, profile: account.profile || null, worker: account.worker || null, role };
+    } catch {
+      return { user, profile: null, worker: null, role: "customer" };
+    }
+  }, [refreshClaims]);
+
   const signIn = useCallback(async (email, password) => {
     if (!auth) throw new Error("Firebase is not configured.");
     const credential = await signInWithEmailAndPassword(auth, email, password);
-    await refreshClaims();
-    return credential.user;
-  }, [refreshClaims]);
+    return loadAccount(credential.user);
+  }, [loadAccount]);
 
   const googleSignIn = useCallback(async () => {
     if (!auth || !db) throw new Error("Firebase is not configured.");
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: "select_account" });
     const credential = await signInWithPopup(auth, provider);
+    const uid = credential.user.uid;
 
-    const snapshot = await getDoc(doc(db, "users", credential.user.uid));
+    const [snapshot, workerSnap] = await Promise.all([
+      getDoc(doc(db, "users", uid)),
+      getDoc(doc(db, "workers", uid)),
+    ]);
     if (!snapshot.exists()) {
-      await api.post("/auth/session", {
-        name: credential.user.displayName || "",
-        role: "customer",
-      });
+      if (workerSnap.exists()) {
+        const worker = workerSnap.data();
+        await api.post("/auth/session", {
+          name: credential.user.displayName || worker.name || "",
+          role: "worker",
+          service: worker.service,
+          serviceKey: worker.serviceKey,
+          area: worker.area,
+          areaName: worker.areaName,
+          city: worker.city,
+          state: worker.state,
+          pricePerWork: worker.pricePerWork,
+          lat: worker.lat,
+          lng: worker.lng,
+        });
+      } else {
+        await api.post("/auth/session", {
+          name: credential.user.displayName || "",
+          role: "customer",
+        });
+      }
     }
-    await refreshClaims();
-    return credential.user;
-  }, [refreshClaims]);
+    return loadAccount(credential.user);
+  }, [loadAccount]);
 
   const logout = useCallback(async () => {
     if (!auth) return;

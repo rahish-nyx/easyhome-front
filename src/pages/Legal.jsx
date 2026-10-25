@@ -107,7 +107,7 @@ const PAGES = {
         heading: "What we collect",
         body: [
           "Account data: name, email, phone, role and profile photo. Booking data: service, description, area, budget, urgency, optional photo and location coordinates.",
-          "Worker data: trade, service area, pricing, UPI ID for commission settlement, ratings and KYC status. KYC images are sent directly to a private admin Telegram chat and are visible only to authorised administrators.",
+          "Worker data: trade, service area, pricing, UPI ID for commission settlement, ratings and KYC status. KYC images are sent directly to a private admin Telegram chat and are visible only to authorised administrators; the app database stores only the verification status and timestamps.",
         ],
       },
       {
@@ -128,7 +128,7 @@ const PAGES = {
         heading: "Storage and security",
         body: [
           "Authentication and data are hosted on Google Firebase. Access rules are enforced server-side; the browser is not trusted to write records directly.",
-          "KYC documents are stored outside public buckets and streamed only through an authenticated admin endpoint. No system is perfectly secure, but we work to limit and protect what we hold.",
+          "KYC documents are delivered only to a private admin Telegram channel. They are not stored in the app database or in public storage. No system is perfectly secure, but we work to limit and protect what we hold.",
         ],
       },
       {
@@ -142,6 +142,49 @@ const PAGES = {
         heading: "Cookies and local storage",
         body: [
           "EasyHome stores your sign-in session and selected city in your browser. Firestore caches recent data locally so the app works offline. You can clear this data from your browser settings.",
+        ],
+      },
+    ],
+  },
+  disclaimer: {
+    title: "Disclaimer",
+    updated: "Last updated 1 October 2026",
+    intro:
+      "EasyHome is a discovery, matching and accountability platform. It is not the employer of the independent professionals listed on the platform.",
+    sections: [
+      {
+        heading: "Independent professionals",
+        body: [
+          "Professionals on EasyHome are independent service providers. They set their own availability, agree the final price in the app and perform the work directly for the customer.",
+          "EasyHome verifies identity and account details before approval, but verification is not a warranty of any particular outcome, workmanship or timeline.",
+        ],
+      },
+      {
+        heading: "Service outcomes",
+        body: [
+          "While we work hard to keep quality high, EasyHome does not control the tools, materials or on-site decisions of an independent professional. Any service warranty is between the customer and the professional unless we state otherwise in writing.",
+          "If a job does not go to plan, contact support before confirming payment. We will help mediate a redo, adjustment or cancellation.",
+        ],
+      },
+      {
+        heading: "Pricing and urgency",
+        body: [
+          "Budgets, quotes and final prices are shown in the app. Urgent requests include a 10% priority fee for non-members; active membership customers are exempt.",
+          "EasyHome commission and membership fees are separate from the amount paid to the professional for the service.",
+        ],
+      },
+      {
+        heading: "Location coverage",
+        body: [
+          "Availability depends on admin-managed service zones, the professional's registered city and local area, and their online status. A listed service may not be available in every neighbourhood.",
+          "If we are not live in your area yet, join the waitlist and we will let you know when coverage expands.",
+        ],
+      },
+      {
+        heading: "External links and payments",
+        body: [
+          "The app may link to third-party services such as maps or payment providers. Their terms and privacy practices apply separately.",
+          "Razorpay processes online payments. EasyHome does not store full card numbers or UPI credentials.",
         ],
       },
     ],
@@ -194,6 +237,7 @@ const ICONS = {
   terms: FileText,
   privacy: Lock,
   refunds: RefreshCcw,
+  disclaimer: ShieldCheck,
 };
 
 export default function Legal() {

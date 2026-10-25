@@ -58,7 +58,7 @@ export default function Booking() {
     showZoneNotice,
     openPicker,
   } = useLocation();
-  const { profile, fbUser, emailVerified, resendVerification } = useAuth();
+  const { profile, fbUser, emailVerified, isPremium, resendVerification } = useAuth();
 
   const initialKey = params.get("service") || "";
   const preferredWorkerId = params.get("worker") || "";
@@ -67,7 +67,9 @@ export default function Booking() {
   const [serviceKey, setServiceKey] = useState(initialKey || services[0]?.key || "");
   const [description, setDescription] = useState("");
   const [area, setArea] = useState(
-    [city?.name, profile?.addresses?.[0]?.area].filter(Boolean).join(", "),
+    [city?.areaName, city?.name, profile?.addresses?.[0]?.area]
+      .filter(Boolean)
+      .join(", "),
   );
   const [phone, setPhone] = useState(profile?.phone || "");
   const [budget, setBudget] = useState("");
@@ -89,6 +91,12 @@ export default function Booking() {
       icon: SERVICE_META[initialKey]?.icon || "wrench",
     };
   const minimum = Math.max(99, Number(service.fromPrice) || 199);
+  const budgetAmount = Math.max(minimum, Number(budget) || minimum);
+  const urgentFee =
+    urgency === "urgent" && !isPremium
+      ? Math.round(budgetAmount * 0.1)
+      : 0;
+  const estimatedTotal = budgetAmount + urgentFee;
 
   const workerRef = useMemo(
     () => (preferredWorkerId && db ? doc(db, "workersPublic", preferredWorkerId) : null),
@@ -114,8 +122,12 @@ export default function Booking() {
 
   useEffect(() => {
     if (!city?.name) return;
-    setArea((current) => current || city.name);
-  }, [city?.name]);
+    setArea(
+      (current) =>
+        current ||
+        [city.areaName, city.name].filter(Boolean).join(", "),
+    );
+  }, [city?.name, city?.areaName]);
 
   const captureLocation = async () => {
     if (!navigator.geolocation) {
@@ -143,6 +155,7 @@ export default function Booking() {
         lng: point.lng,
         cityName: city?.name,
         state: city?.state,
+        areaName: city?.areaName,
       });
       if (check.configured && !check.allowed) {
         showZoneNotice(check, point);
@@ -179,8 +192,18 @@ export default function Booking() {
         lng: bookingPoint?.lng ?? city?.lng,
         cityName: city?.name,
         state: city?.state,
+        areaName: city?.areaName,
       }),
-    [zones, bookingPoint?.lat, bookingPoint?.lng, city?.lat, city?.lng, city?.name, city?.state],
+    [
+      zones,
+      bookingPoint?.lat,
+      bookingPoint?.lng,
+      city?.lat,
+      city?.lng,
+      city?.name,
+      city?.state,
+      city?.areaName,
+    ],
   );
 
   const validate = () => {
@@ -233,6 +256,7 @@ export default function Booking() {
       if (preferredWorkerId) form.append("preferredWorkerId", preferredWorkerId);
       if (city?.name) form.append("city", city.name);
       if (city?.state) form.append("state", city.state);
+      if (city?.areaName) form.append("areaName", city.areaName);
       if (bookingPoint) {
         form.append("lat", String(bookingPoint.lat));
         form.append("lng", String(bookingPoint.lng));
@@ -471,7 +495,9 @@ export default function Booking() {
                 {
                   id: "urgent",
                   title: "Urgent",
-                  sub: "ASAP · priority dispatch",
+                  sub: isPremium
+                    ? "ASAP · 10% priority fee waived for members"
+                    : "ASAP · priority dispatch + 10% fee",
                 },
               ].map((option) => (
                 <button
@@ -579,6 +605,20 @@ export default function Booking() {
               <span>Your budget</span>
               <strong>{inr(budget || minimum)}</strong>
             </div>
+            {urgency === "urgent" ? (
+              <div className="summary-row">
+                <span>Urgent priority fee</span>
+                <strong style={{ color: urgentFee ? "var(--red)" : "var(--green)" }}>
+                  {urgentFee ? inr(urgentFee) : "Waived"}
+                </strong>
+              </div>
+            ) : null}
+            {urgency === "urgent" ? (
+              <div className="summary-row">
+                <span>Estimated total</span>
+                <strong>{inr(estimatedTotal)}</strong>
+              </div>
+            ) : null}
           </div>
 
           <div className="summary-total">

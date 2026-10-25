@@ -35,6 +35,7 @@ import {
 const EMPTY_ZONE = {
   state: "",
   cityName: "",
+  areaName: "",
   latitude: "",
   longitude: "",
   radiusKm: 10,
@@ -59,7 +60,7 @@ export default function AdminZones() {
     const term = query.trim().toLowerCase();
     return zones.filter((zone) => {
       if (!term) return true;
-      return [zone.cityName, zone.state, zone.latitude, zone.longitude]
+      return [zone.cityName, zone.state, zone.areaName, zone.latitude, zone.longitude]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(term));
     });
@@ -83,6 +84,7 @@ export default function AdminZones() {
       const payload = {
         state: form.state.trim(),
         cityName: form.cityName.trim(),
+        areaName: String(form.areaName || "").trim(),
         latitude: Number(form.latitude),
         longitude: Number(form.longitude),
         radiusKm: Number(form.radiusKm) || 10,
@@ -233,7 +235,10 @@ export default function AdminZones() {
                     </span>
                     <div className="grow">
                       <h3>{zone.cityName}</h3>
-                      <span>{zone.state}</span>
+                      <span>
+                        {zone.state}
+                        {zone.areaName ? ` · ${zone.areaName}` : " · All areas"}
+                      </span>
                     </div>
                     <StatusPill
                       status={zone.isActive === false ? "expired" : "active"}
@@ -406,6 +411,11 @@ function ZoneModal({ draft, cities, zones, onClose, onSave, loading }) {
   const set = (key) => (event) =>
     setForm((current) => ({ ...current, [key]: event.target.value }));
 
+  const selectedCity = cities.find((item) => item.name === form.cityName);
+  const areaOptions = (selectedCity?.localAreas || [])
+    .map((area) => (typeof area === "string" ? area : area?.name))
+    .filter(Boolean);
+
   const chooseCity = (event) => {
     const name = event.target.value;
     const city = cities.find((item) => item.name === name);
@@ -413,7 +423,8 @@ function ZoneModal({ draft, cities, zones, onClose, onSave, loading }) {
     setForm((current) => ({
       ...current,
       cityName: name,
-      state: existing?.state || current.state || "",
+      areaName: "",
+      state: city?.state || existing?.state || current.state || "",
       latitude: city ? Number(city.lat) : current.latitude,
       longitude: city ? Number(city.lng) : current.longitude,
       radiusKm: city?.radiusKm || existing?.radiusKm || current.radiusKm,
@@ -473,6 +484,24 @@ function ZoneModal({ draft, cities, zones, onClose, onSave, loading }) {
             ))}
             {form.cityName && !cities.some((city) => city.name === form.cityName) ? (
               <option value={form.cityName}>{form.cityName}</option>
+            ) : null}
+          </Select>
+        </Field>
+
+        <Field
+          label="Local area"
+          htmlFor="zone-area"
+          hint="Leave blank for a city-wide zone, or pick one area for precise coverage."
+        >
+          <Select id="zone-area" value={form.areaName || ""} onChange={set("areaName")}>
+            <option value="">All areas in the city</option>
+            {areaOptions.map((area) => (
+              <option key={area} value={area}>
+                {area}
+              </option>
+            ))}
+            {form.areaName && !areaOptions.includes(form.areaName) ? (
+              <option value={form.areaName}>{form.areaName}</option>
             ) : null}
           </Select>
         </Field>

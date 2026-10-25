@@ -4,9 +4,11 @@ import {
   ArrowLeft,
   Clock3,
   Headphones,
+  PhoneCall,
   Send,
   ShieldCheck,
   Sparkles,
+  XCircle,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -15,7 +17,7 @@ import { qChatMessages } from "../lib/queries";
 import { api } from "../lib/api";
 import { clockTime } from "../lib/format";
 import { usePageMeta } from "../lib/usePageMeta";
-import { Button, Input, Spinner } from "../components/ui";
+import { Button, Input, Modal, Spinner } from "../components/ui";
 
 const QUICK_REPLIES = [
   "I need help with a booking",
@@ -25,13 +27,16 @@ const QUICK_REPLIES = [
   "Payment or refund help",
 ];
 
-export default function Chat() {
+export default function Chat({ backTo = "/" }) {
   usePageMeta("Support", "Chat with the EasyHome support team about bookings, payments and membership.");
 
   const { fbUser } = useAuth();
   const toast = useToast();
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [ending, setEnding] = useState(false);
+  const [confirmEnd, setConfirmEnd] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const bodyRef = useRef(null);
 
@@ -76,9 +81,36 @@ export default function Chat() {
     }
   };
 
+  const requestCall = async () => {
+    setRequesting(true);
+    try {
+      await api.post("/chat/request-call", {});
+      toast.success("Call request sent. Our team will use your registered number.");
+    } catch (requestError) {
+      toast.error(requestError.message);
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  const endChat = async () => {
+    setEnding(true);
+    try {
+      await api.post("/chat/end", {});
+      setText("");
+      setLoaded(false);
+      setConfirmEnd(false);
+      toast.success("Chat ended. All messages were deleted.");
+    } catch (endError) {
+      toast.error(endError.message);
+    } finally {
+      setEnding(false);
+    }
+  };
+
   return (
     <div className="page page--narrow">
-      <Link to="/" className="btn btn--ghost btn--sm" style={{ marginBottom: 12, paddingLeft: 0 }}>
+      <Link to={backTo} className="btn btn--ghost btn--sm" style={{ marginBottom: 12, paddingLeft: 0 }}>
         <ArrowLeft size={15} /> Back
       </Link>
 
@@ -94,9 +126,28 @@ export default function Chat() {
               Usually replies in a few minutes
             </p>
           </div>
-          <span className="badge badge--green">
-            <ShieldCheck size={11} /> Secure
-          </span>
+          <div className="chat-head__actions">
+            <Button
+              size="sm"
+              variant="outline"
+              icon={PhoneCall}
+              loading={requesting}
+              onClick={requestCall}
+            >
+              Request a call
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={XCircle}
+              onClick={() => setConfirmEnd(true)}
+            >
+              End chat
+            </Button>
+            <span className="badge badge--green chat-head__secure">
+              <ShieldCheck size={11} /> Secure
+            </span>
+          </div>
         </header>
 
         <div className="chat-body" ref={bodyRef}>
@@ -180,10 +231,34 @@ export default function Chat() {
           </form>
           <p className="tiny muted" style={{ padding: "0 16px 10px" }}>
             <Clock3 size={11} style={{ display: "inline", marginRight: 4 }} />
-            Never share OTPs, passwords or card details. Support will never ask for them.
+            Never share OTPs, passwords or card details. Messages are deleted when either side
+            ends the chat.
           </p>
         </div>
       </div>
+
+      <Modal
+        open={confirmEnd}
+        onClose={() => setConfirmEnd(false)}
+        title="End this support chat?"
+        subtitle="Every message in this session will be permanently deleted for you and the admin team."
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirmEnd(false)}>
+              Keep chatting
+            </Button>
+            <Button
+              className="btn--danger"
+              loading={ending}
+              icon={XCircle}
+              onClick={endChat}
+            >
+              End and delete
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 }

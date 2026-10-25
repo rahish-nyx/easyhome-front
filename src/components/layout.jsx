@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import {
+  Link,
+  Navigate,
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import {
   Bell,
   BriefcaseBusiness,
@@ -27,7 +34,7 @@ import { Avatar, Badge, Button, IconButton, Modal, Spinner } from "./ui";
 import { NotificationBell } from "./common";
 import { OutOfZoneModal } from "./geofence";
 import { cx } from "../lib/format";
-import { cityZone } from "../lib/zones";
+import { activeZones, cityZone, zoneForArea } from "../lib/zones";
 
 /* --------------------------------- Brand --------------------------------- */
 
@@ -96,7 +103,10 @@ export function SiteHeader() {
             <span className="city-btn__copy">
               <span className="city-btn__label">Serving in</span>
               <span className="city-btn__value">
-                {city?.name || "Choose city"} <ChevronDown size={13} />
+                {city?.areaName
+                  ? `${city.areaName}, ${city.name}`
+                  : city?.name || "Choose city"}{" "}
+                <ChevronDown size={13} />
               </span>
             </span>
           </button>
@@ -182,8 +192,8 @@ export function SiteHeader() {
                 <Link to="/auth" className="btn btn--ghost btn--sm">
                   Sign in
                 </Link>
-                <Link to="/auth?role=worker" className="btn btn--dark btn--sm user-join">
-                  Join as a pro
+                <Link to="/auth?mode=signup" className="btn btn--dark btn--sm user-join">
+                  Create account
                 </Link>
               </>
             )}
@@ -196,9 +206,73 @@ export function SiteHeader() {
 
 /* -------------------------------- City modal ------------------------------ */
 
+function areaList(city) {
+  return (city?.localAreas || [])
+    .map((area) =>
+      typeof area === "string"
+        ? { name: area }
+        : { ...area, name: String(area?.name || area?.area || "").trim() },
+    )
+    .filter((area) => area.name);
+}
+
 export function CityModal({ open, onClose }) {
-  const { city, cities, zones, setCity, detectLocation, detecting, error } = useCity();
+  const {
+    city,
+    cities,
+    states,
+    citiesForState,
+    setCity,
+    detectLocation,
+    detecting,
+    error,
+    zones,
+  } = useCity();
+  const currentCity = cities.find(
+    (item) =>
+      String(item.name || "").toLowerCase() ===
+      String(city?.name || "").toLowerCase(),
+  );
   const [localError, setLocalError] = useState("");
+  const [selectedState, setSelectedState] = useState(
+    city?.state || currentCity?.state || "",
+  );
+  const [selectedCity, setSelectedCity] = useState(currentCity?.name || "");
+  const [selectedArea, setSelectedArea] = useState(
+    currentCity ? city?.areaName || "" : "",
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    const savedCity = cities.find(
+      (item) =>
+        String(item.name || "").toLowerCase() ===
+        String(city?.name || "").toLowerCase(),
+    );
+    setLocalError("");
+    setSelectedState(city?.state || savedCity?.state || states[0] || "");
+    setSelectedCity(savedCity?.name || "");
+    setSelectedArea(savedCity ? city?.areaName || "" : "");
+  }, [open, city?.state, city?.name, city?.areaName, cities, states]);
+
+  const stateCities = citiesForState(selectedState);
+  const cityObject = stateCities.find((item) => item.name === selectedCity);
+  const active = activeZones(zones);
+  const cityActiveZones = active.filter(
+    (zone) =>
+      String(zone.cityName || "").toLowerCase() ===
+      String(cityObject?.name || "").toLowerCase(),
+  );
+  const hasAreaZones = cityActiveZones.some((zone) => zone.areaName);
+  const hasCityWideZone = cityActiveZones.some((zone) => !zone.areaName);
+  const cityAreas = areaList(cityObject).filter((area) => {
+    if (!hasAreaZones) return true;
+    return cityActiveZones.some(
+      (zone) =>
+        String(zone.areaName || "").toLowerCase() ===
+        String(area.name || "").toLowerCase(),
+    );
+  });
 
   const handleDetect = async () => {
     setLocalError("");
@@ -210,18 +284,85 @@ export function CityModal({ open, onClose }) {
     }
   };
 
+  const chooseState = (state) => {
+    setLocalError("");
+    setSelectedState(state);
+    setSelectedCity("");
+    setSelectedArea("");
+  };
+
+  const chooseCity = (name) => {
+    const item = stateCities.find((cityItem) => cityItem.name === name);
+    if (!item) {
+      setSelectedCity("");
+      setSelectedArea("");
+      return;
+    }
+    const areas = areaList(item);
+    const cityZones = active.filter(
+      (zone) =>
+        String(zone.cityName || "").toLowerCase() ===
+        String(item.name || "").toLowerCase(),
+    );
+    const hasCityAreaZones = cityZones.some((zone) => zone.areaName);
+    const liveAreas = hasCityAreaZones
+      ? areas.filter((area) =>
+          cityZones.some(
+            (zone) =>
+              String(zone.areaName || "").toLowerCase() ===
+              String(area.name || "").toLowerCase(),
+          ),
+        )
+      : areas;
+    setLocalError("");
+    setSelectedCity(item.name);
+    setSelectedArea(liveAreas[0]?.name || "");
+  };
+
+  const saveSelection = (areaOverride = null) => {
+    if (!cityObject) {
+      setLocalError("Choose a state and district first.");
+      return;
+    }
+    const area =
+      areaOverride ||
+      cityAreas.find((item) => item.name === selectedArea) ||
+      null;
+    if (hasAreaZones && !cityAreas.length) {
+      setLocalError(
+        "We are expanding fast! We'll be in your area soon. No active local area is available right now.",
+      );
+      return;
+    }
+    if (cityAreas.length && !area) {
+      setLocalError("Choose a local area to finish saving your location.");
+      return;
+    }
+    setLocalError("");
+    setCity({
+      ...cityObject,
+      area: area?.name || cityObject.name,
+      areaName: area?.name || "",
+      lat: area?.lat ?? cityObject.lat,
+      lng: area?.lng ?? cityObject.lng,
+    });
+    onClose?.();
+  };
+
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Choose your city"
-      subtitle="We match verified pros inside your live service zone."
-      size="sm"
+      title="Choose your location"
+      subtitle="Pick your state, district and local area so we can match verified pros in exactly the right place."
+      size="md"
     >
       <button type="button" className="city-detect" onClick={handleDetect} disabled={detecting}>
-        {detecting ? <Spinner size={16} /> : <span aria-hidden="true">📍</span>}
+        {detecting ? <Spinner size={16} /> : <MapPin size={16} />}
         <span className="grow">
-          {detecting ? "Detecting your location…" : "Use my current location"}
+          {detecting
+            ? "Detecting your location…"
+            : "Use my current location (auto-detects state, district and area)"}
         </span>
       </button>
 
@@ -231,47 +372,138 @@ export function CityModal({ open, onClose }) {
         </p>
       ) : null}
 
-      {cities.length ? (
-        <div className="city-list">
-          {cities.map((item) => {
-            const live = cityZone(zones, item);
-            const status = zones.length === 0 ? null : live ? "Live" : "Coming soon";
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className={cx(
-                  "city-option",
-                  city?.name === item.name && "is-active",
-                  status === "Coming soon" && "is-soon",
-                )}
-                onClick={() => {
-                  setCity(item);
-                  onClose?.();
-                }}
-              >
-                <span className="city-option__name">{item.name}</span>
-                <span
-                  className={cx(
-                    "city-option__status",
-                    status === "Live" && "is-live",
-                    status === "Coming soon" && "is-soon",
-                  )}
-                >
-                  {status || (city?.name === item.name ? "✓" : "")}
-                </span>
-              </button>
-            );
-          })}
+      {states.length ? (
+        <div className="city-select-grid">
+          <label className="city-field" htmlFor="city-state">
+            <span>State</span>
+            <select
+              id="city-state"
+              value={selectedState}
+              onChange={(event) => chooseState(event.target.value)}
+            >
+              <option value="">Select state</option>
+              {states.map((state) => (
+                <option key={state} value={state}>
+                  {state}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="city-field" htmlFor="city-district">
+            <span>District / city</span>
+            <select
+              id="city-district"
+              value={selectedCity}
+              onChange={(event) => chooseCity(event.target.value)}
+              disabled={!selectedState || !stateCities.length}
+            >
+              <option value="">
+                {selectedState
+                  ? stateCities.length
+                    ? "Select district"
+                    : "No active districts"
+                  : "Choose a state first"}
+              </option>
+              {stateCities.map((item) => {
+                const live = cityZone(zones, item);
+                const status = zones.length === 0 ? "" : live ? " · Live" : " · Coming soon";
+                return (
+                  <option key={item.id || item.name} value={item.name}>
+                    {item.name}
+                    {status}
+                  </option>
+                );
+              })}
+            </select>
+          </label>
         </div>
       ) : (
-        <p className="small muted">
-          City list is being set up. Ask an admin to add service areas in the admin console.
+        <p className="small muted" style={{ marginBottom: 12 }}>
+          Locations are being set up. Try “Use my current location”.
+        </p>
+      )}
+
+      {cityObject ? (
+        <>
+          <div className="city-area-head">
+            <strong>Local area</strong>
+            <span className="tiny muted">
+              {selectedState}
+              {selectedCity ? ` · ${selectedCity}` : ""}
+            </span>
+          </div>
+
+          <div className="city-list city-list--grid">
+            {cityAreas.length ? (
+              cityAreas.map((area) => {
+                const live =
+                  zones.length === 0 ||
+                  hasCityWideZone ||
+                  Boolean(zoneForArea(zones, cityObject.name, cityObject.state, area.name));
+                return (
+                  <button
+                    key={area.name}
+                    type="button"
+                    className={cx(
+                      "city-option",
+                      selectedArea === area.name && "is-active",
+                      !live && "is-soon",
+                    )}
+                    onClick={() => {
+                      setSelectedArea(area.name);
+                      saveSelection(area);
+                    }}
+                  >
+                    <span className="city-option__name">{area.name}</span>
+                    <span
+                      className={cx(
+                        "city-option__status",
+                        live && "is-live",
+                        !live && "is-soon",
+                      )}
+                    >
+                      {zones.length === 0 ? "Select" : live ? "Live" : "Coming soon"}
+                    </span>
+                  </button>
+                );
+              })
+            ) : (
+              <button
+                type="button"
+                className="city-option is-active"
+                onClick={() => saveSelection()}
+              >
+                <span className="city-option__name">{cityObject.name}</span>
+                <span className="city-option__status">City-wide</span>
+              </button>
+            )}
+          </div>
+
+          {hasAreaZones && !selectedArea ? (
+            <p className="small muted" style={{ marginTop: 10 }}>
+              Choose an area to see live availability.
+            </p>
+          ) : null}
+
+          <button
+            type="button"
+            className="btn btn--primary btn--block"
+            style={{ marginTop: 16 }}
+            onClick={() => saveSelection()}
+          >
+            Save this location
+          </button>
+        </>
+      ) : (
+        <p className="small muted" style={{ marginTop: 14 }}>
+          Choose a state and district to see local areas.
         </p>
       )}
 
       <p className="small muted" style={{ marginTop: 16 }}>
-        Not in the list? We are expanding fast — try “Use my current location”.
+        We are expanding fast! We&apos;ll be in your area soon. If your district is
+        missing, try “Use my current location” or contact support.
       </p>
     </Modal>
   );
@@ -351,14 +583,19 @@ export function SiteFooter() {
               {service.name}
             </Link>
           ))}
+          <Link to="/services" className="footer-col__more">
+            …and many more
+          </Link>
         </div>
 
         <div className="footer-col">
           <h2>Company</h2>
           <Link to="/legal/about">About us</Link>
+          <Link to="/faq">FAQ</Link>
           <Link to="/legal/terms">Terms of service</Link>
           <Link to="/legal/privacy">Privacy policy</Link>
           <Link to="/legal/refunds">Refund policy</Link>
+          <Link to="/legal/disclaimer">Disclaimer</Link>
           <Link to="/chat">Help &amp; support</Link>
         </div>
 
@@ -367,7 +604,6 @@ export function SiteFooter() {
           <Link to="/auth?role=worker">Become a pro</Link>
           <Link to="/worker">Worker dashboard</Link>
           <Link to="/subscription">EasyHome Pro</Link>
-          <Link to="/admin">Admin console</Link>
         </div>
       </div>
 
@@ -388,6 +624,7 @@ export function SiteFooter() {
 
 export function CustomerLayout() {
   const location = useLocation();
+  const { isWorker } = useAuth();
   const {
     pickerOpen,
     closePicker,
@@ -399,6 +636,22 @@ export function CustomerLayout() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [location.pathname]);
+
+  // Customer and professional sessions stay separate. Public legal pages are
+  // safe for anyone; every other customer route sends a professional back to
+  // their own console (support gets its own worker-safe route).
+  if (
+    isWorker &&
+    !location.pathname.startsWith("/legal/") &&
+    !location.pathname.startsWith("/workers/")
+  ) {
+    return (
+      <Navigate
+        to={location.pathname === "/chat" ? "/worker/support" : "/worker"}
+        replace
+      />
+    );
+  }
 
   return (
     <>

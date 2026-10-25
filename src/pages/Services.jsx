@@ -22,7 +22,11 @@ import { useLiveQuery } from "../hooks/useLive";
 import { qWorkers } from "../lib/queries";
 import { usePageMeta } from "../lib/usePageMeta";
 import { inr } from "../lib/format";
-import { distanceKm, distanceLabel } from "../lib/geo";
+import {
+  distanceKm,
+  distanceLabel,
+  workerInServiceArea,
+} from "../lib/geo";
 import { SERVICE_META } from "../lib/constants";
 import { Badge, EmptyState, SectionHeader } from "../components/ui";
 import {
@@ -162,16 +166,13 @@ function ServiceDetail({ serviceKey }) {
   );
 
   const nearby = useMemo(() => {
-    const list = workers.map((worker) => ({
-      ...worker,
-      distance: city && city.lat && worker.lat ? distanceKm(city, worker) : null,
-    }));
-    const filtered = list.filter((worker) => {
-      if (!city?.name) return true;
-      if (worker.distance !== null) return worker.distance <= (Number(city.radiusKm) || 30);
-      return String(worker.area || "").toLowerCase().includes(city.name.toLowerCase());
-    });
-    return (filtered.length ? filtered : list)
+    return workers
+      .filter((worker) => workerInServiceArea(worker, city))
+      .map((worker) => ({
+        ...worker,
+        distance:
+          city && city.lat && worker.lat ? distanceKm(city, worker) : null,
+      }))
       .sort((a, b) => (b.rating || 0) - (a.rating || 0))
       .slice(0, 6);
   }, [workers, city]);

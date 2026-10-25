@@ -16,6 +16,7 @@ import { api } from "../lib/api";
 import { inr } from "../lib/format";
 import { Button, Field, Input, Modal, Select, Textarea } from "../components/ui";
 import { ServiceIcon } from "../components/common";
+import { SERVICE_ICON_OPTIONS } from "../lib/iconMap";
 import {
   AdminPage,
   EmptyBlock,
@@ -29,19 +30,6 @@ import {
   Toggle,
 } from "./adminKit";
 
-const ICON_OPTIONS = [
-  { id: "sparkles", label: "Sparkles (cleaning)" },
-  { id: "wrench", label: "Wrench (plumbing)" },
-  { id: "zap", label: "Zap (electrical)" },
-  { id: "hammer", label: "Hammer (carpentry)" },
-  { id: "plug-zap", label: "Plug (appliance)" },
-  { id: "scissors", label: "Scissors (salon)" },
-  { id: "paintbrush", label: "Paintbrush (painting)" },
-  { id: "bug", label: "Bug (pest control)" },
-  { id: "truck", label: "Truck (moving)" },
-  { id: "graduation-cap", label: "Graduation cap (tutoring)" },
-];
-
 const EMPTY_SERVICE = {
   name: "",
   key: "",
@@ -54,11 +42,44 @@ const EMPTY_SERVICE = {
 
 const EMPTY_CITY = {
   name: "",
+  state: "",
   lat: "",
   lng: "",
   radiusKm: 10,
+  localAreas: [],
   active: true,
 };
+
+function areasToText(areas = []) {
+  return (areas || [])
+    .map((area) => {
+      if (typeof area === "string") return area;
+      const coords =
+        Number.isFinite(Number(area?.lat)) && Number.isFinite(Number(area?.lng))
+          ? `, ${area.lat}, ${area.lng}`
+          : "";
+      return `${area?.name || area?.area || ""}${coords}`;
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+function textToAreas(text = "") {
+  return String(text)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [name, lat, lng] = line.split(",").map((part) => part.trim());
+      const area = { name };
+      if (Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))) {
+        area.lat = Number(lat);
+        area.lng = Number(lng);
+      }
+      return area;
+    })
+    .filter((area) => area.name);
+}
 
 export default function AdminCatalog() {
   const toast = useToast();
@@ -97,7 +118,13 @@ export default function AdminCatalog() {
     const term = query.trim().toLowerCase();
     return cities.filter((city) => {
       if (!term) return true;
-      return [city.name, city.lat, city.lng]
+      return [
+        city.name,
+        city.state,
+        city.lat,
+        city.lng,
+        ...(city.localAreas || []).map((area) => area?.name || area),
+      ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(term));
     });
@@ -546,14 +573,28 @@ function ServiceModal({ draft, onClose, onSave, loading }) {
             placeholder="cleaning"
           />
         </Field>
-        <Field label="Icon" htmlFor="cat-service-icon">
-          <Select id="cat-service-icon" value={form.icon} onChange={set("icon")}>
-            {ICON_OPTIONS.map((icon) => (
-              <option key={icon.id} value={icon.id}>
-                {icon.label}
-              </option>
+        <Field
+          label="Icon"
+          htmlFor="cat-service-icon"
+          hint="Choose any icon. New categories go live as soon as they are saved."
+          className="adm-span-2"
+        >
+          <div className="adm-icon-picker" id="cat-service-icon" role="listbox" aria-label="Service icon">
+            {SERVICE_ICON_OPTIONS.map((icon) => (
+              <button
+                key={icon.id}
+                type="button"
+                role="option"
+                aria-selected={form.icon === icon.id}
+                className={`adm-icon-picker__item ${form.icon === icon.id ? "is-active" : ""}`}
+                title={icon.label}
+                onClick={() => setForm((prev) => ({ ...prev, icon: icon.id }))}
+              >
+                <ServiceIcon icon={icon.id} size={34} iconSize={17} />
+                <span>{icon.label}</span>
+              </button>
             ))}
-          </Select>
+          </div>
         </Field>
         <Field label="Starting price (₹)" htmlFor="cat-service-price">
           <Input
@@ -603,10 +644,12 @@ function ServiceModal({ draft, onClose, onSave, loading }) {
 
 function CityModal({ draft, onClose, onSave, loading }) {
   const [form, setForm] = useState(draft || EMPTY_CITY);
+  const [areasText, setAreasText] = useState(() => areasToText(draft?.localAreas));
   const [locating, setLocating] = useState(false);
 
   useEffect(() => {
     setForm(draft || EMPTY_CITY);
+    setAreasText(areasToText(draft?.localAreas));
   }, [draft]);
 
   const set = (key) => (event) =>
@@ -646,8 +689,13 @@ function CityModal({ draft, onClose, onSave, loading }) {
           <Button
             loading={loading}
             onClick={() => {
-              if (!form.name.trim()) return;
-              onSave({ ...form, name: form.name.trim() });
+              if (!form.name.trim() || !form.state.trim()) return;
+              onSave({
+                ...form,
+                name: form.name.trim(),
+                state: form.state.trim(),
+                localAreas: textToAreas(areasText),
+              });
             }}
           >
             {draft.id ? "Save changes" : "Add city"}
@@ -656,13 +704,22 @@ function CityModal({ draft, onClose, onSave, loading }) {
       }
     >
       <div className="adm-form-grid">
-        <Field label="City name" htmlFor="cat-city-name" required className="adm-span-2">
+        <Field label="City name" htmlFor="cat-city-name" required>
           <Input
             id="cat-city-name"
             value={form.name}
             maxLength={80}
             onChange={set("name")}
             placeholder="Bengaluru"
+          />
+        </Field>
+        <Field label="State" htmlFor="cat-city-state" required>
+          <Input
+            id="cat-city-state"
+            value={form.state}
+            maxLength={80}
+            onChange={set("state")}
+            placeholder="Karnataka"
           />
         </Field>
         <Field label="Latitude" htmlFor="cat-city-lat" required>
@@ -697,6 +754,20 @@ function CityModal({ draft, onClose, onSave, loading }) {
             max={200}
             value={form.radiusKm}
             onChange={set("radiusKm")}
+          />
+        </Field>
+        <Field
+          label="Local areas"
+          htmlFor="cat-city-areas"
+          hint="One area per line. Add optional coordinates as: Area name, latitude, longitude."
+          className="adm-span-2"
+        >
+          <Textarea
+            id="cat-city-areas"
+            rows={6}
+            value={areasText}
+            onChange={(event) => setAreasText(event.target.value)}
+            placeholder={"Indiranagar\nKoramangala\nWhitefield, 12.9698, 77.7500"}
           />
         </Field>
         <div className="adm-span-2">

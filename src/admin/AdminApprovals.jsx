@@ -24,7 +24,7 @@ import { api } from "../lib/api";
 import { formatDate, formatDateTime, inr, timeAgo } from "../lib/format";
 import { mapsUrl } from "../lib/geo";
 import { Avatar, Button } from "../components/ui";
-import { AuthedImage } from "../components/common";
+
 import {
   AdminPage,
   EmptyBlock,
@@ -332,7 +332,7 @@ function WorkerDetail({
   const approved = worker.status === "approved";
   const rejected = worker.status === "rejected";
   const suspended = worker.status === "suspended";
-  const hasKyc = Boolean(worker.kycPath || worker.kycTelegramFileId);
+  const canReviewKyc = worker.kycStatus === "pending";
   const coords =
     Number.isFinite(Number(worker.lat)) && Number.isFinite(Number(worker.lng))
       ? mapsUrl(worker.lat, worker.lng, worker.area)
@@ -408,31 +408,29 @@ function WorkerDetail({
       <div className="adm-detail-section">
         <div className="adm-detail-section__head">
           <div>
-            <h3>Identity document</h3>
+            <h3>Identity check</h3>
             <p>
-              {worker.kycTelegramFileId
-                ? "Sent directly to the admin Telegram chat. Only admins can open it here."
-                : "Stored privately. Only admins can view this file."}
+              Documents go only to the admin Telegram chat. EasyHome never stores or displays
+              the ID here.
             </p>
           </div>
           <StatusPill status={worker.kycStatus} />
         </div>
-        <div className="adm-kyc">
-          <AuthedImage
-            path={hasKyc ? worker.id : ""}
-            alt={`${worker.name} identity document`}
-            className="adm-kyc__image"
-          />
+        <div className="adm-kyc adm-kyc--status">
           <div className="adm-kyc__side">
+            <p>
+              {worker.kycStatus === "pending"
+                ? "An ID was submitted. Review the document in Telegram, then record the result here."
+                : worker.kycStatus === "verified"
+                  ? "This professional's identity has been verified."
+                  : worker.kycStatus === "rejected"
+                    ? "The last ID was rejected. Ask the professional to upload a clearer document."
+                    : "No ID has been submitted yet."}
+            </p>
             {worker.kycRejectionReason ? (
               <p className="adm-kyc__reason">{worker.kycRejectionReason}</p>
-            ) : (
-              <p>
-                Check that the photo is legible, the name matches the profile and the document is
-                not expired.
-              </p>
-            )}
-            {hasKyc && worker.kycStatus !== "verified" ? (
+            ) : null}
+            {canReviewKyc ? (
               <div className="adm-inline-actions">
                 <Button
                   size="sm"
@@ -440,7 +438,7 @@ function WorkerDetail({
                   loading={busy === `kyc:verify:${worker.id}`}
                   onClick={onKycVerify}
                 >
-                  Verify ID
+                  Mark ID verified
                 </Button>
                 <Button
                   size="sm"
@@ -452,14 +450,12 @@ function WorkerDetail({
                   Reject ID
                 </Button>
               </div>
-            ) : hasKyc ? (
+            ) : worker.kycStatus === "verified" ? (
               <p className="adm-ok-line">
                 <ShieldCheck size={14} /> Identity verified
                 {worker.kycReviewedAt ? ` · ${formatDate(worker.kycReviewedAt)}` : ""}
               </p>
-            ) : (
-              <p className="adm-muted">No document uploaded yet.</p>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

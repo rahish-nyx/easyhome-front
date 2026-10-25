@@ -9,6 +9,7 @@ import {
   Eye,
   EyeOff,
   Mail,
+  MapPin,
   ShieldCheck,
   Sparkles,
   UserRound,
@@ -44,10 +45,11 @@ function friendly(error) {
 export default function Auth() {
   usePageMeta("Sign in", "Sign in or create your EasyHome account to book verified home services.");
 
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const nextParam = params.get("next") || "";
   const next = nextParam.startsWith("/") ? nextParam : "";
   const roleParam = params.get("role") === "worker" ? "worker" : "customer";
+  const modeParam = params.get("mode") === "signup" ? "signup" : "signin";
 
   const {
     fbUser,
@@ -63,11 +65,11 @@ export default function Auth() {
     emailVerified,
   } = useAuth();
   const { services } = useCatalogue();
-  const { city } = useLocation();
+  const { city, openPicker } = useLocation();
   const toast = useToast();
   const navigate = useNavigate();
 
-  const [mode, setMode] = useState("signin");
+  const [mode, setMode] = useState(modeParam);
   const [role, setRole] = useState(roleParam);
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -92,6 +94,10 @@ export default function Auth() {
   }, [roleParam]);
 
   useEffect(() => {
+    setMode(modeParam);
+  }, [modeParam]);
+
+  useEffect(() => {
     if (services.length && !form.serviceKey) {
       setForm((prev) => ({ ...prev, serviceKey: services[0].key }));
     }
@@ -101,9 +107,23 @@ export default function Auth() {
     if (!form.area && city?.name) setForm((prev) => ({ ...prev, area: city.name }));
   }, [city?.name, form.area]);
 
+  const chooseRole = (nextRole) => {
+    setRole(nextRole);
+    setError("");
+    const nextParams = new URLSearchParams(params);
+    if (nextRole === "worker") nextParams.set("role", "worker");
+    else nextParams.delete("role");
+    setParams(nextParams, { replace: true });
+  };
+
   const goNext = (targetRole = role) => {
-    if (next) navigate(next, { replace: true });
-    else navigate(targetRole === "worker" ? "/worker" : "/", { replace: true });
+    if (targetRole === "worker") {
+      navigate("/worker", { replace: true });
+      return;
+    }
+    const safeNext =
+      next && !next.startsWith("/worker") && !next.startsWith("/admin") ? next : "";
+    navigate(safeNext || "/", { replace: true });
   };
 
   const handleSignIn = async (event) => {
@@ -115,9 +135,17 @@ export default function Auth() {
     }
     setBusy(true);
     try {
-      const user = await signIn(form.email.trim(), form.password);
+      const result = await signIn(form.email.trim(), form.password);
+      const actualRole = result?.role || role;
+      if (actualRole !== role) {
+        toast.info(
+          actualRole === "worker"
+            ? "This is a professional account. Opening your worker dashboard."
+            : "This is a customer account. Opening the customer app.",
+        );
+      }
       toast.success("Welcome back.");
-      goNext(user?.displayName ? role : role);
+      goNext(actualRole);
     } catch (signInError) {
       setError(friendly(signInError));
     } finally {
@@ -140,8 +168,8 @@ export default function Auth() {
       setError("Enter a valid 10-digit Indian mobile number, or leave it blank.");
       return;
     }
-    if (role === "worker" && (!form.serviceKey || !form.area.trim())) {
-      setError("Choose your trade and service area to apply as a worker.");
+    if (role === "worker" && (!form.serviceKey || !city?.name)) {
+      setError("Choose your state, city, local area and trade to apply as a worker.");
       return;
     }
     if (!terms) {
@@ -159,7 +187,11 @@ export default function Auth() {
                 SERVICE_META[form.serviceKey]?.name ||
                 form.serviceKey,
               serviceKey: form.serviceKey,
-              area: form.area.trim(),
+              area:
+                [city?.areaName, city?.name].filter(Boolean).join(", ") ||
+                form.area.trim(),
+              areaName: city?.areaName || form.area.trim(),
+              state: city?.state || "",
               pricePerWork: Number(form.pricePerWork) || undefined,
               city: city?.name || form.area.trim(),
               lat: city?.lat || null,
@@ -191,9 +223,17 @@ export default function Auth() {
     setError("");
     setGoogleBusy(true);
     try {
-      await googleSignIn();
+      const result = await googleSignIn();
+      const actualRole = result?.role || role;
+      if (actualRole !== role) {
+        toast.info(
+          actualRole === "worker"
+            ? "Professional account detected. Opening your worker dashboard."
+            : "Customer account detected. Opening the customer app.",
+        );
+      }
       toast.success("Signed in with Google.");
-      goNext(role);
+      goNext(actualRole);
     } catch (googleError) {
       setError(friendly(googleError));
     } finally {
@@ -229,8 +269,8 @@ export default function Auth() {
       if (fbUser.emailVerified) {
         toast.success("Email verified. You are all set.");
         setJustSignedUp(false);
-        if (role === "worker") navigate("/worker", { replace: true });
-        else goNext(role);
+        const actualRole = profile?.role === "worker" ? "worker" : role;
+        goNext(actualRole);
       } else {
         toast.info("Not verified yet. Open the link in your email first.");
       }
@@ -245,7 +285,7 @@ export default function Auth() {
 
   if (fbUser && !justSignedUp) {
     return (
-      <AuthShell>
+      <AuthShell role={profile?.role === "worker" ? "worker" : role}>
         <div className="auth-card">
           <div className="auth-card__head">
             <h2>You are signed in</h2>
@@ -299,7 +339,7 @@ export default function Auth() {
 
   if (justSignedUp) {
     return (
-      <AuthShell>
+      <AuthShell role={role}>
         <div className="auth-card">
           <div className="verify-card">
             <span className="verify-card__icon">
@@ -356,7 +396,7 @@ export default function Auth() {
   }
 
   return (
-    <AuthShell>
+    <AuthShell role={role}>
       <div className="auth-card">
         <div className="auth-card__head">
           <h2>
@@ -366,7 +406,9 @@ export default function Auth() {
                 ? role === "worker"
                   ? "Join as a professional"
                   : "Create your account"
-                : "Welcome back"}
+                : role === "worker"
+                  ? "Professional sign in"
+                  : "Welcome back"}
           </h2>
           <p>
             {mode === "reset"
@@ -375,9 +417,38 @@ export default function Auth() {
                 ? role === "worker"
                   ? "Apply once. Get verified. Receive local jobs."
                   : "Book verified pros in under a minute."
-                : "Sign in to manage bookings, addresses and membership."}
+                : role === "worker"
+                  ? "Sign in to manage jobs, availability and payouts."
+                  : "Sign in to manage bookings, addresses and membership."}
           </p>
         </div>
+
+        {mode !== "reset" ? (
+          <div className="auth-role-switch" aria-label="Choose account type">
+            <button
+              type="button"
+              className={role === "customer" ? "is-active" : ""}
+              onClick={() => chooseRole("customer")}
+            >
+              <UserRound size={17} />
+              <span>
+                <strong>Customer</strong>
+                <small>Book home services</small>
+              </span>
+            </button>
+            <button
+              type="button"
+              className={role === "worker" ? "is-active" : ""}
+              onClick={() => chooseRole("worker")}
+            >
+              <BriefcaseBusiness size={17} />
+              <span>
+                <strong>Professional</strong>
+                <small>Find local work</small>
+              </span>
+            </button>
+          </div>
+        ) : null}
 
         {mode !== "reset" ? (
           <div className="auth-tabs">
@@ -467,25 +538,6 @@ export default function Auth() {
           </form>
         ) : mode === "signup" ? (
           <form onSubmit={handleSignUp} className="stack">
-            <div className="auth-tabs" style={{ marginBottom: 0 }}>
-              <button
-                type="button"
-                className={role === "customer" ? "is-active" : ""}
-                onClick={() => setRole("customer")}
-              >
-                <UserRound size={14} style={{ display: "inline", marginRight: 5 }} />
-                Customer
-              </button>
-              <button
-                type="button"
-                className={role === "worker" ? "is-active" : ""}
-                onClick={() => setRole("worker")}
-              >
-                <BriefcaseBusiness size={14} style={{ display: "inline", marginRight: 5 }} />
-                Professional
-              </button>
-            </div>
-
             <div className="auth-grid">
               <Field label="Full name" htmlFor="signup-name" required>
                 <Input
@@ -582,18 +634,21 @@ export default function Auth() {
                   <Field
                     label="Service area"
                     htmlFor="signup-area"
-                    hint="Locality or city you can reach."
+                    hint="Set this from the location picker so state, city and area stay in sync."
                     required
                     className="span-2"
                   >
-                    <Input
-                      id="signup-area"
-                      value={form.area}
-                      maxLength={120}
-                      onChange={(event) => setForm((prev) => ({ ...prev, area: event.target.value }))}
-                      placeholder="Indiranagar, Bengaluru"
-                      required
-                    />
+                    <div className="auth-location" id="signup-area">
+                      <MapPin size={17} />
+                      <span>
+                        {city?.name
+                          ? [city.areaName, city.name, city.state].filter(Boolean).join(", ")
+                          : "Choose your state, city and local area"}
+                      </span>
+                      <button type="button" onClick={openPicker}>
+                        {city?.name ? "Change" : "Choose"}
+                      </button>
+                    </div>
                   </Field>
                 </>
               ) : null}
@@ -709,9 +764,10 @@ export default function Auth() {
   );
 }
 
-function AuthShell({ children }) {
+function AuthShell({ children, role = "customer" }) {
+  const worker = role === "worker";
   return (
-    <div className="auth-page">
+    <div className={`auth-page ${worker ? "auth-page--worker" : ""}`}>
       <aside className="auth-brand">
         <Link to="/" className="auth-brand__logo">
           <span>
@@ -722,28 +778,46 @@ function AuthShell({ children }) {
 
         <div>
           <p className="eyebrow" style={{ color: "rgba(10,10,10,.55)" }}>
-            Home services, sorted
+            {worker ? "Work with EasyHome" : "Home services, sorted"}
           </p>
-          <h1>Good help, one tap away.</h1>
+          <h1>{worker ? "Local work, booked and paid." : "Good help, one tap away."}</h1>
           <p>
-            Verified professionals for every corner of your home. Agree the price first, pay
-            after the job, and keep every visit in one place.
+            {worker
+              ? "Get verified, set your rates and receive nearby jobs. Agree the price before you travel and keep every payout in one place."
+              : "Verified professionals for every corner of your home. Agree the price first, pay after the job, and keep every visit in one place."}
           </p>
           <div className="auth-brand__chips">
-            <span className="auth-brand__chip">
-              <BadgeCheck size={13} /> ID-verified pros
-            </span>
-            <span className="auth-brand__chip">
-              <Wallet size={13} /> Pay after service
-            </span>
-            <span className="auth-brand__chip">
-              <ShieldCheck size={13} /> Private contact
-            </span>
+            {worker ? (
+              <>
+                <span className="auth-brand__chip">
+                  <BadgeCheck size={13} /> Verified local jobs
+                </span>
+                <span className="auth-brand__chip">
+                  <Wallet size={13} /> Clear payouts
+                </span>
+                <span className="auth-brand__chip">
+                  <ShieldCheck size={13} /> You set your rates
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="auth-brand__chip">
+                  <BadgeCheck size={13} /> ID-verified pros
+                </span>
+                <span className="auth-brand__chip">
+                  <Wallet size={13} /> Pay after service
+                </span>
+                <span className="auth-brand__chip">
+                  <ShieldCheck size={13} /> Private contact
+                </span>
+              </>
+            )}
           </div>
         </div>
 
         <p className="auth-brand__foot">
-          © {new Date().getFullYear()} EasyHome · Made for Indian homes
+          © {new Date().getFullYear()} EasyHome ·{" "}
+          {worker ? "Built for local professionals" : "Made for Indian homes"}
         </p>
       </aside>
 

@@ -114,13 +114,18 @@ export function CatalogueProvider({ children }) {
     return source.filter((service) => service.active !== false);
   }, [servicesState.data, bootstrap]);
   const cities = useMemo(() => {
+    // Only admin-active locations may appear in customer dropdowns. The
+    // hardcoded list is a cold-start fallback while the live listener is still
+    // warming up; once Firestore answers, an empty result stays empty.
     const source = citiesState.data.length
       ? citiesState.data
       : bootstrap?.cities?.length
         ? bootstrap.cities
-        : FALLBACK_CITIES;
+        : citiesState.loading
+          ? FALLBACK_CITIES
+          : [];
     return source.filter((city) => city.active !== false);
-  }, [citiesState.data, bootstrap]);
+  }, [citiesState.data, citiesState.loading, bootstrap]);
 
   const zones = useMemo(() => {
     const source = zonesState.data.length

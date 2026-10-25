@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { getDistance } from "geolib";
 import { useCatalogue } from "./CatalogueContext";
 import { api } from "../lib/api";
 import {
@@ -42,17 +43,64 @@ function pointOf(item) {
   return { lat, lng };
 }
 
+function normalizeAreas(areas) {
+  return (Array.isArray(areas) ? areas : [])
+    .map((area) => {
+      if (typeof area === "string") return { name: area.trim() };
+      const name = String(area?.name || area?.area || "").trim();
+      if (!name) return null;
+      return {
+        name,
+        lat: Number.isFinite(Number(area?.lat)) ? Number(area.lat) : null,
+        lng: Number.isFinite(Number(area?.lng)) ? Number(area.lng) : null,
+      };
+    })
+    .filter(Boolean);
+}
+
 function safeCity(city) {
   if (!city) return null;
+  const localAreas = normalizeAreas(city.localAreas || city.areas);
+  const areaName = String(city.areaName || city.area || "").trim();
+  const area =
+    localAreas.find(
+      (item) => item.name.toLowerCase() === areaName.toLowerCase(),
+    ) || (areaName ? { name: areaName, lat: null, lng: null } : null);
+  const cityLat = Number(city.cityLat ?? city.lat);
+  const cityLng = Number(city.cityLng ?? city.lng);
+  const lat = Number.isFinite(Number(area?.lat)) ? Number(area.lat) : cityLat;
+  const lng = Number.isFinite(Number(area?.lng)) ? Number(area.lng) : cityLng;
   return {
     id: city.id || city.name,
     name: city.name || "Current location",
-    lat: Number(city.lat) || null,
-    lng: Number(city.lng) || null,
-    radiusKm: Number(city.radiusKm) || 0,
     state: city.state || "",
+    area: area?.name || "",
+    areaName: area?.name || "",
+    localAreas,
+    lat: Number.isFinite(lat) ? lat : null,
+    lng: Number.isFinite(lng) ? lng : null,
+    cityLat: Number.isFinite(cityLat) ? cityLat : null,
+    cityLng: Number.isFinite(cityLng) ? cityLng : null,
+    radiusKm: Number(city.radiusKm) || 0,
     detected: Boolean(city.detected),
   };
+}
+
+function nearestAreaName(city, lat, lng) {
+  const areas = normalizeAreas(city?.localAreas || city?.areas).filter(
+    (area) => Number.isFinite(Number(area.lat)) && Number.isFinite(Number(area.lng)),
+  );
+  if (!areas.length) return normalizeAreas(city?.localAreas || city?.areas)[0]?.name || "";
+  const ranked = areas
+    .map((area) => ({
+      area,
+      meters: getDistance(
+        { latitude: Number(area.lat), longitude: Number(area.lng) },
+        { latitude: Number(lat), longitude: Number(lng) },
+      ),
+    }))
+    .sort((a, b) => a.meters - b.meters);
+  return ranked[0]?.area?.name || "";
 }
 
 function apiZone(zone) {
@@ -61,7 +109,7 @@ function apiZone(zone) {
     ...zone,
     latitude: zone.latitude ?? zone.lat,
     longitude: zone.longitude ?? zone.lng,
-    isActive: true,
+    isActive: zone.isActive !== false,
   });
 }
 
@@ -76,7 +124,6 @@ export function LocationProvider({ children }) {
   const [error, setError] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [zoneNotice, setZoneNotice] = useState(null);
-  const [serverCheck, setServerCheck] = useState(null);
   const dismissedKey = useRef("");
 
   // Resolve the first usable city during render so the header never flashes
@@ -94,6 +141,25 @@ export function LocationProvider({ children }) {
     return pointOf(city);
   }, [coords, city]);
 
+  const areas = useMemo(() => normalizeAreas(city?.localAreas), [city]);
+  const states = useMemo(
+    () =>
+      Array.from(
+        new Set(cities.map((item) => String(item.state || "").trim()).filter(Boolean)),
+      ).sort((a, b) => a.localeCompare(b)),
+    [cities],
+  );
+  const citiesForState = useCallback(
+    (state) =>
+      cities.filter(
+        (item) =>
+          !state ||
+          String(item.state || "").trim().toLowerCase() ===
+            String(state || "").trim().toLowerCase(),
+      ),
+    [cities],
+  );
+
   const localCheck = useMemo(
     () =>
       evaluateZones(zones, {
@@ -101,17 +167,17 @@ export function LocationProvider({ children }) {
         lng: point?.lng,
         cityName: city?.name,
         state: city?.state,
+        areaName: city?.areaName || city?.area || "",
       }),
     [zones, point, city],
   );
 
-  const zoneCheck = useMemo(() => {
-    if (localCheck.configured) return localCheck;
-    return serverCheck || localCheck;
-  }, [localCheck, serverCheck]);
+  // Local zone state is authoritative. A stale API response must never keep a
+  // disabled area live after an admin switches it off.
+  const zoneCheck = localCheck;
 
   const checkKey = city
-    ? `${city.id || city.name}:${point?.lat ?? ""}:${point?.lng ?? ""}`
+    ? `${city.id || city.name}:${city.areaName || ""}:${point?.lat ?? ""}:${point?.lng ?? ""}`
     : "";
 
   const commitCoords = useCallback((nextPoint, source = "gps") => {
@@ -139,7 +205,6 @@ export function LocationProvider({ children }) {
       if (!safe) return;
       setCityState(safe);
       writeJson(CITY_KEY, safe);
-      setServerCheck(null);
       const nextPoint = pointOf(safe);
       if (nextPoint) commitCoords(nextPoint, "city");
       else commitCoords(null);
@@ -149,12 +214,14 @@ export function LocationProvider({ children }) {
         lng: nextPoint?.lng,
         cityName: safe.name,
         state: safe.state,
+        areaName: safe.areaName || safe.area || "",
       });
       if (check.configured && !check.allowed) {
         setZoneNotice({
           open: true,
           cityName: safe.name,
           state: safe.state,
+          areaName: safe.areaName || "",
           nearestZone: check.nearest?.zone?.cityName || "",
           distanceMeters: check.nearest?.distanceMeters ?? null,
           coords: nextPoint,
@@ -164,6 +231,23 @@ export function LocationProvider({ children }) {
       }
     },
     [zones, commitCoords],
+  );
+
+  const setArea = useCallback(
+    (areaName) => {
+      if (!city) return;
+      const area = areas.find(
+        (item) => item.name.toLowerCase() === String(areaName || "").toLowerCase(),
+      );
+      setCity({
+        ...city,
+        area: area?.name || areaName,
+        areaName: area?.name || areaName,
+        lat: area?.lat ?? city.cityLat ?? city.lat,
+        lng: area?.lng ?? city.cityLng ?? city.lng,
+      });
+    },
+    [city, areas, setCity],
   );
 
   const detectLocation = useCallback(async () => {
@@ -195,34 +279,57 @@ export function LocationProvider({ children }) {
       const matched = result?.city
         ? cities.find(
             (item) =>
-              item.name.toLowerCase() === String(result.city).toLowerCase(),
+              item.name.toLowerCase() === String(result.city).toLowerCase() &&
+              (!result.state ||
+                !item.state ||
+                item.state.toLowerCase() === String(result.state).toLowerCase()),
+          ) || cities.find(
+            (item) => item.name.toLowerCase() === String(result.city).toLowerCase(),
           )
         : null;
-      const next =
-        matched ||
-        (result?.allowed && result?.city
-          ? safeCity({
-              id: result.cityId || result.city,
-              name: result.city,
+      const areaName =
+        result?.areaName ||
+        (matched ? nearestAreaName(matched, lat, lng) : "");
+      const next = safeCity(
+        matched
+          ? {
+              ...matched,
+              area: areaName,
+              areaName,
               lat,
               lng,
-              radiusKm: result.radiusKm || 20,
-              state: result.state || "",
-            })
-          : safeCity({
-              id: "current-location",
-              name: "Current location",
-              lat,
-              lng,
-              radiusKm: 0,
-              state: result?.state || "",
-              detected: true,
-            }));
+              state: result?.state || matched.state || "",
+            }
+          : result?.allowed && result?.city
+            ? {
+                id: result.cityId || result.city,
+                name: result.city,
+                lat,
+                lng,
+                radiusKm: result.radiusKm || 20,
+                state: result.state || "",
+                area: areaName,
+                areaName,
+              }
+            : {
+                id: "current-location",
+                name: "Current location",
+                lat,
+                lng,
+                radiusKm: 0,
+                state: result?.state || "",
+                area: areaName,
+                areaName,
+                detected: true,
+              },
+      );
 
       const local = evaluateZones(zones, {
         lat,
         lng,
         cityName: next?.name,
+        state: next?.state,
+        areaName: next?.areaName,
       });
       const apiResultZone = apiZone(result?.zone);
       const remote = result
@@ -244,7 +351,6 @@ export function LocationProvider({ children }) {
       setCityState(next);
       writeJson(CITY_KEY, next);
       commitCoords(exact, "gps");
-      setServerCheck(remote);
 
       const finalCheck =
         local.configured
@@ -302,6 +408,7 @@ export function LocationProvider({ children }) {
         open: true,
         cityName: city?.name === "Current location" ? "" : city?.name || "",
         state: city?.state || check?.zone?.state || "",
+        areaName: city?.areaName || "",
         nearestZone: check?.nearest?.zone?.cityName || "",
         distanceMeters: check?.nearest?.distanceMeters ?? null,
         coords: nextPoint,
@@ -319,6 +426,7 @@ export function LocationProvider({ children }) {
       open: true,
       cityName: city.name === "Current location" ? "" : city.name,
       state: city.state || zoneCheck.zone?.state || "",
+      areaName: city.areaName || "",
       nearestZone: zoneCheck.nearest?.zone?.cityName || "",
       distanceMeters: zoneCheck.nearest?.distanceMeters ?? null,
       coords: point,
@@ -329,12 +437,16 @@ export function LocationProvider({ children }) {
     () => ({
       city,
       cities,
+      states,
+      citiesForState,
+      areas,
       zones,
       coords,
       point,
       zoneCheck,
       zoneNotice,
       setCity,
+      setArea,
       setCoords: commitCoords,
       detectLocation,
       detecting,
@@ -348,12 +460,16 @@ export function LocationProvider({ children }) {
     [
       city,
       cities,
+      states,
+      citiesForState,
+      areas,
       zones,
       coords,
       point,
       zoneCheck,
       zoneNotice,
       setCity,
+      setArea,
       commitCoords,
       detectLocation,
       detecting,

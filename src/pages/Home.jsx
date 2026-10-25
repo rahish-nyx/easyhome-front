@@ -15,13 +15,19 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 import { useCatalogue } from "../context/CatalogueContext";
 import { useLocation } from "../context/LocationContext";
 import { useLiveQuery } from "../hooks/useLive";
 import { qUrgent, qWorkers } from "../lib/queries";
 import { usePageMeta } from "../lib/usePageMeta";
 import { inr, timeAgo } from "../lib/format";
-import { distanceKm, distanceLabel } from "../lib/geo";
+import {
+  distanceKm,
+  distanceLabel,
+  jobInServiceArea,
+  workerInServiceArea,
+} from "../lib/geo";
 import { SERVICE_META } from "../lib/constants";
 import { SectionHeader } from "../components/ui";
 import {
@@ -37,6 +43,7 @@ export default function Home() {
     "Book verified cleaners, plumbers, electricians, AC technicians and more near you. Transparent prices, pay after the job.",
   );
 
+  const { fbUser } = useAuth();
   const { services, promos, settings } = useCatalogue();
   const { city } = useLocation();
   const urgentQuery = useMemo(() => qUrgent(10), []);
@@ -44,23 +51,21 @@ export default function Home() {
   const urgent = useLiveQuery(urgentQuery);
   const workers = useLiveQuery(workersQuery);
 
+  const localUrgent = useMemo(
+    () => urgent.data.filter((job) => jobInServiceArea(job, city)),
+    [urgent.data, city],
+  );
+
   const nearby = useMemo(() => {
-    const all = workers.data.slice();
-    const withDistance = all.map((worker) => ({
+    const withDistance = workers.data.map((worker) => ({
       ...worker,
       distance:
         city && city.lat && worker.lat
           ? distanceKm(city, worker)
           : null,
     }));
-    const filtered = withDistance.filter((worker) => {
-      if (!city?.name) return true;
-      if (worker.distance !== null) {
-        return worker.distance <= (Number(city.radiusKm) || 25);
-      }
-      return String(worker.area || "").toLowerCase().includes(city.name.toLowerCase());
-    });
-    return (filtered.length ? filtered : withDistance)
+    return withDistance
+      .filter((worker) => workerInServiceArea(worker, city))
       .sort((a, b) => {
         if (a.online !== b.online) return a.online ? -1 : 1;
         return (b.rating || 0) - (a.rating || 0);
@@ -129,6 +134,46 @@ export default function Home() {
           </div>
         </section>
 
+        {!fbUser ? (
+          <section className="section">
+            <div className="guest-role">
+              <div className="guest-role__intro">
+                <p className="eyebrow">Join EasyHome</p>
+                <h2>One platform. Two ways in.</h2>
+                <p>
+                  Create a customer account to book trusted help, or apply as a
+                  professional to receive local jobs in your trade.
+                </p>
+              </div>
+              <div className="guest-role__grid">
+                <Link to="/auth?mode=signup" className="guest-role__card">
+                  <span className="guest-role__icon">
+                    <Users size={22} />
+                  </span>
+                  <span className="grow">
+                    <strong>Book home services</strong>
+                    <small>I need help at home · Customer account</small>
+                  </span>
+                  <ArrowRight size={17} />
+                </Link>
+                <Link
+                  to="/auth?role=worker&mode=signup"
+                  className="guest-role__card guest-role__card--dark"
+                >
+                  <span className="guest-role__icon">
+                    <Sparkles size={22} />
+                  </span>
+                  <span className="grow">
+                    <strong>Work as a professional</strong>
+                    <small>I want local jobs · Professional account</small>
+                  </span>
+                  <ArrowRight size={17} />
+                </Link>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         <section className="section">
           <SectionHeader
             eyebrow="What do you need?"
@@ -155,9 +200,9 @@ export default function Home() {
             }
           />
 
-          {urgent.data.length ? (
+          {localUrgent.length ? (
             <div className="urgent-track">
-              {urgent.data.slice(0, 8).map((job) => (
+              {localUrgent.slice(0, 8).map((job) => (
                 <article className="urgent-card" key={job.id}>
                   <span className="urgent-card__bar" />
                   <div className="urgent-card__top">

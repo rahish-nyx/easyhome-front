@@ -23,6 +23,7 @@ import { useToast } from "../context/ToastContext";
 import { useLiveQuery } from "../hooks/useLive";
 import { qBookingsForCustomer } from "../lib/queries";
 import { api } from "../lib/api";
+import { compressImage } from "../lib/image";
 import {
   daysLeft,
   formatDate,
@@ -93,8 +94,12 @@ export default function Profile() {
     }
     setUploading(true);
     try {
+      const compressed = await compressImage(file, { maxSize: 1024, quality: 0.82 });
+      if (compressed.size > 5 * 1024 * 1024) {
+        throw new Error("That image is still too large after compression. Try a smaller photo.");
+      }
       const form = new FormData();
-      form.append("image", file);
+      form.append("image", compressed, compressed.name);
       await api.upload("/avatar", form);
       await refreshProfile();
       toast.success("Profile photo updated.");

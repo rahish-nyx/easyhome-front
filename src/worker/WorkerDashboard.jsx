@@ -13,6 +13,7 @@ import {
   Clock3,
   Crosshair,
   Crown,
+  Headphones,
   Home,
   IndianRupee,
   LogOut,
@@ -40,7 +41,12 @@ import { useAsync } from "../hooks/useAsync";
 import { useLiveQuery } from "../hooks/useLive";
 import { qBookingsForWorker, qJobFeed } from "../lib/queries";
 import { api } from "../lib/api";
-import { distanceKm, distanceLabel, mapsUrl } from "../lib/geo";
+import {
+  distanceKm,
+  distanceLabel,
+  jobMatchesWorker,
+  mapsUrl,
+} from "../lib/geo";
 import {
   formatDateTime,
   inr,
@@ -160,16 +166,12 @@ export default function WorkerDashboard() {
     return feed
       .filter((job) => {
         if (job.preferredWorkerId && job.preferredWorkerId !== worker.id) return false;
-        return true;
+        return jobMatchesWorker(worker, job);
       })
       .map((job) => ({
         ...job,
         distance: distanceKm(worker, job),
       }))
-      .filter((job) => {
-        if (job.distance === null) return true;
-        return job.distance <= (Number(worker.radiusKm) || 25);
-      })
       .sort((a, b) => {
         if (a.urgency !== b.urgency) return a.urgency === "urgent" ? -1 : 1;
         if (a.distance !== null && b.distance !== null) return a.distance - b.distance;
@@ -345,6 +347,15 @@ export default function WorkerDashboard() {
               <small>today</small>
             </span>
 
+            <Link
+              to="/worker/support"
+              className="wk-icon-link"
+              aria-label="Worker support"
+              title="Worker support"
+            >
+              <Headphones size={18} />
+            </Link>
+
             <span className="wk-bell">
               <NotificationBell />
             </span>
@@ -458,6 +469,8 @@ export default function WorkerDashboard() {
         {tab === "profile" ? (
           <ProfileTab worker={worker} onLogout={logout} onRefresh={refreshMoney} />
         ) : null}
+
+        <WorkerFooter />
       </main>
 
       <nav className="worker-nav" aria-label="Worker navigation">
@@ -603,7 +616,7 @@ function HomeTab({
           <p>
             {activeJobs.length
               ? "Keep customers updated, confirm every price before work and mark the job complete when you are done."
-              : "Jobs in your trade and radius appear below in real time. Accept one to get started."}
+              : "Jobs in your trade, city and local area appear below in real time. Accept one to get started."}
           </p>
         </div>
         <div className="wk-hero__stats">
@@ -646,6 +659,8 @@ function HomeTab({
         onSeeAll={() => onTab("jobs")}
       />
 
+      <WorkerPromos worker={worker} isPremium={isPremium} onTab={onTab} />
+
       <div className="wk-quicklinks">
         <button type="button" onClick={() => onTab("jobs")}>
           <span className="wk-quicklinks__icon">
@@ -684,6 +699,135 @@ function HomeTab({
   );
 }
 
+function WorkerPromos({ worker, isPremium, onTab }) {
+  const location =
+    [worker?.areaName, worker?.city].filter(Boolean).join(", ") ||
+    worker?.area ||
+    "your local area";
+
+  return (
+    <section className="wk-promos" aria-label="Professional offers and next steps">
+      <div className="wk-promos__head">
+        <div>
+          <p className="wk-eyebrow">Built for your business</p>
+          <h2>Make every local job count.</h2>
+        </div>
+        <span className="wk-promos__location">
+          <MapPin size={13} /> {location}
+        </span>
+      </div>
+
+      <div className="wk-promos__grid">
+        <button
+          type="button"
+          className="wk-promo wk-promo--yellow"
+          onClick={() => onTab("profile")}
+        >
+          <span className="wk-promo__icon">
+            <Crown size={20} />
+          </span>
+          <span className="grow">
+            <strong>{isPremium ? "Pro membership is active" : "Keep 100% with Pro"}</strong>
+            <small>
+              {isPremium
+                ? "0% commission, priority placement and urgent-job priority."
+                : "Upgrade to pay 0% commission on completed jobs."}
+            </small>
+          </span>
+          <ChevronRight size={17} />
+        </button>
+
+        <button
+          type="button"
+          className="wk-promo wk-promo--blue"
+          onClick={() => onTab("profile")}
+        >
+          <span className="wk-promo__icon">
+            <ShieldCheck size={20} />
+          </span>
+          <span className="grow">
+            <strong>
+              {worker?.kycStatus === "verified" ? "ID verification complete" : "Finish your KYC"}
+            </strong>
+            <small>
+              {worker?.kycStatus === "verified"
+                ? "Customers can see your verified professional badge."
+                : "Verified pros get more accepted jobs and trust."}
+            </small>
+          </span>
+          <ChevronRight size={17} />
+        </button>
+
+        <Link to="/worker/support" className="wk-promo wk-promo--dark">
+          <span className="wk-promo__icon">
+            <Headphones size={20} />
+          </span>
+          <span className="grow">
+            <strong>Need a hand?</strong>
+            <small>Chat with the EasyHome Pro support team about any job.</small>
+          </span>
+          <ChevronRight size={17} />
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function WorkerFooter() {
+  return (
+    <footer className="wk-footer">
+      <div className="wk-footer__main">
+        <div className="wk-footer__brand">
+          <div className="wk-footer__logo">
+            Easy<span>Home</span>
+            <em>PRO</em>
+          </div>
+          <p>
+            Local work, transparent payouts and a support team that knows your
+            jobs. Built for independent professionals across India.
+          </p>
+          <div className="wk-footer__badges">
+            <span>
+              <BadgeCheck size={12} /> Verified professionals
+            </span>
+            <span>
+              <ShieldCheck size={12} /> Private KYC
+            </span>
+          </div>
+        </div>
+
+        <div className="wk-footer__col">
+          <h3>Worker console</h3>
+          <Link to="/worker">Dashboard</Link>
+          <Link to="/worker?tab=jobs">Jobs</Link>
+          <Link to="/worker?tab=earnings">Earnings</Link>
+          <Link to="/worker?tab=profile">Profile &amp; KYC</Link>
+        </div>
+
+        <div className="wk-footer__col">
+          <h3>Support</h3>
+          <Link to="/worker/support">Chat with support</Link>
+          <Link to="/legal/terms">Terms of service</Link>
+          <Link to="/legal/privacy">Privacy policy</Link>
+          <Link to="/legal/disclaimer">Disclaimer</Link>
+        </div>
+
+        <div className="wk-footer__col">
+          <h3>Grow with EasyHome</h3>
+          <Link to="/worker?tab=profile">Upgrade to Pro</Link>
+          <Link to="/worker?tab=earnings">Commission &amp; payouts</Link>
+          <Link to="/worker/support">Report an issue</Link>
+        </div>
+      </div>
+
+      <div className="wk-footer__bottom">
+        <span>© {new Date().getFullYear()} EasyHome. For independent professionals.</span>
+        <span>Made for local work across India 🇮🇳</span>
+      </div>
+    </footer>
+  );
+}
+
 function JobsTab({
   worker,
   activeJobs,
@@ -709,7 +853,11 @@ function JobsTab({
           <p className="wk-eyebrow">Job desk</p>
           <h1>Active &amp; available jobs</h1>
           <p>
-            {worker.service} · {worker.area} · {worker.radiusKm || 25} km radius
+            {worker.service} ·{" "}
+            {[worker.areaName, worker.city].filter(Boolean).join(", ") ||
+              worker.area ||
+              "Your local area"}{" "}
+            · {worker.radiusKm || 25} km radius
           </p>
         </div>
         <button

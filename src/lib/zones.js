@@ -1,7 +1,7 @@
 import { getDistance } from "geolib";
 
 export const OUT_OF_ZONE_MESSAGE =
-  "We are not live in your location yet! Our services will get to your location soon.";
+  "We are expanding fast! We'll be in your area soon.";
 
 function numberOrNull(value) {
   const number = Number(value);
@@ -26,11 +26,45 @@ export function normalizeZone(zone) {
   return {
     ...zone,
     ...point,
+    areaName: String(zone.areaName || zone.area || "").trim(),
     latitude: point.lat,
     longitude: point.lng,
     radiusKm: zoneRadiusKm(zone),
     isActive: zone.isActive !== false,
   };
+}
+
+function sameText(a, b) {
+  return String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+}
+
+function cityMatches(zone, cityName, state = "") {
+  if (!cityName) return true;
+  if (!sameText(zone.cityName, cityName)) return false;
+  if (state && zone.state && !sameText(zone.state, state)) return false;
+  return true;
+}
+
+export function candidateZones(zones, { cityName, state, areaName } = {}) {
+  const active = activeZones(zones);
+  if (!cityName) return active;
+  const cityZones = active.filter((zone) => cityMatches(zone, cityName, state));
+  const areaZones = cityZones.filter((zone) => zone.areaName);
+  if (areaName) {
+    if (areaZones.length) {
+      return areaZones.filter((zone) => sameText(zone.areaName, areaName));
+    }
+    return cityZones.filter((zone) => !zone.areaName);
+  }
+  return areaZones.length ? areaZones : cityZones;
+}
+
+export function zoneForArea(zones, cityName, state, areaName) {
+  return (
+    candidateZones(zones, { cityName, state, areaName }).find(
+      (zone) => !areaName || sameText(zone.areaName, areaName),
+    ) || null
+  );
 }
 
 export function activeZones(zones) {
@@ -62,30 +96,24 @@ export function nearestZone(zones, point) {
   return ranked[0] || null;
 }
 
-export function zoneForCity(zones, cityName, state = "") {
-  const wantedCity = String(cityName || "").trim().toLowerCase();
-  const wantedState = String(state || "").trim().toLowerCase();
-  if (!wantedCity) return null;
-  return (
-    activeZones(zones).find((zone) => {
-      const zoneCity = String(zone.cityName || "").trim().toLowerCase();
-      const zoneState = String(zone.state || "").trim().toLowerCase();
-      if (zoneCity !== wantedCity) return false;
-      if (wantedState && zoneState && zoneState !== wantedState) return false;
-      return true;
-    }) || null
-  );
+export function zoneForCity(zones, cityName, state = "", areaName = "") {
+  return zoneForArea(zones, cityName, state, areaName);
 }
 
 export function cityZone(zones, city) {
   if (!city) return null;
-  const direct = zoneForCity(zones, city.name, city.state || "");
+  const direct = zoneForArea(
+    zones,
+    city.name,
+    city.state || "",
+    city.areaName || city.area || "",
+  );
   if (direct) return direct;
   const point = { lat: city.lat, lng: city.lng };
   return activeZones(zones).find((zone) => isInsideZone(zone, point)) || null;
 }
 
-export function evaluateZones(zones, { lat, lng, cityName, state } = {}) {
+export function evaluateZones(zones, { lat, lng, cityName, state, areaName } = {}) {
   const active = activeZones(zones);
   if (!active.length) {
     return {
@@ -98,13 +126,14 @@ export function evaluateZones(zones, { lat, lng, cityName, state } = {}) {
     };
   }
 
+  const candidates = candidateZones(active, { cityName, state, areaName });
   const latitude = numberOrNull(lat);
   const longitude = numberOrNull(lng);
   const hasPoint = latitude !== null && longitude !== null;
 
   if (hasPoint) {
     const point = { lat: latitude, lng: longitude };
-    const inside = active
+    const inside = candidates
       .filter((zone) => isInsideZone(zone, point))
       .sort(
         (a, b) =>
@@ -117,10 +146,10 @@ export function evaluateZones(zones, { lat, lng, cityName, state } = {}) {
         zone: inside[0],
         nearest: { zone: inside[0], distanceMeters: zoneDistanceMeters(inside[0], point) },
         distanceMeters: zoneDistanceMeters(inside[0], point),
-        message: `We serve ${inside[0].cityName || "your area"}.`,
+        message: `We serve ${inside[0].areaName || inside[0].cityName || "your area"}.`,
       };
     }
-    const nearest = nearestZone(active, point);
+    const nearest = nearestZone(candidates.length ? candidates : active, point);
     return {
       configured: true,
       allowed: false,
@@ -132,7 +161,13 @@ export function evaluateZones(zones, { lat, lng, cityName, state } = {}) {
     };
   }
 
-  const match = zoneForCity(active, cityName, state);
+  const match = candidates.find((zone) => {
+    if (!cityName) return false;
+    if (!sameText(zone.cityName, cityName)) return false;
+    if (state && zone.state && !sameText(zone.state, state)) return false;
+    if (areaName && zone.areaName && !sameText(zone.areaName, areaName)) return false;
+    return true;
+  });
   if (match) {
     return {
       configured: true,
@@ -140,7 +175,7 @@ export function evaluateZones(zones, { lat, lng, cityName, state } = {}) {
       zone: match,
       nearest: null,
       distanceMeters: 0,
-      message: `We serve ${match.cityName || "your area"}.`,
+      message: `We serve ${match.areaName || match.cityName || "your area"}.`,
     };
   }
 
