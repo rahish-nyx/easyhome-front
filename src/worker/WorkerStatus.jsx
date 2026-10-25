@@ -223,8 +223,8 @@ export function KycCard({ worker, compact = false }) {
       toast.error("Upload a JPG, PNG, WEBP or GIF photo of your government ID.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Choose an image under 5 MB.");
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Choose an image under 4 MB.");
       return;
     }
     setBusy(true);

@@ -540,7 +540,7 @@ export default function Booking() {
                 value={image}
                 onChange={setImage}
                 label="Add a photo (optional)"
-                hint="A picture helps the pro bring the right tools. Up to 5 MB."
+                hint="A picture helps the pro bring the right tools. Up to 4 MB."
               />
             </div>
           </div>

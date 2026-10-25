@@ -1981,7 +1981,7 @@ function ProfileTab({ worker, onLogout }) {
     setPhotoSaving(true);
     try {
       const compressed = await compressImage(file, { maxSize: 900, quality: 0.8 });
-      if (compressed.size > 5 * 1024 * 1024) {
+      if (compressed.size > 4 * 1024 * 1024) {
         throw new Error("This photo is still too large after compression. Choose a smaller image.");
       }
       const formData = new FormData();

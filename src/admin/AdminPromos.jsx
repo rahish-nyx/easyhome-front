@@ -600,7 +600,7 @@ function PromoModal({ draft, file, onFile, onClose, onSave, loading }) {
             onChange={onFile}
             existingUrl={draft.imagePath ? mediaUrl(draft.imagePath) : ""}
             label="Promo artwork (optional)"
-            hint="Wide image, at least 1200×600. JPG, PNG or WEBP up to 5 MB."
+            hint="Wide image, at least 1200×600. JPG, PNG or WEBP up to 4 MB."
           />
         </div>
         <Field

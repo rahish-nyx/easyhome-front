@@ -680,7 +680,7 @@ export function ImageUpload({
   existingUrl = "",
   accept = "image/*",
   label = "Add a photo",
-  hint = "JPG or PNG, up to 5 MB",
+  hint = "JPG or PNG, up to 4 MB",
   className = "",
 }) {
   const [preview, setPreview] = useState("");

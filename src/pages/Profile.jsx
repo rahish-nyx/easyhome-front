@@ -88,14 +88,14 @@ export default function Profile() {
 
   const uploadAvatar = async (file) => {
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Choose an image under 5 MB.");
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Choose an image under 4 MB.");
       return;
     }
     setUploading(true);
     try {
       const compressed = await compressImage(file, { maxSize: 1024, quality: 0.82 });
-      if (compressed.size > 5 * 1024 * 1024) {
+      if (compressed.size > 4 * 1024 * 1024) {
         throw new Error("That image is still too large after compression. Try a smaller photo.");
       }
       const form = new FormData();
