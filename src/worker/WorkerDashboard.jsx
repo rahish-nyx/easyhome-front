@@ -8,6 +8,7 @@ import {
   BriefcaseBusiness,
   CalendarCheck,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   CircleAlert,
   Clock3,
@@ -31,6 +32,7 @@ import {
   Timer,
   TrendingUp,
   UserRound,
+  Users,
   Wallet,
   Zap,
 } from "lucide-react";
@@ -376,13 +378,19 @@ export default function WorkerDashboard() {
               <NotificationBell />
             </span>
 
-            <div className="worker-user">
+            <button
+              type="button"
+              className="worker-user worker-user--btn"
+              onClick={() => setTab("profile")}
+              aria-label="Open profile and account settings"
+            >
               <Avatar name={worker.name || profile?.name} path={worker.photoPath} size={36} ring={isPremium} />
-              <div>
+              <div className="worker-user__meta">
                 <strong>{worker.name || profile?.name}</strong>
                 <span>{worker.service || "EasyHome Pro"}</span>
               </div>
-            </div>
+              <ChevronDown size={15} className="worker-user__chev" />
+            </button>
           </div>
         </div>
       </header>
@@ -770,6 +778,21 @@ function WorkerPromos({ worker, isPremium, onTab }) {
                 ? "Customers can see your verified professional badge."
                 : "Verified pros get more accepted jobs and trust."}
             </small>
+          </span>
+          <ChevronRight size={17} />
+        </button>
+
+        <button
+          type="button"
+          className="wk-promo wk-promo--green"
+          onClick={() => onTab("earnings")}
+        >
+          <span className="wk-promo__icon">
+            <Users size={20} />
+          </span>
+          <span className="grow">
+            <strong>Refer a pro, earn ₹100</strong>
+            <small>Invite a skilled neighbour — you both get ₹100 after their first completed job.</small>
           </span>
           <ChevronRight size={17} />
         </button>
@@ -1900,9 +1923,6 @@ function ProfileTab({ worker, onLogout }) {
         <div className="wk-account-actions">
           <Link to="/chat" className="wk-btn wk-btn--outline">
             <Phone size={15} /> Support
-          </Link>
-          <Link to="/" className="wk-btn wk-btn--outline">
-            <Home size={15} /> Customer app
           </Link>
           <button
             type="button"

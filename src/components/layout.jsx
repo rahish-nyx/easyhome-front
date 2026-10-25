@@ -34,7 +34,7 @@ import { Avatar, Badge, Button, IconButton, Modal, Spinner } from "./ui";
 import { NotificationBell } from "./common";
 import { OutOfZoneModal } from "./geofence";
 import { cx } from "../lib/format";
-import { activeZones, cityZone, zoneForArea } from "../lib/zones";
+import { activeZones, cityZone, normalizeZone } from "../lib/zones";
 
 /* --------------------------------- Brand --------------------------------- */
 
@@ -437,10 +437,23 @@ export function CityModal({ open, onClose }) {
           <div className="city-list city-list--grid">
             {cityAreas.length ? (
               cityAreas.map((area) => {
+                const specificZone = zones
+                  .map(normalizeZone)
+                  .find(
+                    (zone) =>
+                      zone &&
+                      String(zone.cityName || "").trim().toLowerCase() ===
+                        String(cityObject.name).trim().toLowerCase() &&
+                      (!zone.state ||
+                        !cityObject.state ||
+                        String(zone.state).trim().toLowerCase() ===
+                          String(cityObject.state).trim().toLowerCase()) &&
+                      String(zone.areaName || "").trim().toLowerCase() ===
+                        String(area.name).trim().toLowerCase(),
+                  );
                 const live =
                   zones.length === 0 ||
-                  hasCityWideZone ||
-                  Boolean(zoneForArea(zones, cityObject.name, cityObject.state, area.name));
+                  (specificZone ? Boolean(specificZone.isActive) : hasCityWideZone);
                 return (
                   <button
                     key={area.name}

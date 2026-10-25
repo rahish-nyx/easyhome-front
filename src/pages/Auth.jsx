@@ -108,14 +108,6 @@ export default function Auth() {
     if (!form.area && city?.name) setForm((prev) => ({ ...prev, area: city.name }));
   }, [city?.name, form.area]);
 
-  const chooseRole = (nextRole) => {
-    setRole(nextRole);
-    setError("");
-    const nextParams = new URLSearchParams(params);
-    nextParams.set("role", nextRole);
-    setParams(nextParams, { replace: true });
-  };
-
   const goNext = (targetRole = role) => {
     if (targetRole === "worker") {
       navigate("/worker", { replace: true });
@@ -138,11 +130,18 @@ export default function Auth() {
       const result = await signIn(form.email.trim(), form.password);
       const actualRole = result?.role || role;
       if (actualRole !== role) {
-        toast.info(
+        // Strict role isolation: reject the cross-role attempt and end the session.
+        try {
+          await logout();
+        } catch {
+          /* ignore logout failures */
+        }
+        setError(
           actualRole === "worker"
-            ? "This is a professional account. Opening your worker dashboard."
-            : "This is a customer account. Opening the customer app.",
+            ? "No customer account exists for this email. Use the Professional sign-in instead."
+            : "No professional account exists for this email. Use the Customer sign-in instead.",
         );
+        return;
       }
       toast.success("Welcome back.");
       goNext(actualRole);
@@ -226,11 +225,18 @@ export default function Auth() {
       const result = await googleSignIn();
       const actualRole = result?.role || role;
       if (actualRole !== role) {
-        toast.info(
+        // Strict role isolation: reject the cross-role attempt and end the session.
+        try {
+          await logout();
+        } catch {
+          /* ignore logout failures */
+        }
+        setError(
           actualRole === "worker"
-            ? "Professional account detected. Opening your worker dashboard."
-            : "Customer account detected. Opening the customer app.",
+            ? "This Google account is a professional account. Use the Professional sign-in instead."
+            : "This Google account is a customer account. Use the Customer sign-in instead.",
         );
+        return;
       }
       toast.success("Signed in with Google.");
       goNext(actualRole);
@@ -441,33 +447,6 @@ export default function Auth() {
                   : "Sign in to manage bookings, addresses and membership."}
           </p>
         </div>
-
-        {mode !== "reset" ? (
-          <div className="auth-role-switch" aria-label="Choose account type">
-            <button
-              type="button"
-              className={role === "customer" ? "is-active" : ""}
-              onClick={() => chooseRole("customer")}
-            >
-              <UserRound size={17} />
-              <span>
-                <strong>Customer</strong>
-                <small>Book home services</small>
-              </span>
-            </button>
-            <button
-              type="button"
-              className={role === "worker" ? "is-active" : ""}
-              onClick={() => chooseRole("worker")}
-            >
-              <BriefcaseBusiness size={17} />
-              <span>
-                <strong>Professional</strong>
-                <small>Find local work</small>
-              </span>
-            </button>
-          </div>
-        ) : null}
 
         {mode !== "reset" ? (
           <div className="auth-tabs">
