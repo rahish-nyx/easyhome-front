@@ -47,9 +47,13 @@ function phaseOf(job) {
 
 /** Broadcasts the worker's GPS to the active job every ~25 seconds. */
 export function useGpsBroadcast(activeJobs = []) {
-  const job = activeJobs.find(
-    (item) => item.activeJob !== false && ["accepted", "ongoing"].includes(item.status),
+  const jobs = activeJobs.filter(
+    (item) => item.id && item.activeJob !== false && ["accepted", "ongoing"].includes(item.status),
   );
+  const jobKey = jobs.map((item) => item.id).sort().join(",");
+  const jobsRef = useRef(jobs);
+  jobsRef.current = jobs;
+  const job = jobs[0];
   const [state, setState] = useState({
     status: "idle",
     error: "",
@@ -62,12 +66,12 @@ export function useGpsBroadcast(activeJobs = []) {
   const jobIdRef = useRef("");
 
   useEffect(() => {
-    if (jobIdRef.current !== (job?.id || "")) {
-      jobIdRef.current = job?.id || "";
+    if (jobIdRef.current !== jobKey) {
+      jobIdRef.current = jobKey;
       lastSentRef.current = 0;
       lastPointRef.current = null;
     }
-    if (!job?.id) {
+    if (!jobKey) {
       setState((current) =>
         current.status === "idle" ? current : { ...current, status: "idle" },
       );
@@ -96,16 +100,27 @@ export function useGpsBroadcast(activeJobs = []) {
       if (lastSentRef.current && now - lastSentRef.current < 22_000 && !moved) return;
       lastSentRef.current = now;
       lastPointRef.current = { lat: latitude, lng: longitude };
-      api
-        .patch(`/worker/jobs/${job.id}/location`, {
+      const payload = {
           lat: latitude,
           lng: longitude,
           accuracy: Math.round(accuracy || 0),
           heading: Number.isFinite(Number(heading)) ? Number(heading) : null,
           speed: Number.isFinite(Number(speed)) ? Number(speed) : null,
-        })
-        .then(() => {
-          if (!active) return;
+        };
+      Promise.allSettled(
+        jobsRef.current.map((activeJob) =>
+          api.patch(`/worker/jobs/${activeJob.id}/location`, payload),
+        ),
+      ).then((results) => {
+        if (!active) return;
+        const failed = results.find((result) => result.status === "rejected");
+        if (failed) {
+          setState((current) => ({
+            ...current,
+            status: "retrying",
+            error: failed.reason?.message || "Could not send GPS to every active booking.",
+          }));
+        } else {
           setState({
             status: "sharing",
             error: "",
@@ -113,15 +128,8 @@ export function useGpsBroadcast(activeJobs = []) {
             lat: latitude,
             lng: longitude,
           });
-        })
-        .catch((error) => {
-          if (!active) return;
-          setState((current) => ({
-            ...current,
-            status: "retrying",
-            error: error.message || "Could not send GPS.",
-          }));
-        });
+        }
+      });
     };
 
     const watchId = navigator.geolocation.watchPosition(
@@ -139,8 +147,8 @@ export function useGpsBroadcast(activeJobs = []) {
       },
       {
         enableHighAccuracy: true,
-        maximumAge: 15_000,
-        timeout: 20_000,
+        maximumAge: 0,
+        timeout: 15_000,
       },
     );
 
@@ -148,10 +156,10 @@ export function useGpsBroadcast(activeJobs = []) {
       active = false;
       navigator.geolocation.clearWatch(watchId);
     };
-  }, [job?.id, job?.status]);
+  }, [jobKey]);
 
   const sendNow = useCallback(() => {
-    if (!job?.id || !navigator.geolocation) return;
+    if (!jobKey || !navigator.geolocation) return;
     setState((current) => ({ ...current, status: "locating" }));
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -159,15 +167,27 @@ export function useGpsBroadcast(activeJobs = []) {
         const { latitude, longitude, accuracy, heading, speed } = position.coords;
         lastSentRef.current = Date.now();
         lastPointRef.current = { lat: latitude, lng: longitude };
-        api
-          .patch(`/worker/jobs/${job.id}/location`, {
-            lat: latitude,
-            lng: longitude,
-            accuracy: Math.round(accuracy || 0),
-            heading: Number.isFinite(Number(heading)) ? Number(heading) : null,
-            speed: Number.isFinite(Number(speed)) ? Number(speed) : null,
-          })
-          .then(() => {
+        const payload = {
+              lat: latitude,
+              lng: longitude,
+              accuracy: Math.round(accuracy || 0),
+              heading: Number.isFinite(Number(heading)) ? Number(heading) : null,
+              speed: Number.isFinite(Number(speed)) ? Number(speed) : null,
+            };
+        Promise.allSettled(
+            jobsRef.current.map((activeJob) =>
+              api.patch(`/worker/jobs/${activeJob.id}/location`, payload),
+            ),
+        ).then((results) => {
+            const failed = results.find((result) => result.status === "rejected");
+            if (failed) {
+              setState((current) => ({
+                ...current,
+                status: "retrying",
+                error: failed.reason?.message || "Could not send GPS to every active booking.",
+              }));
+              return;
+            }
             setState({
               status: "sharing",
               error: "",
@@ -175,14 +195,7 @@ export function useGpsBroadcast(activeJobs = []) {
               lat: latitude,
               lng: longitude,
             });
-          })
-          .catch((error) => {
-            setState((current) => ({
-              ...current,
-              status: "retrying",
-              error: error.message || "Could not send GPS.",
-            }));
-          });
+        });
       },
       (error) => {
         setState((current) => ({
@@ -194,11 +207,11 @@ export function useGpsBroadcast(activeJobs = []) {
               : "GPS signal is weak. Try again outdoors.",
         }));
       },
-      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 5_000 },
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 },
     );
-  }, [job?.id]);
+  }, [jobKey]);
 
-  return { ...state, jobId: job?.id || "", sendNow };
+  return { ...state, jobId: job?.id || "", jobIds: jobs.map((item) => item.id), sendNow };
 }
 
 /** Detects a job that has not had a status or GPS update for ten minutes. */

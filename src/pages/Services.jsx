@@ -145,7 +145,14 @@ function ServicesList({ filtered, query, city, services }) {
 
 function ServiceDetail({ serviceKey }) {
   const { services } = useCatalogue();
-  const { city } = useLocation();
+  const { city, point, zoneCheck } = useLocation();
+  const location = useMemo(
+    () =>
+      city && (!zoneCheck.configured || zoneCheck.allowed)
+        ? { ...city, ...(point || {}) }
+        : null,
+    [city, point, zoneCheck],
+  );
   const meta = SERVICE_META[serviceKey] || {};
   const service =
     services.find((item) => item.key === serviceKey) || {
@@ -167,15 +174,17 @@ function ServiceDetail({ serviceKey }) {
 
   const nearby = useMemo(() => {
     return workers
-      .filter((worker) => workerInServiceArea(worker, city))
+      .filter((worker) => workerInServiceArea(worker, location, zoneCheck.zone))
       .map((worker) => ({
         ...worker,
         distance:
-          city && city.lat && worker.lat ? distanceKm(city, worker) : null,
+          location && location.lat && worker.lat
+            ? distanceKm(location, worker)
+            : null,
       }))
       .sort((a, b) => (b.rating || 0) - (a.rating || 0))
       .slice(0, 6);
-  }, [workers, city]);
+  }, [workers, location, zoneCheck.zone]);
 
   const includes = [
     `Vetted ${service.name.toLowerCase()} professional`,

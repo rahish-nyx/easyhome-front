@@ -22,6 +22,9 @@ export const qServiceZones = () =>
 export const qPromos = () =>
   ready() ? query(collection(db, "promos"), orderBy("order", "asc")) : null;
 
+export const qFooterLinks = () =>
+  ready() ? query(collection(db, "footer_links")) : null;
+
 export const appSettingsRef = () =>
   ready() ? doc(db, "settings", "app") : null;
 
@@ -68,12 +71,13 @@ export const qBookingsForWorker = (uid) =>
       )
     : null;
 
-export const qJobFeed = (serviceKey, count = 30) =>
-  ready()
+export const qJobFeed = (serviceKey, workerId, count = 30) =>
+  ready() && serviceKey && workerId
     ? query(
         collection(db, "jobFeed"),
         where("serviceKey", "==", serviceKey),
         where("status", "==", "open"),
+        where("workerId", "==", workerId),
         orderBy("createdAt", "desc"),
         limit(count),
       )

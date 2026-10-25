@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
   BadgeCheck,
-  BriefcaseBusiness,
   CheckCircle2,
   Eye,
   EyeOff,
@@ -12,7 +11,6 @@ import {
   MapPin,
   ShieldCheck,
   Sparkles,
-  UserRound,
   Wallet,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -50,7 +48,15 @@ export default function Auth() {
   const next = nextParam.startsWith("/") ? nextParam : "";
   const rawRole = params.get("role");
   const roleParam = rawRole === "worker" ? "worker" : rawRole === "customer" ? "customer" : "";
-  const modeParam = params.get("mode") === "signup" ? "signup" : "signin";
+  const role = roleParam || "customer";
+  const requestedMode = params.get("mode");
+  const mode = ["signup", "reset"].includes(requestedMode) ? requestedMode : "signin";
+  const setMode = (nextMode) => {
+    const nextParams = new URLSearchParams(params);
+    if (nextMode === "signin") nextParams.delete("mode");
+    else nextParams.set("mode", nextMode);
+    setParams(nextParams, { replace: true });
+  };
 
   const {
     fbUser,
@@ -70,8 +76,6 @@ export default function Auth() {
   const toast = useToast();
   const navigate = useNavigate();
 
-  const [mode, setMode] = useState(modeParam);
-  const [role, setRole] = useState(roleParam);
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
@@ -85,36 +89,11 @@ export default function Auth() {
     email: "",
     password: "",
     phone: "",
-    serviceKey: services[0]?.key || "cleaning",
+    serviceKey: services[0]?.key || "",
     area: city?.name || "",
     pricePerWork: "",
   });
-
-  useEffect(() => {
-    setRole(roleParam);
-  }, [roleParam]);
-
-  useEffect(() => {
-    setMode(modeParam);
-  }, [modeParam]);
-
-  useEffect(() => {
-    if (services.length && !form.serviceKey) {
-      setForm((prev) => ({ ...prev, serviceKey: services[0].key }));
-    }
-  }, [services, form.serviceKey]);
-
-  useEffect(() => {
-    if (!form.area && city?.name) setForm((prev) => ({ ...prev, area: city.name }));
-  }, [city?.name, form.area]);
-
-  const chooseRole = (nextRole) => {
-    setRole(nextRole);
-    setError("");
-    const nextParams = new URLSearchParams(params);
-    nextParams.set("role", nextRole);
-    setParams(nextParams, { replace: true });
-  };
+  const serviceKey = form.serviceKey || services[0]?.key || "";
 
   const goNext = (targetRole = role) => {
     if (targetRole === "worker") {
@@ -138,11 +117,14 @@ export default function Auth() {
       const result = await signIn(form.email.trim(), form.password);
       const actualRole = result?.role || role;
       if (actualRole !== role) {
-        toast.info(
+        await logout().catch(() => {});
+        setError(
           actualRole === "worker"
-            ? "This is a professional account. Opening your worker dashboard."
-            : "This is a customer account. Opening the customer app.",
+            ? "This is a professional account. Use professional sign-in to continue."
+            : "This is a customer account. Use customer sign-in to continue.",
         );
+        setBusy(false);
+        return;
       }
       toast.success("Welcome back.");
       goNext(actualRole);
@@ -168,7 +150,7 @@ export default function Auth() {
       setError("Enter a valid 10-digit Indian mobile number, or leave it blank.");
       return;
     }
-    if (role === "worker" && (!form.serviceKey || !city?.name)) {
+    if (role === "worker" && (!serviceKey || !city?.name)) {
       setError("Choose your state, city, local area and trade to apply as a worker.");
       return;
     }
@@ -183,10 +165,10 @@ export default function Auth() {
         role === "worker"
           ? {
               service:
-                services.find((item) => item.key === form.serviceKey)?.name ||
-                SERVICE_META[form.serviceKey]?.name ||
-                form.serviceKey,
-              serviceKey: form.serviceKey,
+                services.find((item) => item.key === serviceKey)?.name ||
+                SERVICE_META[serviceKey]?.name ||
+                serviceKey,
+              serviceKey,
               area:
                 [city?.areaName, city?.name].filter(Boolean).join(", ") ||
                 form.area.trim(),
@@ -226,11 +208,14 @@ export default function Auth() {
       const result = await googleSignIn();
       const actualRole = result?.role || role;
       if (actualRole !== role) {
-        toast.info(
+        await logout().catch(() => {});
+        setError(
           actualRole === "worker"
-            ? "Professional account detected. Opening your worker dashboard."
-            : "Customer account detected. Opening the customer app.",
+            ? "This is a professional account. Use professional sign-in to continue."
+            : "This is a customer account. Use customer sign-in to continue.",
         );
+        setGoogleBusy(false);
+        return;
       }
       toast.success("Signed in with Google.");
       goNext(actualRole);
@@ -282,25 +267,6 @@ export default function Auth() {
   };
 
   if (loading) return <PageLoader label="Preparing sign in…" />;
-
-  // Universal guest entry point: force an explicit role selection before
-  // showing any auth form. This keeps customer and professional flows strictly
-  // isolated from the very first tap.
-  if (!fbUser && !role) {
-    return (
-      <AuthShell>
-        <RoleSelectionScreen
-          next={next}
-          onPick={(picked) => {
-            const search = new URLSearchParams(params);
-            search.set("role", picked);
-            if (params.get("mode") === "signup") search.set("mode", "signup");
-            setParams(search, { replace: true });
-          }}
-        />
-      </AuthShell>
-    );
-  }
 
   if (fbUser && !justSignedUp) {
     return (
@@ -443,33 +409,6 @@ export default function Auth() {
         </div>
 
         {mode !== "reset" ? (
-          <div className="auth-role-switch" aria-label="Choose account type">
-            <button
-              type="button"
-              className={role === "customer" ? "is-active" : ""}
-              onClick={() => chooseRole("customer")}
-            >
-              <UserRound size={17} />
-              <span>
-                <strong>Customer</strong>
-                <small>Book home services</small>
-              </span>
-            </button>
-            <button
-              type="button"
-              className={role === "worker" ? "is-active" : ""}
-              onClick={() => chooseRole("worker")}
-            >
-              <BriefcaseBusiness size={17} />
-              <span>
-                <strong>Professional</strong>
-                <small>Find local work</small>
-              </span>
-            </button>
-          </div>
-        ) : null}
-
-        {mode !== "reset" ? (
           <div className="auth-tabs">
             <button
               type="button"
@@ -547,9 +486,6 @@ export default function Auth() {
               >
                 Forgot password?
               </button>
-              <Link to="/auth?role=worker" className="tiny" style={{ color: "var(--blue)" }}>
-                Join as a pro
-              </Link>
             </div>
             <Button type="submit" size="lg" className="btn--block" loading={busy}>
               Sign in
@@ -625,7 +561,7 @@ export default function Auth() {
                   <Field label="Your trade" htmlFor="signup-service" required>
                     <Select
                       id="signup-service"
-                      value={form.serviceKey}
+                      value={serviceKey}
                       onChange={(event) =>
                         setForm((prev) => ({ ...prev, serviceKey: event.target.value }))
                       }
@@ -841,50 +777,6 @@ function AuthShell({ children, role = "customer" }) {
       </aside>
 
       <main className="auth-panel">{children}</main>
-    </div>
-  );
-}
-
-function RoleSelectionScreen({ onPick, next }) {
-  return (
-    <div className="auth-card auth-role-select">
-      <div className="auth-card__head">
-        <h2>Choose your account type</h2>
-        <p>
-          Pick how you want to use EasyHome. Customer and professional accounts
-          stay completely separate.
-        </p>
-      </div>
-
-      <div className="auth-role-select__grid">
-        <button type="button" className="auth-role-select__card" onClick={() => onPick("customer")}>
-          <span className="auth-role-select__icon">
-            <UserRound size={26} />
-          </span>
-          <strong>Sign in / Register as Customer</strong>
-          <small>
-            Book home services, track visits, chat and pay after the job.
-          </small>
-          <span className="auth-role-select__cta">Continue as customer <ArrowRight size={15} /></span>
-        </button>
-
-        <button type="button" className="auth-role-select__card auth-role-select__card--worker" onClick={() => onPick("worker")}>
-          <span className="auth-role-select__icon">
-            <BriefcaseBusiness size={26} />
-          </span>
-          <strong>Sign in / Register as Professional / Worker</strong>
-          <small>
-            Receive local jobs, manage your availability and payouts.
-          </small>
-          <span className="auth-role-select__cta">Continue as professional <ArrowRight size={15} /></span>
-        </button>
-      </div>
-
-      {next ? (
-        <p className="auth-note" style={{ textAlign: "center", marginTop: 14 }}>
-          After signing in you will return to the page you came from.
-        </p>
-      ) : null}
     </div>
   );
 }

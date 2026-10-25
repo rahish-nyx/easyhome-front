@@ -23,7 +23,14 @@ export default function SearchPage() {
   const query = (params.get("q") || "").trim();
   const term = query.toLowerCase();
   const { services } = useCatalogue();
-  const { city } = useLocation();
+  const { city, point, zoneCheck } = useLocation();
+  const location = useMemo(
+    () =>
+      city && (!zoneCheck.configured || zoneCheck.allowed)
+        ? { ...city, ...(point || {}) }
+        : null,
+    [city, point, zoneCheck],
+  );
   const workersQuery = useMemo(() => qWorkers("", 40), []);
   const { data: workers, loading } = useLiveQuery(workersQuery);
 
@@ -46,7 +53,7 @@ export default function SearchPage() {
 
   const workerMatches = useMemo(() => {
     const pool = workers
-      .filter((worker) => workerInServiceArea(worker, city))
+      .filter((worker) => workerInServiceArea(worker, location, zoneCheck.zone))
       .map((worker) => ({ ...worker }));
     if (!term) return pool.slice(0, 8);
     return pool
@@ -59,7 +66,7 @@ export default function SearchPage() {
         return haystack.includes(term) || String(meta.name || "").toLowerCase().includes(term);
       })
       .slice(0, 12);
-  }, [workers, term, city]);
+  }, [workers, term, location, zoneCheck.zone]);
 
   const total = serviceMatches.length + workerMatches.length;
 

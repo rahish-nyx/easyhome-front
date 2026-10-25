@@ -35,7 +35,6 @@ The Vite dev server runs at `http://localhost:5173` and proxies `/api` to `http:
 VITE_FIREBASE_API_KEY=...
 VITE_FIREBASE_AUTH_DOMAIN=...
 VITE_FIREBASE_PROJECT_ID=...
-VITE_FIREBASE_STORAGE_BUCKET=...
 VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
 VITE_API_URL=/api
@@ -50,7 +49,7 @@ The app reads Firestore directly, so these must be enabled for the target projec
 
 1. **Authentication** - enable Email/Password and Google. Email verification is required before a customer can create a booking.
 2. **Cloud Firestore** - database in the region you want (the current project uses `asia-south1`).
-3. **Media** - public images are uploaded to Cloudinary by the API. KYC documents go directly to the admin Telegram chat, so Firebase Storage is only needed for legacy records.
+3. **Media** - uploads require Cloudinary credentials on the API. KYC documents are stored privately in Cloudinary and are also sent to the configured admin Telegram chat.
 4. **Rules** - deploy `../backend/firestore.rules`. Client writes are denied; all mutations go through the API.
 5. **Indexes** - deploy `../backend/firestore.indexes.json` for the booking, feed, chat and admin queries.
 
@@ -106,7 +105,7 @@ From the backend repository (it owns the Firebase project configuration):
 ```bash
 cd ../backend
 npx firebase-tools login
-npx firebase-tools deploy --only firestore:rules,firestore:indexes,storage,hosting
+npx firebase-tools deploy --only firestore:rules,firestore:indexes,hosting
 ```
 
 Hosting is configured to publish `../easyhomes/dist`. Build the frontend first.
@@ -146,5 +145,5 @@ public/         Manifest, service worker, icons, offline page
 - **Auth returns `CONFIGURATION_NOT_FOUND` or `BILLING_NOT_ENABLED`**: enable Authentication in the Firebase project. The current project needs its billing account linked before Identity Platform can initialise.
 - **Catalogue shows fallback data**: Firestore rules or indexes are not deployed yet, or the browser is offline.
 - **Smoke test passes locally but writes fail in production**: deploy `firestore.rules`; the default deny-all ruleset blocks client reads.
-- **Uploads fail**: confirm the Storage bucket exists and the API service account can access it.
+- **Uploads fail**: confirm the API has valid Cloudinary credentials and can reach Cloudinary.
 - **Admin route redirects immediately**: sign in with an account that has the `admin` custom claim and an `admins/{uid}` document.

@@ -99,7 +99,7 @@ function WorkerGate({ profile, children }) {
   return (
     <div className="worker-app">
       <header className="worker-top">
-        <Logo dark />
+        <Logo />
         <div className="worker-top__right">
           <Link
             to="/worker/support"

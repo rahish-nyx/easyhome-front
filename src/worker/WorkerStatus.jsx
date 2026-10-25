@@ -193,7 +193,7 @@ export default function WorkerStatus({ worker }) {
           </Button>
         ) : null}
         {status === "suspended" ? (
-          <Link to="/chat" className="btn btn--dark btn--lg">
+          <Link to="/worker/support" className="btn btn--dark btn--lg">
             Contact support <ArrowRight size={16} />
           </Link>
         ) : null}
@@ -201,7 +201,7 @@ export default function WorkerStatus({ worker }) {
 
       <p className="wk-fineprint">
         Need to change your application details?{" "}
-        <Link to="/chat" style={{ color: "#7aa2ff" }}>
+        <Link to="/worker/support" style={{ color: "#7aa2ff" }}>
           Message support
         </Link>{" "}
         and include your registered email.
@@ -219,8 +219,8 @@ export function KycCard({ worker, compact = false }) {
 
   const upload = async (file) => {
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Upload a photo or scan of your government ID.");
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      toast.error("Upload a JPG, PNG, WEBP or GIF photo of your government ID.");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
@@ -231,8 +231,21 @@ export function KycCard({ worker, compact = false }) {
     try {
       const form = new FormData();
       form.append("image", file);
-      await api.upload("/worker/kyc", form);
-      toast.success("ID sent securely to our verification team.");
+      const result = await api.upload("/worker/kyc", form);
+      const followUp = [
+        ...(!result.telegramForwarded
+          ? [
+              result.telegramConfigured
+                ? "Telegram delivery failed; contact support."
+                : "Telegram bot is not configured on the API.",
+            ]
+          : []),
+      ];
+      if (followUp.length) {
+        toast.error(`ID uploaded for review. ${followUp.join(" ")}`);
+      } else {
+        toast.success("ID uploaded privately and delivered to the verification team.");
+      }
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -280,12 +293,12 @@ export function KycCard({ worker, compact = false }) {
                 "The document could not be read. Upload a clearer photo."
               : status === "pending"
                 ? "Your document was sent securely to the review team. No action needed right now."
-                : "Upload a clear photo of your Aadhaar, PAN or driving licence. It is sent directly to our verification team and is never stored in app storage."}
+                : "Upload a clear photo of your Aadhaar, PAN or driving licence. It is sent securely to our verification team."}
         </p>
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp,image/gif"
           hidden
           onChange={(event) => upload(event.target.files?.[0])}
         />

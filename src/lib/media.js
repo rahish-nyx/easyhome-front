@@ -1,10 +1,8 @@
-import { API_BASE } from "./api";
-
-/** Turns a stored Storage object path into a URL served by the API. */
+/** Returns a Cloudinary URL, or an already-local URL. */
 export function mediaUrl(path) {
   if (!path) return "";
   if (/^https?:\/\//i.test(path) || path.startsWith("/")) return path;
-  return `${API_BASE}/media/${String(path).replace(/^\/+/, "")}`;
+  return "";
 }
 
 export function initials(name = "") {

@@ -351,6 +351,7 @@ export const ADMIN_NAV = [
   { to: "/admin/zones", label: "Service zones", icon: "map-pin" },
   { to: "/admin/revenue", label: "Revenue", icon: "wallet" },
   { to: "/admin/promos", label: "Promos", icon: "megaphone" },
+  { to: "/admin/footer", label: "Footer links", icon: "link" },
   { to: "/admin/broadcast", label: "Broadcast", icon: "send" },
   { to: "/admin/chats", label: "Support", icon: "messages-square" },
   { to: "/admin/settings", label: "Settings", icon: "settings" },

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -19,14 +19,14 @@ import { useAuth } from "../context/AuthContext";
 import { useCatalogue } from "../context/CatalogueContext";
 import { useLocation } from "../context/LocationContext";
 import { useLiveQuery } from "../hooks/useLive";
-import { qUrgent, qWorkers } from "../lib/queries";
+import { qUrgent } from "../lib/queries";
+import { api } from "../lib/api";
 import { usePageMeta } from "../lib/usePageMeta";
 import { inr, timeAgo } from "../lib/format";
 import {
   distanceKm,
   distanceLabel,
   jobInServiceArea,
-  workerInServiceArea,
 } from "../lib/geo";
 import { SERVICE_META } from "../lib/constants";
 import { SectionHeader } from "../components/ui";
@@ -45,39 +45,120 @@ export default function Home() {
 
   const { fbUser } = useAuth();
   const { services, promos, settings } = useCatalogue();
-  const { city } = useLocation();
+  const { city, point, zoneCheck } = useLocation();
+  const location = useMemo(
+    () =>
+      city &&
+      point &&
+      Number.isFinite(Number(point.lat)) &&
+      Number.isFinite(Number(point.lng)) &&
+      (!zoneCheck.configured || zoneCheck.allowed)
+        ? { ...city, lat: point.lat, lng: point.lng }
+        : null,
+    [city, point, zoneCheck.configured, zoneCheck.allowed],
+  );
   const urgentQuery = useMemo(() => qUrgent(10), []);
-  const workersQuery = useMemo(() => qWorkers("", 24), []);
   const urgent = useLiveQuery(urgentQuery);
-  const workers = useLiveQuery(workersQuery);
-
-  const localUrgent = useMemo(
-    () => urgent.data.filter((job) => jobInServiceArea(job, city)),
-    [urgent.data, city],
+  const [nearbyResult, setNearbyResult] = useState({
+    key: "",
+    workers: [],
+    error: "",
+  });
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  const nearbyLocationKey = location
+    ? [
+        location.name,
+        location.state,
+        location.areaName || "",
+        location.lat,
+        location.lng,
+        zoneCheck.zone?.id || "",
+        zoneCheck.zone?.radiusKm || "",
+      ].join("|")
+    : "";
+  const nearby = useMemo(
+    () =>
+      nearbyResult.key === nearbyLocationKey ? nearbyResult.workers : [],
+    [nearbyResult, nearbyLocationKey],
   );
 
-  const nearby = useMemo(() => {
-    const withDistance = workers.data.map((worker) => ({
-      ...worker,
-      distance:
-        city && city.lat && worker.lat
-          ? distanceKm(city, worker)
-          : null,
-    }));
-    return withDistance
-      .filter((worker) => workerInServiceArea(worker, city))
-      .sort((a, b) => {
-        if (a.online !== b.online) return a.online ? -1 : 1;
-        return (b.rating || 0) - (a.rating || 0);
-      })
-      .slice(0, 6);
-  }, [workers.data, city]);
+  const localUrgent = useMemo(
+    () =>
+      urgent.data.filter((job) =>
+        jobInServiceArea(job, location, zoneCheck.zone),
+      ),
+    [urgent.data, location, zoneCheck.zone],
+  );
+
+  useEffect(() => {
+    if (!location) return undefined;
+
+    let active = true;
+    let firstRequest = true;
+    const loadNearby = async () => {
+      if (firstRequest) setNearbyLoading(true);
+      const query = new URLSearchParams({
+        city: location.name,
+        state: location.state,
+        areaName: location.areaName || "",
+        lat: String(location.lat),
+        lng: String(location.lng),
+        limit: "6",
+      });
+      try {
+        const result = await api.get(`/public/workers/nearby?${query}`);
+        if (active) {
+          setNearbyResult({
+            key: nearbyLocationKey,
+            workers: result.workers || [],
+            error: "",
+          });
+        }
+      } catch (error) {
+        if (active) {
+          setNearbyResult({
+            key: nearbyLocationKey,
+            workers: [],
+            error: error.message,
+          });
+        }
+      } finally {
+        if (active && firstRequest) {
+          firstRequest = false;
+          setNearbyLoading(false);
+        }
+      }
+    };
+
+    loadNearby();
+    const timer = window.setInterval(loadNearby, 30_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [
+    location,
+    nearbyLocationKey,
+  ]);
+
+  const nearbyWithDistance = useMemo(
+    () =>
+      nearby
+        .map((worker) => ({
+          ...worker,
+          distance:
+            Number.isFinite(Number(worker.distanceKm))
+              ? Number(worker.distanceKm)
+              : distanceKm(location, worker),
+        })),
+    [nearby, location],
+  );
 
   const popular = services.slice(0, 10);
 
   return (
     <>
-      <PromoCarousel promos={promos} />
+      <PromoCarousel promos={promos.filter((promo) => promo.placement !== "worker_dashboard")} />
 
       <div className="page" style={{ paddingTop: 0 }}>
         <section style={{ paddingTop: 30 }}>
@@ -264,30 +345,30 @@ export default function Home() {
           <SectionHeader
             eyebrow="Around you"
             title={
-              nearby.length
+              nearbyWithDistance.length
                 ? city?.name
                   ? `Available pros in ${city.name}`
                   : "Available near you"
                 : "Available services near you"
             }
             subtitle={
-              nearby.length
+              nearbyWithDistance.length
                 ? "Independent professionals with verified IDs, real ratings and transparent starting prices."
                 : "Pick a service and we will match a verified professional for your slot."
             }
             action={
               <Link
-                to={nearby.length ? "/search?q=" : "/services"}
+                to={nearbyWithDistance.length ? "/search?q=" : "/services"}
                 className="btn btn--outline btn--sm"
               >
-                {nearby.length ? "Find a pro" : "Browse services"} <ArrowRight size={15} />
+                {nearbyWithDistance.length ? "Find a pro" : "Browse services"} <ArrowRight size={15} />
               </Link>
             }
           />
 
-          {nearby.length ? (
+          {nearbyWithDistance.length ? (
             <div className="worker-grid">
-              {nearby.map((worker) => (
+              {nearbyWithDistance.map((worker) => (
                 <div key={worker.id}>
                   <WorkerCard worker={worker} />
                   {worker.distance !== null ? (
@@ -297,6 +378,14 @@ export default function Home() {
                   ) : null}
                 </div>
               ))}
+            </div>
+          ) : nearbyLoading ? (
+            <div className="urgent-placeholder">
+              <p className="muted small">Finding verified professionals inside your live service radius…</p>
+            </div>
+          ) : nearbyResult.key === nearbyLocationKey && nearbyResult.error ? (
+            <div className="urgent-placeholder">
+              <p className="muted small">{nearbyResult.error}</p>
             </div>
           ) : (
             <div className="urgent-placeholder">

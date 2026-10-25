@@ -11,6 +11,21 @@
   box-shadow: var(--shadow-xs);
 }
 
+@media (max-width: 480px) {
+  .zone-gate {
+    padding: 10px;
+  }
+
+  .zone-gate__card {
+    padding: 22px 18px;
+    border-radius: 20px;
+  }
+
+  .zone-gate__actions .zone-btn {
+    width: 100%;
+  }
+}
+
 .service-zone-banner strong {
   display: block;
   font-size: 13.5px;
@@ -210,6 +225,41 @@
   color: var(--muted);
   font-size: 13.5px;
   line-height: 1.6;
+}
+
+.zone-gate__live {
+  margin: -8px 0 20px;
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper-2);
+}
+
+.zone-gate__live > strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.zone-gate__live ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.zone-gate__live li {
+  max-width: 100%;
+  padding: 5px 9px;
+  border: 1px solid #d7e5f7;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .zone-gate__actions {

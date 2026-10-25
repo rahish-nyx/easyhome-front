@@ -1,9 +1,10 @@
 import { getDistance } from "geolib";
 
 export const OUT_OF_ZONE_MESSAGE =
-  "We are expanding fast! We'll be in your area soon.";
+  "We are expanding soon. We will be in your area soon.";
 
 function numberOrNull(value) {
+  if (value === null || value === undefined || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
@@ -52,11 +53,15 @@ export function candidateZones(zones, { cityName, state, areaName } = {}) {
   const areaZones = cityZones.filter((zone) => zone.areaName);
   if (areaName) {
     if (areaZones.length) {
-      return areaZones.filter((zone) => sameText(zone.areaName, areaName));
+      const matchingAreas = areaZones.filter((zone) =>
+        sameText(zone.areaName, areaName),
+      );
+      if (matchingAreas.length) return matchingAreas;
     }
     return cityZones.filter((zone) => !zone.areaName);
   }
-  return areaZones.length ? areaZones : cityZones;
+  const cityWideZones = cityZones.filter((zone) => !zone.areaName);
+  return cityWideZones.length ? cityWideZones : areaZones;
 }
 
 export function zoneForArea(zones, cityName, state, areaName) {
@@ -117,12 +122,12 @@ export function evaluateZones(zones, { lat, lng, cityName, state, areaName } = {
   const active = activeZones(zones);
   if (!active.length) {
     return {
-      configured: false,
-      allowed: true,
+      configured: Boolean(zones?.length),
+      allowed: !zones?.length,
       zone: null,
       nearest: null,
       distanceMeters: null,
-      message: "",
+      message: zones?.length ? OUT_OF_ZONE_MESSAGE : "",
     };
   }
 
@@ -133,7 +138,10 @@ export function evaluateZones(zones, { lat, lng, cityName, state, areaName } = {
 
   if (hasPoint) {
     const point = { lat: latitude, lng: longitude };
-    const inside = candidates
+    const coordinateCandidates = active.filter((zone) =>
+      cityMatches(zone, cityName, state),
+    );
+    const inside = coordinateCandidates
       .filter((zone) => isInsideZone(zone, point))
       .sort(
         (a, b) =>
@@ -149,7 +157,10 @@ export function evaluateZones(zones, { lat, lng, cityName, state, areaName } = {
         message: `We serve ${inside[0].areaName || inside[0].cityName || "your area"}.`,
       };
     }
-    const nearest = nearestZone(candidates.length ? candidates : active, point);
+    const nearest = nearestZone(
+      coordinateCandidates.length ? coordinateCandidates : active,
+      point,
+    );
     return {
       configured: true,
       allowed: false,
@@ -165,7 +176,7 @@ export function evaluateZones(zones, { lat, lng, cityName, state, areaName } = {
     if (!cityName) return false;
     if (!sameText(zone.cityName, cityName)) return false;
     if (state && zone.state && !sameText(zone.state, state)) return false;
-    if (areaName && zone.areaName && !sameText(zone.areaName, areaName)) return false;
+    if (zone.areaName && !sameText(zone.areaName, areaName)) return false;
     return true;
   });
   if (match) {

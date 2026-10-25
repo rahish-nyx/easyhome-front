@@ -668,7 +668,7 @@ function CityModal({ draft, onClose, onSave, loading }) {
         setLocating(false);
       },
       () => setLocating(false),
-      { enableHighAccuracy: true, timeout: 12000 },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
   };
 

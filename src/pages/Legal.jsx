@@ -49,7 +49,7 @@ const PAGES = {
     ],
   },
   terms: {
-    title: "Terms of service",
+    title: "Terms and Conditions",
     updated: "Last updated 1 October 2026",
     intro:
       "These terms explain the rules for using EasyHome as a customer or professional. By creating an account or booking a service, you agree to them.",
@@ -107,13 +107,14 @@ const PAGES = {
         heading: "What we collect",
         body: [
           "Account data: name, email, phone, role and profile photo. Booking data: service, description, area, budget, urgency, optional photo and location coordinates.",
-          "Worker data: trade, service area, pricing, UPI ID for commission settlement, ratings and KYC status. KYC images are sent directly to a private admin Telegram chat and are visible only to authorised administrators; the app database stores only the verification status and timestamps.",
+          "Worker data: trade, service area, pricing, UPI ID for commission settlement, ratings and KYC status. KYC images are stored as private Cloudinary assets and sent to the configured admin Telegram chat; access to the images is restricted to authorised administrators.",
         ],
       },
       {
         heading: "How we use it",
         body: [
           "We use your data to authenticate you, match bookings, show relevant services, process payments and commission, prevent fraud and provide support.",
+          "If you choose current-location detection, your coordinates are used to identify service coverage and resolve your locality through OpenStreetMap Nominatim. If GPS is unavailable, EasyHome may use your network IP to estimate your city and state through ipapi.co; this estimate is approximate and does not provide precise coordinates. When a professional is assigned to an active booking, their live location is shared with that booking's customer while tracking is active.",
           "We do not sell personal data. We do not show your phone number publicly or to workers until the final price is confirmed.",
         ],
       },
@@ -128,7 +129,7 @@ const PAGES = {
         heading: "Storage and security",
         body: [
           "Authentication and data are hosted on Google Firebase. Access rules are enforced server-side; the browser is not trusted to write records directly.",
-          "KYC documents are delivered only to a private admin Telegram channel. They are not stored in the app database or in public storage. No system is perfectly secure, but we work to limit and protect what we hold.",
+          "KYC documents are stored privately in Cloudinary and forwarded to a private admin Telegram channel. They are not stored in Firestore or exposed as public images. No system is perfectly secure, but we work to limit and protect what we hold.",
         ],
       },
       {

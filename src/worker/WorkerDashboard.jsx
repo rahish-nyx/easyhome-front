@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowRight,
@@ -21,6 +21,7 @@ import {
   Navigation,
   Percent,
   Phone,
+  Pencil,
   Power,
   Radio,
   ReceiptText,
@@ -31,6 +32,7 @@ import {
   Timer,
   TrendingUp,
   UserRound,
+  Users,
   Wallet,
   Zap,
 } from "lucide-react";
@@ -44,7 +46,6 @@ import { api } from "../lib/api";
 import {
   distanceKm,
   distanceLabel,
-  jobMatchesWorker,
   mapsUrl,
 } from "../lib/geo";
 import {
@@ -52,7 +53,7 @@ import {
   inr,
   timeAgo,
 } from "../lib/format";
-import { SERVICE_META, TRACKING_PHASES, trackingMeta } from "../lib/constants";
+import { PLANS, SERVICE_META, TRACKING_PHASES, trackingMeta } from "../lib/constants";
 import { usePageMeta } from "../lib/usePageMeta";
 import {
   Avatar,
@@ -66,6 +67,8 @@ import {
 } from "../components/ui";
 import { Logo } from "../components/layout";
 import RazorpayPayment from "../components/RazorpayPayment";
+import { compressImage } from "../lib/image";
+import { mediaUrl } from "../lib/media";
 import {
   NotificationBell,
   RatingStars,
@@ -78,6 +81,7 @@ const TABS = [
   { id: "home", label: "Home", icon: Home },
   { id: "jobs", label: "Jobs", icon: BriefcaseBusiness },
   { id: "earnings", label: "Earnings", icon: Wallet },
+  { id: "membership", label: "Membership", icon: Crown },
   { id: "profile", label: "Profile", icon: UserRound },
 ];
 
@@ -112,10 +116,11 @@ export default function WorkerDashboard() {
     logout,
     refreshProfile,
   } = useAuth();
-  const { settings } = useCatalogue();
+  const { settings, promos, zones } = useCatalogue();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
-  const tab = params.get("tab") || "home";
+  const requestedTab = params.get("tab") || "home";
+  const tab = TABS.some((item) => item.id === requestedTab) ? requestedTab : "home";
   const focusJobId = params.get("job") || "";
 
   const [busy, setBusy] = useState("");
@@ -134,9 +139,10 @@ export default function WorkerDashboard() {
     () => (fbUser ? qBookingsForWorker(fbUser.uid) : null),
     [fbUser],
   );
+  const serviceKey = worker?.serviceKey;
   const feedQuery = useMemo(
-    () => (worker?.serviceKey ? qJobFeed(worker.serviceKey, 40) : null),
-    [worker?.serviceKey],
+    () => (serviceKey && fbUser?.uid ? qJobFeed(serviceKey, fbUser.uid, 40) : null),
+    [serviceKey, fbUser?.uid],
   );
   const { data: myBookings, loading: myLoading } = useLiveQuery(myQuery);
   const { data: feed, loading: feedLoading } = useLiveQuery(feedQuery);
@@ -161,15 +167,27 @@ export default function WorkerDashboard() {
   const trackingAlert = useTrackingAlert(activeJobs);
   const supportPhone = settings?.supportPhone || "";
 
+  const activeZoneIds = useMemo(
+    () =>
+      new Set(
+        zones
+          .filter((zone) => zone.isActive === true)
+          .map((zone) => zone.id),
+      ),
+    [zones],
+  );
+
   const available = useMemo(() => {
     if (!worker) return [];
     return feed
       .filter((job) => {
         if (job.preferredWorkerId && job.preferredWorkerId !== worker.id) return false;
-        return jobMatchesWorker(worker, job);
+        if (job.serviceZoneId && !activeZoneIds.has(job.serviceZoneId)) return false;
+        return true;
       })
       .map((job) => ({
         ...job,
+        id: job.bookingId || job.id,
         distance: distanceKm(worker, job),
       }))
       .sort((a, b) => {
@@ -177,7 +195,7 @@ export default function WorkerDashboard() {
         if (a.distance !== null && b.distance !== null) return a.distance - b.distance;
         return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
       });
-  }, [feed, worker]);
+  }, [feed, worker, activeZoneIds]);
 
   const canAccept = Boolean(worker?.online) && (isPremium || (Number(worker?.dues) || 0) <= 0);
 
@@ -325,7 +343,7 @@ export default function WorkerDashboard() {
     <div className="worker-app">
       <header className="worker-top">
         <div className="worker-top__inner">
-          <Logo dark />
+          <Logo />
           <nav className="worker-top__links" aria-label="Worker sections">
             {TABS.map((item) => (
               <button
@@ -376,13 +394,14 @@ export default function WorkerDashboard() {
               <NotificationBell />
             </span>
 
-            <div className="worker-user">
-              <Avatar name={worker.name || profile?.name} path={worker.photoPath} size={36} ring={isPremium} />
-              <div>
-                <strong>{worker.name || profile?.name}</strong>
-                <span>{worker.service || "EasyHome Pro"}</span>
-              </div>
-            </div>
+            <WorkerProfileMenu
+              worker={worker}
+              profile={profile}
+              isPremium={isPremium}
+              onProfile={() => setTab("profile")}
+              onMembership={() => setTab("membership")}
+              onLogout={logout}
+            />
           </div>
         </div>
       </header>
@@ -396,6 +415,8 @@ export default function WorkerDashboard() {
           onRefresh={refreshMoney}
           onEarnings={() => setTab("earnings")}
         />
+
+        {tab === "home" ? <WorkerAdSlot promos={promos} /> : null}
 
         {!worker.online ? (
           <div className="wk-banner wk-banner--offline">
@@ -478,12 +499,31 @@ export default function WorkerDashboard() {
             isPremium={isPremium}
             onRefresh={refreshMoney}
             onCommission={setCommissionTarget}
-            onUpgrade={() => setTab("profile")}
+            onUpgrade={() => setTab("membership")}
           />
         ) : null}
 
+        {tab === "membership" ? (
+          <MembershipTab worker={worker} isPremium={isPremium} settings={settings} />
+        ) : null}
+
         {tab === "profile" ? (
-          <ProfileTab worker={worker} onLogout={logout} onRefresh={refreshMoney} />
+          <ProfileTab
+            key={JSON.stringify([
+              worker.name,
+              worker.phone,
+              worker.serviceKey,
+              worker.service,
+              worker.area,
+              worker.pricePerWork,
+              worker.bio,
+              worker.upiId,
+              worker.photoPath,
+            ])}
+            worker={worker}
+            onLogout={logout}
+            onRefresh={refreshMoney}
+          />
         ) : null}
 
         <WorkerFooter />
@@ -507,6 +547,7 @@ export default function WorkerDashboard() {
       </nav>
 
       <PriceModal
+        key={priceTarget?.id || "closed"}
         job={priceTarget}
         settings={settings}
         isPremium={isPremium}
@@ -596,6 +637,210 @@ function EarningsStrip({ earnings, worker, isPremium, refreshing, onRefresh, onE
         </button>
       </div>
     </section>
+  );
+}
+
+function WorkerProfileMenu({
+  worker,
+  profile,
+  isPremium,
+  onProfile,
+  onMembership,
+  onLogout,
+}) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (event) => {
+      if (event.type === "keydown" && event.key === "Escape") {
+        setOpen(false);
+        return;
+      }
+      if (event.type === "mousedown" && !menuRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [open]);
+
+  return (
+    <div className="wk-profile-menu" ref={menuRef}>
+      <button
+        type="button"
+        className="worker-user worker-user--btn"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Open profile menu"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Avatar
+          name={worker.name || profile?.name}
+          path={worker.photoPath || profile?.photoPath}
+          size={36}
+          ring={isPremium}
+        />
+        <span className="wk-profile-menu__copy">
+          <strong>{worker.name || profile?.name}</strong>
+          <span>{worker.service || "EasyHome Pro"}</span>
+        </span>
+        <ChevronRight size={15} className="wk-profile-menu__chevron" aria-hidden="true" />
+      </button>
+      {open ? (
+        <div className="wk-profile-menu__dropdown" role="menu" aria-label="Profile options">
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              onProfile();
+              setOpen(false);
+            }}
+          >
+            <UserRound size={16} /> Profile &amp; KYC
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              onMembership();
+              setOpen(false);
+            }}
+          >
+            <Crown size={16} /> Membership
+          </button>
+          <Link to="/worker/support" role="menuitem" onClick={() => setOpen(false)}>
+            <Headphones size={16} /> Worker support
+          </Link>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              onLogout();
+            }}
+          >
+            <LogOut size={16} /> Sign out
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function WorkerAdSlot({ promos }) {
+  const promo = promos.find((item) => item.placement === "worker_dashboard");
+  if (!promo) return null;
+
+  const imageUrl = mediaUrl(promo.imagePath);
+  const content = (
+    <>
+      {imageUrl ? <img className="wk-ad-slot__image" src={imageUrl} alt="" /> : null}
+      <span className="wk-ad-slot__copy">
+        <strong>{promo.title}</strong>
+        {promo.subtitle ? <span>{promo.subtitle}</span> : null}
+      </span>
+      {promo.ctaText ? <span className="wk-ad-slot__cta">{promo.ctaText}</span> : null}
+    </>
+  );
+  const safeLink = String(promo.ctaLink || "").trim();
+  const isSafeInternalLink =
+    safeLink.startsWith("/") && !safeLink.startsWith("//") && !safeLink.includes("\\");
+
+  return (
+    <aside className={`wk-ad-slot is-${promo.theme || "blue"}`} aria-label="Promoted offer">
+      {isSafeInternalLink ? (
+        <Link to={safeLink}>{content}</Link>
+      ) : (
+        <div>{content}</div>
+      )}
+    </aside>
+  );
+}
+
+function MembershipTab({ worker, isPremium, settings }) {
+  const { refreshClaims, refreshProfile } = useAuth();
+  const toast = useToast();
+  const [plan, setPlan] = useState("monthly");
+  const monthly = Number(settings.subscriptionPrice) || 199;
+  const plans = PLANS.map((item) => {
+    const multiplier = item.id === "quarterly" ? 3 : item.id === "yearly" ? 12 : 1;
+    const discount = item.id === "quarterly" ? 0.9 : item.id === "yearly" ? 0.8 : 1;
+    const amount = Math.round(monthly * multiplier * discount);
+    return { ...item, amount, perMonth: Math.round(amount / multiplier) };
+  });
+  const selected = plans.find((item) => item.id === plan) || plans[0];
+
+  const onPaid = async () => {
+    await Promise.all([refreshProfile(), refreshClaims()]);
+    toast.success("Payment verified. Your EasyHome Pro membership is active.");
+  };
+
+  return (
+    <>
+      <div className="wk-page-head">
+        <div>
+          <p className="wk-eyebrow">EasyHome Pro</p>
+          <h1>Membership</h1>
+          <p>Choose a plan for zero commission and priority access to jobs.</p>
+        </div>
+        {isPremium ? <span className="wk-badge wk-badge--green">Membership active</span> : null}
+      </div>
+      <section className="wk-membership-card">
+        <div>
+          <p className="wk-eyebrow">{isPremium ? "Your plan" : "Professional membership"}</p>
+          <h2>{isPremium ? "You’re on EasyHome Pro" : "Keep more of every job"}</h2>
+          <p>
+            {isPremium
+              ? `Your current membership is active until ${formatDateTime(worker.premiumUntil)}.`
+              : "Pro includes 0% commission, priority job placement and a verified Pro badge."}
+          </p>
+          <ul>
+            {(settings.workerBenefits || []).map((benefit) => (
+              <li key={benefit}><CheckCircle2 size={16} /> {benefit}</li>
+            ))}
+          </ul>
+        </div>
+        {!isPremium ? (
+          <div className="wk-membership-card__checkout">
+            <fieldset className="wk-plan-picker">
+              <legend>Choose a plan</legend>
+              <div className="wk-plan-picker__grid">
+                {plans.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`wk-plan-option${plan === item.id ? " is-active" : ""}`}
+                    aria-pressed={plan === item.id}
+                    onClick={() => setPlan(item.id)}
+                  >
+                    {item.badge ? <span className="wk-plan-option__badge">{item.badge}</span> : null}
+                    <strong>{item.label}</strong>
+                    <span className="wk-plan-option__price">{inr(item.amount)}</span>
+                    <small>{item.id === "monthly" ? "per month" : `${inr(item.perMonth)} / month`}</small>
+                    <span className="wk-plan-option__blurb">{item.blurb}</span>
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <RazorpayPayment
+              amount={selected.amount}
+              description={`EasyHome Pro · ${selected.label}`}
+              orderEndpoint="/payment/subscription/order"
+              verifyEndpoint="/payment/subscription/verify"
+              orderBody={{ plan: selected.id }}
+              onSuccess={onPaid}
+              buttonLabel={`Pay ${inr(selected.amount)} & activate`}
+            />
+          </div>
+        ) : null}
+      </section>
+    </>
   );
 }
 
@@ -726,7 +971,7 @@ function WorkerPromos({ worker, isPremium, onTab }) {
       <div className="wk-promos__head">
         <div>
           <p className="wk-eyebrow">Built for your business</p>
-          <h2>Make every local job count.</h2>
+          <h2>Grow with EasyHome</h2>
         </div>
         <span className="wk-promos__location">
           <MapPin size={13} /> {location}
@@ -737,17 +982,17 @@ function WorkerPromos({ worker, isPremium, onTab }) {
         <button
           type="button"
           className="wk-promo wk-promo--yellow"
-          onClick={() => onTab("profile")}
+          onClick={() => onTab("membership")}
         >
           <span className="wk-promo__icon">
             <Crown size={20} />
           </span>
           <span className="grow">
-            <strong>{isPremium ? "Pro membership is active" : "Keep 100% with Pro"}</strong>
+            <strong>{isPremium ? "Pro membership is active" : "Upgrade to EasyHome Pro"}</strong>
             <small>
               {isPremium
                 ? "0% commission, priority placement and urgent-job priority."
-                : "Upgrade to pay 0% commission on completed jobs."}
+                : "Keep 100% of your earnings with 0% commission on Pro."}
             </small>
           </span>
           <ChevronRight size={17} />
@@ -763,13 +1008,28 @@ function WorkerPromos({ worker, isPremium, onTab }) {
           </span>
           <span className="grow">
             <strong>
-              {worker?.kycStatus === "verified" ? "ID verification complete" : "Finish your KYC"}
+              {worker?.kycStatus === "verified" ? "ID verification complete" : "Complete your KYC"}
             </strong>
             <small>
               {worker?.kycStatus === "verified"
-                ? "Customers can see your verified professional badge."
-                : "Verified pros get more accepted jobs and trust."}
+                ? "Your verified badge builds trust with customers."
+                : "Get verified to win more jobs and build credibility."}
             </small>
+          </span>
+          <ChevronRight size={17} />
+        </button>
+
+        <button
+          type="button"
+          className="wk-promo wk-promo--green"
+          onClick={() => onTab("earnings")}
+        >
+          <span className="wk-promo__icon">
+            <Users size={20} />
+          </span>
+          <span className="grow">
+            <strong>Refer &amp; earn</strong>
+            <small>Invite skilled pros and earn referral bonuses when they complete jobs.</small>
           </span>
           <ChevronRight size={17} />
         </button>
@@ -779,8 +1039,8 @@ function WorkerPromos({ worker, isPremium, onTab }) {
             <Headphones size={20} />
           </span>
           <span className="grow">
-            <strong>Need a hand?</strong>
-            <small>Chat with the EasyHome Pro support team about any job.</small>
+            <strong>Need help?</strong>
+            <small>Chat with EasyHome Pro support for jobs, payouts or account help.</small>
           </span>
           <ChevronRight size={17} />
         </Link>
@@ -790,6 +1050,11 @@ function WorkerPromos({ worker, isPremium, onTab }) {
 }
 
 function WorkerFooter() {
+  const { footerLinks } = useCatalogue();
+  const legalLinks = footerLinks.filter(
+    (item) => item.group === "legal" || item.group === "support",
+  );
+
   return (
     <footer className="wk-footer">
       <div className="wk-footer__main">
@@ -818,19 +1083,20 @@ function WorkerFooter() {
           <Link to="/worker?tab=jobs">Jobs</Link>
           <Link to="/worker?tab=earnings">Earnings</Link>
           <Link to="/worker?tab=profile">Profile &amp; KYC</Link>
+          <Link to="/worker?tab=membership">Membership</Link>
         </div>
 
         <div className="wk-footer__col">
           <h3>Support</h3>
           <Link to="/worker/support">Chat with support</Link>
-          <Link to="/legal/terms">Terms of service</Link>
-          <Link to="/legal/privacy">Privacy policy</Link>
-          <Link to="/legal/disclaimer">Disclaimer</Link>
+          {legalLinks.map((item) => (
+            <Link key={item.id} to={item.href}>{item.label}</Link>
+          ))}
         </div>
 
         <div className="wk-footer__col">
           <h3>Grow with EasyHome</h3>
-          <Link to="/worker?tab=profile">Upgrade to Pro</Link>
+          <Link to="/worker?tab=membership">Membership &amp; upgrade</Link>
           <Link to="/worker?tab=earnings">Commission &amp; payouts</Link>
           <Link to="/worker/support">Report an issue</Link>
         </div>
@@ -981,7 +1247,7 @@ function ActiveJobsSection({
   onSeeAll,
 }) {
   return (
-    <section className="wk-section">
+    <section className="wk-section wk-section--card">
       <div className="wk-section__head">
         <div>
           <p className="wk-eyebrow">In progress</p>
@@ -1037,7 +1303,7 @@ function AvailableJobsSection({
   showEmptyHint,
 }) {
   return (
-    <section className="wk-section">
+    <section className="wk-section wk-section--card">
       <div className="wk-section__head">
         <div>
           <p className="wk-eyebrow">Job feed</p>
@@ -1097,9 +1363,14 @@ function AvailableJobCard({ job, busy, canAccept, onAccept }) {
               <span className="wk-badge wk-badge--red">
                 <Timer size={11} /> Urgent
               </span>
-            ) : (
+            ) : null}
+            {job.priority === "pro" ? (
+              <span className="wk-badge wk-badge--yellow">
+                <Crown size={11} /> Pro priority
+              </span>
+            ) : job.urgency !== "urgent" ? (
               <span className="wk-badge wk-badge--muted">Standard</span>
-            )}
+            ) : null}
           </div>
           <p className="wk-job__meta">
             <span>
@@ -1152,8 +1423,9 @@ function ActiveJobCard({
   gps,
 }) {
   const [phone, setPhone] = useState("");
-  const [loadingPhone, setLoadingPhone] = useState(false);
+  const [phoneLoadedFor, setPhoneLoadedFor] = useState("");
   const confirmed = Boolean(job.pricing?.confirmedAt);
+  const loadingPhone = confirmed && phoneLoadedFor !== job.id;
   const price =
     job.pricing?.finalPrice || job.pricing?.workerPrice || job.pricing?.customerOffer || job.budget;
   const lat = job.location?.lat;
@@ -1182,10 +1454,8 @@ function ActiveJobCard({
   useEffect(() => {
     let active = true;
     if (!confirmed) {
-      setPhone("");
       return undefined;
     }
-    setLoadingPhone(true);
     api
       .get(`/bookings/${job.id}/contact`)
       .then((data) => {
@@ -1193,7 +1463,7 @@ function ActiveJobCard({
       })
       .catch(() => {})
       .finally(() => {
-        if (active) setLoadingPhone(false);
+        if (active) setPhoneLoadedFor(job.id);
       });
     return () => {
       active = false;
@@ -1473,9 +1743,13 @@ function EarningsTab({
             <div className="wk-premium-card wk-premium-card--muted">
               <strong>Zero commission with Pro</strong>
               <p>Keep every rupee, get priority job placement and a verified Pro badge.</p>
-              <Link to="/subscription" className="wk-btn wk-btn--primary">
+              <button
+                type="button"
+                className="wk-btn wk-btn--primary"
+                onClick={onUpgrade}
+              >
                 <Crown size={16} /> Upgrade
-              </Link>
+              </button>
             </div>
           )}
           <div className="wk-mini-stats">
@@ -1602,7 +1876,8 @@ function EarningsTab({
 function ProfileTab({ worker, onLogout }) {
   const { services, settings } = useCatalogue();
   const toast = useToast();
-  const { refreshClaims } = useAuth();
+  const { refreshClaims, refreshProfile } = useAuth();
+  const photoInputRef = useRef(null);
   const [form, setForm] = useState({
     name: worker.name || "",
     phone: worker.phone || "",
@@ -1614,33 +1889,12 @@ function ProfileTab({ worker, onLogout }) {
     upiId: worker.upiId || "",
   });
   const [saving, setSaving] = useState(false);
+  const [photoSaving, setPhotoSaving] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [photoPath, setPhotoPath] = useState(worker.photoPath || "");
   const [coords, setCoords] = useState(
     worker.lat && worker.lng ? { lat: worker.lat, lng: worker.lng } : null,
   );
-
-  useEffect(() => {
-    setForm((prev) => ({
-      ...prev,
-      name: worker.name || "",
-      phone: worker.phone || "",
-      serviceKey: worker.serviceKey || "",
-      service: worker.service || "",
-      area: worker.area || "",
-      pricePerWork: worker.pricePerWork || "",
-      bio: worker.bio || "",
-      upiId: worker.upiId || "",
-    }));
-  }, [
-    worker.name,
-    worker.phone,
-    worker.serviceKey,
-    worker.service,
-    worker.area,
-    worker.pricePerWork,
-    worker.bio,
-    worker.upiId,
-  ]);
 
   const set = (field) => (event) =>
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
@@ -1683,13 +1937,17 @@ function ProfileTab({ worker, onLogout }) {
   };
 
   const capture = async () => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      toast.error("This browser does not support location. Add your service area manually.");
+      return;
+    }
     setLocating(true);
     try {
       const position = await new Promise((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
-          timeout: 12000,
+          timeout: 15000,
+          maximumAge: 0,
         });
       });
       setCoords({
@@ -1697,10 +1955,51 @@ function ProfileTab({ worker, onLogout }) {
         lng: position.coords.longitude,
       });
       toast.success("Location updated. Save changes to apply it.");
-    } catch {
-      toast.error("Could not access location.");
+    } catch (error) {
+      const messages = {
+        1: "Location permission was denied. Allow location access in your browser or add your service area manually.",
+        2: "Your location is unavailable right now. Check device location settings or add your service area manually.",
+        3: "Location request timed out. Try again or add your service area manually.",
+      };
+      toast.error(messages[error?.code] || "Could not access location. Add your service area manually.");
     } finally {
       setLocating(false);
+    }
+  };
+
+  const uploadPhoto = async (file) => {
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Choose a JPG, PNG or WEBP photo.");
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("Choose a photo smaller than 15 MB.");
+      return;
+    }
+
+    setPhotoSaving(true);
+    try {
+      const compressed = await compressImage(file, { maxSize: 900, quality: 0.8 });
+      if (compressed.size > 5 * 1024 * 1024) {
+        throw new Error("This photo is still too large after compression. Choose a smaller image.");
+      }
+      const formData = new FormData();
+      formData.append("image", compressed);
+      const result = await api.upload("/auth/avatar", formData);
+      setPhotoPath(result.photoPath || "");
+      try {
+        await Promise.all([refreshProfile(), refreshClaims()]);
+      } catch {
+        toast.info("Photo uploaded. Your profile details may take a moment to refresh.");
+        return;
+      }
+      toast.success("Profile photo updated.");
+    } catch (error) {
+      toast.error(error.message || "Could not upload your profile photo.");
+    } finally {
+      setPhotoSaving(false);
+      if (photoInputRef.current) photoInputRef.current.value = "";
     }
   };
 
@@ -1720,7 +2019,31 @@ function ProfileTab({ worker, onLogout }) {
       <div className="wk-profile-grid">
         <section className="wk-panel-card wk-profile-card">
           <div className="wk-profile-card__top">
-            <Avatar name={worker.name} path={worker.photoPath} size={78} ring={worker.isPremium} />
+            <div className="wk-avatar-upload">
+              <Avatar
+                name={worker.name}
+                path={photoPath || worker.photoPath}
+                size={78}
+                ring={worker.isPremium}
+              />
+              <input
+                ref={photoInputRef}
+                className="sr-only"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                aria-label="Choose a profile photo"
+                onChange={(event) => uploadPhoto(event.target.files?.[0])}
+              />
+              <button
+                type="button"
+                className="wk-chip-btn"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={photoSaving}
+              >
+                {photoSaving ? <Spinner size={14} /> : <Pencil size={14} />}
+                {photoSaving ? "Uploading…" : "Update photo"}
+              </button>
+            </div>
             <div>
               <h2>{worker.name}</h2>
               <p>
@@ -1898,11 +2221,8 @@ function ProfileTab({ worker, onLogout }) {
           </p>
         </div>
         <div className="wk-account-actions">
-          <Link to="/chat" className="wk-btn wk-btn--outline">
+          <Link to="/worker/support" className="wk-btn wk-btn--outline">
             <Phone size={15} /> Support
-          </Link>
-          <Link to="/" className="wk-btn wk-btn--outline">
-            <Home size={15} /> Customer app
           </Link>
           <button
             type="button"
@@ -1926,12 +2246,10 @@ function ProfileTab({ worker, onLogout }) {
 /* --------------------------------- Modals --------------------------------- */
 
 function PriceModal({ job, settings, isPremium, busy, onClose, onSubmit }) {
-  const [price, setPrice] = useState("");
+  const [price, setPrice] = useState(
+    String(job?.pricing?.workerPrice || job?.budget || ""),
+  );
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (job) setPrice(String(job.pricing?.workerPrice || job.budget || ""));
-  }, [job]);
 
   const amount = Number(price) || 0;
   const commission = isPremium ? 0 : Math.round((amount * (settings.commissionPct || 10)) / 100);

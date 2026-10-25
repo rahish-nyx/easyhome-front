@@ -40,6 +40,7 @@ const AdminZones = lazy(() => import("./admin/AdminZones"));
 const AdminCatalog = lazy(() => import("./admin/AdminCatalog"));
 const AdminRevenue = lazy(() => import("./admin/AdminRevenue"));
 const AdminPromos = lazy(() => import("./admin/AdminPromos"));
+const AdminFooterLinks = lazy(() => import("./admin/AdminFooterLinks"));
 const AdminBroadcast = lazy(() => import("./admin/AdminBroadcast"));
 const AdminChats = lazy(() => import("./admin/AdminChats"));
 const AdminSettings = lazy(() => import("./admin/AdminSettings"));
@@ -122,6 +123,7 @@ export default function App() {
                     <Route path="catalog" element={<AdminCatalog />} />
                     <Route path="revenue" element={<AdminRevenue />} />
                     <Route path="promos" element={<AdminPromos />} />
+                    <Route path="footer" element={<AdminFooterLinks />} />
                     <Route path="broadcast" element={<AdminBroadcast />} />
                     <Route path="chats" element={<AdminChats />} />
                     <Route path="settings" element={<AdminSettings />} />

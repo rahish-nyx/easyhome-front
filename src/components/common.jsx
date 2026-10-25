@@ -804,11 +804,10 @@ export function InstallCard({ className = "" }) {
 
 export function SetupScreen() {
   const toast = useToast();
-  const snippet = `VITE_FIREBASE_API_KEY=...
-VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your-project
-VITE_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
-VITE_FIREBASE_MESSAGING_SENDER_ID=...
+  const snippet = `  VITE_FIREBASE_API_KEY=...
+  VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+  VITE_FIREBASE_PROJECT_ID=your-project
+  VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...`;
 
   return (
@@ -833,10 +832,13 @@ VITE_FIREBASE_APP_ID=...`;
             <strong>Google</strong> sign-in.
           </div>
           <div className="setup__step">
-            Create a <strong>Firestore</strong> database and a <strong>Storage</strong> bucket.
+            Create a <strong>Firestore</strong> database for the live catalogue and bookings.
           </div>
           <div className="setup__step">
             Copy <code>.env.example</code> → <code>.env.local</code> and paste your web app keys.
+          </div>
+          <div className="setup__step">
+            Configure Cloudinary credentials in the backend environment to enable image uploads.
           </div>
         </div>
 

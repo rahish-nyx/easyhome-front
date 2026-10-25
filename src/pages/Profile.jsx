@@ -100,7 +100,7 @@ export default function Profile() {
       }
       const form = new FormData();
       form.append("image", compressed, compressed.name);
-      await api.upload("/avatar", form);
+      await api.upload("/auth/avatar", form);
       await refreshProfile();
       toast.success("Profile photo updated.");
     } catch (error) {
@@ -568,7 +568,8 @@ function AddressModal({ state, onClose, onSave, count }) {
       const position = await new Promise((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
-          timeout: 12000,
+          timeout: 15000,
+          maximumAge: 0,
         });
       });
       setForm((prev) => ({

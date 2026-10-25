@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import L from "leaflet";
+import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import {
   BellRing,
   Compass,
@@ -42,6 +45,14 @@ const EMPTY_ZONE = {
   isActive: true,
 };
 
+const DEFAULT_MAP_CENTER = [22.9734, 78.6569];
+const ZONE_PIN = L.divIcon({
+  className: "adm-zone-map__pin",
+  html: "<span></span>",
+  iconSize: [28, 36],
+  iconAnchor: [14, 34],
+});
+
 export default function AdminZones() {
   const toast = useToast();
   const { cities } = useCatalogue();
@@ -52,8 +63,8 @@ export default function AdminZones() {
   const [busy, setBusy] = useState("");
 
   const zonesState = useAsync(() => api.get("/admin/zones"), []);
-  const zones = zonesState.data?.zones || [];
-  const waitlist = zonesState.data?.waitlist || [];
+  const zones = useMemo(() => zonesState.data?.zones || [], [zonesState.data]);
+  const waitlist = useMemo(() => zonesState.data?.waitlist || [], [zonesState.data]);
   const stats = zonesState.data?.stats || { total: 0, active: 0, waiting: 0 };
 
   const filteredZones = useMemo(() => {
@@ -128,7 +139,7 @@ export default function AdminZones() {
     if (!deleteTarget) return;
     setBusy(`delete:${deleteTarget.id}`);
     try {
-      await api.delete(`/admin/zones/${deleteTarget.id}`);
+      await api.del(`/admin/zones/${deleteTarget.id}`);
       toast.success(`${deleteTarget.cityName} zone removed.`);
       setDeleteTarget(null);
       await refresh();
@@ -370,14 +381,17 @@ export default function AdminZones() {
         )}
       </Panel>
 
-      <ZoneModal
-        draft={draft}
-        cities={cities}
-        zones={zones}
-        loading={busy === "zone"}
-        onClose={() => setDraft(null)}
-        onSave={saveZone}
-      />
+      {draft && (
+        <ZoneModal
+          key={draft.id || "new"}
+          draft={draft}
+          cities={cities}
+          zones={zones}
+          loading={busy === "zone"}
+          onClose={() => setDraft(null)}
+          onSave={saveZone}
+        />
+      )}
 
       <ConfirmModal
         open={Boolean(deleteTarget)}
@@ -401,11 +415,6 @@ function ZoneModal({ draft, cities, zones, onClose, onSave, loading }) {
   const [form, setForm] = useState(draft || EMPTY_ZONE);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    setForm(draft || EMPTY_ZONE);
-    setError("");
-  }, [draft]);
-
   if (!draft) return null;
 
   const set = (key) => (event) =>
@@ -413,13 +422,26 @@ function ZoneModal({ draft, cities, zones, onClose, onSave, loading }) {
 
   const selectedCity = cities.find((item) => item.name === form.cityName);
   const areaOptions = (selectedCity?.localAreas || [])
-    .map((area) => (typeof area === "string" ? area : area?.name))
+    .map((area) =>
+      typeof area === "string"
+        ? { name: area }
+        : {
+            ...area,
+            name: area?.name || area?.area,
+            lat: area?.lat ?? area?.latitude,
+            lng: area?.lng ?? area?.longitude,
+          },
+    )
     .filter(Boolean);
 
   const chooseCity = (event) => {
     const name = event.target.value;
-    const city = cities.find((item) => item.name === name);
     const existing = zones.find((item) => item.cityName === name);
+    const city = cities.find(
+      (item) =>
+        item.name === name &&
+        (!existing?.state || item.state === existing.state),
+    ) || cities.find((item) => item.name === name);
     setForm((current) => ({
       ...current,
       cityName: name,
@@ -431,10 +453,30 @@ function ZoneModal({ draft, cities, zones, onClose, onSave, loading }) {
     }));
   };
 
+  const chooseArea = (event) => {
+    const name = event.target.value;
+    const area = areaOptions.find((item) => item.name === name);
+    setForm((current) => ({
+      ...current,
+      areaName: name,
+      latitude: area?.lat != null && Number.isFinite(Number(area.lat))
+        ? String(area.lat)
+        : current.latitude,
+      longitude: area?.lng != null && Number.isFinite(Number(area.lng))
+        ? String(area.lng)
+        : current.longitude,
+      radiusKm: Number(area?.radiusKm) || current.radiusKm,
+    }));
+  };
+
   const submit = () => {
     setError("");
     if (!form.state.trim() || !form.cityName.trim()) {
       setError("State and city name are required.");
+      return;
+    }
+    if (!String(form.latitude).trim() || !String(form.longitude).trim()) {
+      setError("Choose the exact centre coordinates on the map.");
       return;
     }
     const lat = Number(form.latitude);
@@ -493,14 +535,14 @@ function ZoneModal({ draft, cities, zones, onClose, onSave, loading }) {
           htmlFor="zone-area"
           hint="Leave blank for a city-wide zone, or pick one area for precise coverage."
         >
-          <Select id="zone-area" value={form.areaName || ""} onChange={set("areaName")}>
+          <Select id="zone-area" value={form.areaName || ""} onChange={chooseArea}>
             <option value="">All areas in the city</option>
             {areaOptions.map((area) => (
-              <option key={area} value={area}>
-                {area}
+              <option key={area.name} value={area.name}>
+                {area.name}
               </option>
             ))}
-            {form.areaName && !areaOptions.includes(form.areaName) ? (
+            {form.areaName && !areaOptions.some((area) => area.name === form.areaName) ? (
               <option value={form.areaName}>{form.areaName}</option>
             ) : null}
           </Select>
@@ -542,6 +584,27 @@ function ZoneModal({ draft, cities, zones, onClose, onSave, loading }) {
           />
         </Field>
 
+        <div className="adm-span-2">
+          <div className="adm-zone-map__heading">
+            <strong>Map pin</strong>
+            <span>Click the map or drag the pin to set the zone centre.</span>
+          </div>
+          <ZoneMap
+            latitude={form.latitude}
+            longitude={form.longitude}
+            onChange={(latitude, longitude) =>
+              setForm((current) => ({
+                ...current,
+                latitude: latitude.toFixed(6),
+                longitude: longitude.toFixed(6),
+              }))
+            }
+          />
+          <p className="adm-zone-map__attribution">
+            Map data © OpenStreetMap contributors
+          </p>
+        </div>
+
         <Field
           label="Radius (km)"
           htmlFor="zone-radius"
@@ -571,4 +634,69 @@ function ZoneModal({ draft, cities, zones, onClose, onSave, loading }) {
       </div>
     </Modal>
   );
+}
+
+function ZoneMap({ latitude, longitude, onChange }) {
+  const parsedLat = Number(latitude);
+  const parsedLng = Number(longitude);
+  const hasPosition =
+    Number.isFinite(parsedLat) &&
+    parsedLat >= -90 &&
+    parsedLat <= 90 &&
+    Number.isFinite(parsedLng) &&
+    parsedLng >= -180 &&
+    parsedLng <= 180;
+  const position = hasPosition ? [parsedLat, parsedLng] : null;
+
+  return (
+    <div className="adm-zone-map" aria-label="Interactive service zone map">
+      <MapContainer
+        center={position || DEFAULT_MAP_CENTER}
+        zoom={position ? 12 : 5}
+        scrollWheelZoom
+        className="adm-zone-map__canvas"
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <ZoneMapView position={position} />
+        <ZoneMapEvents onChange={onChange} />
+        {position ? (
+          <Marker
+            position={position}
+            icon={ZONE_PIN}
+            draggable
+            eventHandlers={{
+              dragend: (event) => {
+                const point = event.target.getLatLng();
+                onChange(point.lat, point.lng);
+              },
+            }}
+          />
+        ) : null}
+      </MapContainer>
+    </div>
+  );
+}
+
+function ZoneMapView({ position }) {
+  const map = useMap();
+  const latitude = position?.[0] ?? null;
+  const longitude = position?.[1] ?? null;
+
+  useEffect(() => {
+    if (latitude === null || longitude === null) return;
+    map.setView([latitude, longitude], Math.max(map.getZoom(), 12));
+  }, [map, latitude, longitude]);
+  return null;
+}
+
+function ZoneMapEvents({ onChange }) {
+  useMapEvents({
+    click(event) {
+      onChange(event.latlng.lat, event.latlng.lng);
+    },
+  });
+  return null;
 }

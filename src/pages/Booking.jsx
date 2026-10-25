@@ -54,7 +54,9 @@ export default function Booking() {
     city,
     zones,
     coords: savedCoords,
+    point: selectedPoint,
     setCoords: setGlobalCoords,
+    detectLocation,
     showZoneNotice,
     openPicker,
   } = useLocation();
@@ -130,25 +132,33 @@ export default function Booking() {
   }, [city?.name, city?.areaName]);
 
   const captureLocation = async () => {
-    if (!navigator.geolocation) {
-      toast.error("This device does not support location.");
-      return;
-    }
     setLocating(true);
     try {
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 12000,
-        });
-      });
+      const detected = await detectLocation();
+      if (!detected) {
+        toast.error("Could not detect your location. Choose your city and area manually.");
+        return;
+      }
+      if (detected.locationSource === "ip") {
+        const oldDefaultArea = [city?.areaName, city?.name].filter(Boolean).join(", ");
+        if (!area.trim() || area.trim() === oldDefaultArea) {
+          setArea([detected.areaName, detected.name].filter(Boolean).join(", "));
+        }
+        setCoords(null);
+        if (detected.requiresManualArea) openPicker();
+        toast.info("GPS was unavailable; we selected an approximate city from your network. Confirm your address before booking.");
+        return;
+      }
+      const oldDefaultArea = [city?.areaName, city?.name].filter(Boolean).join(", ");
+      if (!area.trim() || area.trim() === oldDefaultArea) {
+        setArea([detected.areaName, detected.name].filter(Boolean).join(", "));
+      }
       const point = {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-        accuracy: Math.round(position.coords.accuracy || 0),
+        lat: detected.lat,
+        lng: detected.lng,
+        accuracy: detected.accuracy || null,
       };
       setCoords(point);
-      setGlobalCoords(point, "gps");
 
       const check = evaluateZones(zones, {
         lat: point.lat,
@@ -164,11 +174,7 @@ export default function Booking() {
       }
       toast.success("Location pinned. We will match pros around you.");
     } catch (error) {
-      toast.error(
-        error.code === 1
-          ? "Location permission denied. Enter your area manually."
-          : "Could not get your location. Try again.",
-      );
+      toast.error(error.message || "Could not detect your location. Choose your city and area manually.");
     } finally {
       setLocating(false);
     }
@@ -181,6 +187,7 @@ export default function Booking() {
 
   const bookingPoint =
     coords ||
+    selectedPoint ||
     (savedCoords?.source === "gps" && Number.isFinite(Number(savedCoords.lat))
       ? savedCoords
       : null);
@@ -188,8 +195,8 @@ export default function Booking() {
   const currentZoneCheck = useMemo(
     () =>
       evaluateZones(zones, {
-        lat: bookingPoint?.lat ?? city?.lat,
-        lng: bookingPoint?.lng ?? city?.lng,
+        lat: bookingPoint?.lat ?? (city?.locationSource === "ip" ? null : city?.lat),
+        lng: bookingPoint?.lng ?? (city?.locationSource === "ip" ? null : city?.lng),
         cityName: city?.name,
         state: city?.state,
         areaName: city?.areaName,
@@ -200,6 +207,7 @@ export default function Booking() {
       bookingPoint?.lng,
       city?.lat,
       city?.lng,
+      city?.locationSource,
       city?.name,
       city?.state,
       city?.areaName,
@@ -209,6 +217,10 @@ export default function Booking() {
   const validate = () => {
     const next = {};
     if (!serviceKey) next.service = "Choose a service.";
+    if (!bookingPoint) {
+      next.location =
+        "Use current location or select a mapped service area to verify the service radius.";
+    }
     if (description.trim().length < 10) {
       next.description = "Add at least 10 characters so the pro knows what to bring.";
     }
@@ -237,6 +249,11 @@ export default function Booking() {
     }
 
     if (currentZoneCheck.configured && !currentZoneCheck.allowed) {
+      if (city?.requiresManualArea) {
+        openPicker();
+        toast.info("Choose a live local area before sending a booking request.");
+        return;
+      }
       showZoneNotice(currentZoneCheck, bookingPoint || city);
       toast.error(OUT_OF_ZONE_MESSAGE);
       return;
@@ -265,6 +282,7 @@ export default function Booking() {
 
       const result = await api.upload("/bookings", form);
       toast.success("Request sent. Matching you with a verified pro now.");
+      for (const warning of result.warnings || []) toast.info(warning);
       navigate(`/bookings?created=${result.booking?.id || ""}`);
     } catch (error) {
       toast.error(error.message);
@@ -446,6 +464,11 @@ export default function Booking() {
                 {bookingPoint ? "Update location" : "Use my location"}
               </Button>
             </div>
+            {errors.location ? (
+              <p className="field__error" role="alert">
+                {errors.location}
+              </p>
+            ) : null}
           </div>
 
           <div className="form-section">

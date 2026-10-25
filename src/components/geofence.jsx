@@ -13,7 +13,7 @@ import "../styles/zones.css";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { api } from "../lib/api";
-import { OUT_OF_ZONE_MESSAGE, formatZoneDistance } from "../lib/zones";
+import { activeZones, OUT_OF_ZONE_MESSAGE, formatZoneDistance } from "../lib/zones";
 
 export function OutOfZoneModal({
   open,
@@ -24,6 +24,7 @@ export function OutOfZoneModal({
   nearestZone = "",
   distanceMeters = null,
   coords = null,
+  liveZones = [],
 }) {
   const { profile } = useAuth();
   const toast = useToast();
@@ -59,6 +60,14 @@ export function OutOfZoneModal({
       ? `${nearestZone} is the nearest live zone, about ${distance} away.`
       : `The nearest live zone is ${nearestZone}.`;
   }, [nearestZone, distanceMeters]);
+  const liveAreas = useMemo(() => {
+    const unique = new Map();
+    activeZones(liveZones).forEach((zone) => {
+      const label = [zone.areaName, zone.cityName, zone.state].filter(Boolean).join(", ");
+      if (label) unique.set(label.toLowerCase(), label);
+    });
+    return [...unique.values()];
+  }, [liveZones]);
 
   if (!open) return null;
 
@@ -110,6 +119,14 @@ export function OutOfZoneModal({
           {nearestCopy ||
             "Our verified professionals are currently live in selected service zones."}
         </p>
+        {liveAreas.length ? (
+          <section className="zone-gate__live" aria-label="Currently active service areas">
+            <strong>Currently live</strong>
+            <ul>
+              {liveAreas.map((area) => <li key={area}>{area}</li>)}
+            </ul>
+          </section>
+        ) : null}
 
         {done ? (
           <div className="zone-gate__done">

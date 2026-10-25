@@ -20,7 +20,6 @@ import {
   Menu,
   Search,
   Shield,
-  Sparkles,
   User,
   WifiOff,
   X,
@@ -166,11 +165,7 @@ export function SiteHeader() {
                         <Link className="menu__item" to="/worker" onClick={() => setMenuOpen(false)}>
                           <BriefcaseBusiness size={16} /> Worker dashboard
                         </Link>
-                      ) : (
-                        <Link className="menu__item" to="/auth?role=worker" onClick={() => setMenuOpen(false)}>
-                          <Sparkles size={16} /> Become a pro
-                        </Link>
-                      )}
+                      ) : null}
                       {isAdmin ? (
                         <>
                           <div className="menu__sep" />
@@ -225,8 +220,8 @@ export function CityModal({ open, onClose }) {
     setCity,
     detectLocation,
     detecting,
-    error,
     zones,
+    error: locationError,
   } = useCity();
   const currentCity = cities.find(
     (item) =>
@@ -278,7 +273,28 @@ export function CityModal({ open, onClose }) {
     setLocalError("");
     try {
       const next = await detectLocation();
-      if (next) onClose?.();
+      if (next?.requiresManualArea) {
+        const matchingCity = cities.find(
+          (item) =>
+            item.name.toLowerCase() === next.name.toLowerCase() &&
+            (!next.state ||
+              String(item.state || "").toLowerCase() ===
+                next.state.toLowerCase()),
+        );
+        setSelectedState(next.state || matchingCity?.state || "");
+        setSelectedCity(matchingCity?.name || "");
+        setSelectedArea("");
+        setLocalError(
+          "GPS was unavailable. IP identifies only your city; choose a live local area to confirm coverage.",
+        );
+      } else if (next) {
+        onClose?.();
+      } else {
+        setLocalError(
+          locationError ||
+            "Current-location detection is unavailable. Choose your state and city manually.",
+        );
+      }
     } catch (detectError) {
       setLocalError(detectError.message);
     }
@@ -292,6 +308,7 @@ export function CityModal({ open, onClose }) {
   };
 
   const chooseCity = (name) => {
+    setLocalError("");
     const item = stateCities.find((cityItem) => cityItem.name === name);
     if (!item) {
       setSelectedCity("");
@@ -341,7 +358,7 @@ export function CityModal({ open, onClose }) {
     setLocalError("");
     setCity({
       ...cityObject,
-      area: area?.name || cityObject.name,
+      area: area?.name || "",
       areaName: area?.name || "",
       lat: area?.lat ?? cityObject.lat,
       lng: area?.lng ?? cityObject.lng,
@@ -366,9 +383,9 @@ export function CityModal({ open, onClose }) {
         </span>
       </button>
 
-      {localError || error ? (
+      {localError ? (
         <p className="small" style={{ color: "var(--red)", marginBottom: 12 }}>
-          {localError || error}
+          {localError}
         </p>
       ) : null}
 
@@ -544,7 +561,12 @@ export function BottomNav() {
 /* ---------------------------------- Footer -------------------------------- */
 
 export function SiteFooter() {
-  const { services, cities } = useCatalogue();
+  const { services, cities, footerLinks } = useCatalogue();
+  const serviceLinks = footerLinks.filter((item) => item.group === "services");
+  const footerGroups = [
+    { id: "legal", label: "Legal" },
+    { id: "professionals", label: "For professionals" },
+  ];
 
   return (
     <footer className="site-footer">
@@ -578,33 +600,42 @@ export function SiteFooter() {
 
         <div className="footer-col">
           <h2>Services</h2>
-          {services.slice(0, 6).map((service) => (
-            <Link key={service.id} to={`/services/${service.key}`}>
-              {service.name}
+          {serviceLinks.length
+            ? serviceLinks.map((item) => (
+                <Link key={item.id} to={item.href}>
+                  {item.label}
+                </Link>
+              ))
+            : services.slice(0, 6).map((service) => (
+                <Link key={service.id} to={`/services/${service.key}`}>
+                  {service.name}
+                </Link>
+              ))}
+          {!serviceLinks.length ? (
+            <Link to="/services" className="footer-col__more">
+              …and many more
             </Link>
-          ))}
-          <Link to="/services" className="footer-col__more">
-            …and many more
-          </Link>
+          ) : null}
         </div>
 
-        <div className="footer-col">
-          <h2>Company</h2>
-          <Link to="/legal/about">About us</Link>
-          <Link to="/faq">FAQ</Link>
-          <Link to="/legal/terms">Terms of service</Link>
-          <Link to="/legal/privacy">Privacy policy</Link>
-          <Link to="/legal/refunds">Refund policy</Link>
-          <Link to="/legal/disclaimer">Disclaimer</Link>
-          <Link to="/chat">Help &amp; support</Link>
-        </div>
-
-        <div className="footer-col">
-          <h2>For professionals</h2>
-          <Link to="/auth?role=worker">Become a pro</Link>
-          <Link to="/worker">Worker dashboard</Link>
-          <Link to="/subscription">EasyHome Pro</Link>
-        </div>
+        {footerGroups.map((group) => {
+          const links = footerLinks.filter((item) =>
+            group.id === "legal"
+              ? ["company", "legal", "support"].includes(item.group)
+              : item.group === group.id,
+          );
+          if (!links.length) return null;
+          return (
+            <div className="footer-col" key={group.id}>
+              <h2>{group.label}</h2>
+              {links.map((item) => (
+                <Link key={item.id} to={item.href}>
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          );
+        })}
       </div>
 
       <div className="footer-bottom">
@@ -631,6 +662,7 @@ export function CustomerLayout() {
     zoneNotice,
     dismissZoneNotice,
     openPicker,
+    zones,
   } = useCity();
 
   useEffect(() => {
@@ -643,6 +675,7 @@ export function CustomerLayout() {
   if (
     isWorker &&
     !location.pathname.startsWith("/legal/") &&
+    location.pathname !== "/faq" &&
     !location.pathname.startsWith("/workers/")
   ) {
     return (
@@ -672,6 +705,7 @@ export function CustomerLayout() {
         nearestZone={zoneNotice?.nearestZone || ""}
         distanceMeters={zoneNotice?.distanceMeters ?? null}
         coords={zoneNotice?.coords || null}
+        liveZones={zones}
       />
     </>
   );

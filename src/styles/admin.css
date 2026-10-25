@@ -50,6 +50,126 @@ body.adm-mode {
   color-scheme: dark;
 }
 
+.adm-zone-map__heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--adm-text);
+  font-size: 12px;
+}
+
+.adm-zone-map__heading span,
+.adm-zone-map__attribution {
+  color: var(--adm-muted);
+  font-size: 10px;
+}
+
+.adm-zone-map {
+  height: 300px;
+  overflow: hidden;
+  border: 1px solid var(--adm-line-strong);
+  border-radius: 12px;
+  background: var(--adm-panel-2);
+}
+
+.adm-zone-map__canvas {
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.adm-zone-map__attribution {
+  margin-top: 5px;
+}
+
+.adm-zone-map__pin {
+  border: 0;
+  background: transparent;
+}
+
+.adm-zone-map__pin span {
+  display: block;
+  width: 24px;
+  height: 24px;
+  transform: rotate(-45deg);
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  background: #2563eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.adm-footer-links {
+  display: grid;
+  gap: 8px;
+}
+
+.adm-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.adm-footer-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--adm-line);
+  border-radius: 12px;
+  background: var(--adm-panel-2);
+}
+
+.adm-footer-link__order {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--adm-blue-soft);
+  color: var(--adm-blue);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.adm-footer-link .adm-approval__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.adm-footer-link .grow > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  color: var(--adm-muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.adm-footer-link__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+@media (max-width: 640px) {
+  .adm-zone-map {
+    height: 240px;
+  }
+
+  .adm-footer-link {
+    flex-wrap: wrap;
+  }
+
+  .adm-footer-link__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
 .admin-shell *,
 .admin-shell *::before,
 .admin-shell *::after {

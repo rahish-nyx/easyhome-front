@@ -334,6 +334,10 @@ function WorkerDetail({
   const suspended = worker.status === "suspended";
   const canReviewKyc = worker.kycStatus === "pending";
   const coords =
+    worker.lat !== null &&
+    worker.lat !== undefined &&
+    worker.lng !== null &&
+    worker.lng !== undefined &&
     Number.isFinite(Number(worker.lat)) && Number.isFinite(Number(worker.lng))
       ? mapsUrl(worker.lat, worker.lng, worker.area)
       : "";
@@ -410,8 +414,8 @@ function WorkerDetail({
           <div>
             <h3>Identity check</h3>
             <p>
-              Documents go only to the admin Telegram chat. EasyHome never stores or displays
-              the ID here.
+              ID images are stored privately in Cloudinary and forwarded to the admin Telegram
+              chat. This panel does not display the document image.
             </p>
           </div>
           <StatusPill status={worker.kycStatus} />

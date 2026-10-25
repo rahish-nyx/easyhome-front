@@ -20,6 +20,8 @@ import {
   UserRound,
 } from "lucide-react";
 import { doc } from "firebase/firestore";
+import { divIcon } from "leaflet";
+import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { useLiveDoc } from "../hooks/useLive";
@@ -35,6 +37,7 @@ import {
 import { usePageMeta } from "../lib/usePageMeta";
 import { Avatar, Badge, EmptyState, PageLoader } from "../components/ui";
 import "../styles/tracking.css";
+import "leaflet/dist/leaflet.css";
 
 function toDate(value) {
   if (!value) return null;
@@ -43,18 +46,64 @@ function toDate(value) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function mapSrc(lat, lng) {
-  if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) return "";
-  const latitude = Number(lat);
-  const longitude = Number(lng);
-  const delta = 0.012;
-  const bbox = [
-    longitude - delta,
-    latitude - delta,
-    longitude + delta,
-    latitude + delta,
-  ].join("%2C");
-  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${latitude}%2C${longitude}`;
+const workerMapIcon = divIcon({
+  className: "track-map-marker track-map-marker--worker",
+  html: "<span></span>",
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+});
+const customerMapIcon = divIcon({
+  className: "track-map-marker track-map-marker--customer",
+  html: "<span></span>",
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
+
+function TrackingMapViewport({ point }) {
+  const map = useMap();
+  const lat = point?.lat;
+  const lng = point?.lng;
+  useEffect(() => {
+    if (lat == null || lng == null) return;
+    map.flyTo([lat, lng], Math.max(map.getZoom(), 14), {
+      duration: 0.7,
+    });
+  }, [map, lat, lng]);
+  return null;
+}
+
+function TrackingMap({ workerPoint, targetPoint }) {
+  const center = workerPoint || targetPoint;
+  if (!center) return null;
+  return (
+    <MapContainer
+      className="track-map__leaflet"
+      center={[center.lat, center.lng]}
+      zoom={14}
+      aria-label="Live professional and service address map"
+      scrollWheelZoom={false}
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      <TrackingMapViewport point={workerPoint || targetPoint} />
+      {targetPoint ? (
+        <Marker
+          position={[targetPoint.lat, targetPoint.lng]}
+          icon={customerMapIcon}
+          title="Service address"
+        />
+      ) : null}
+      {workerPoint ? (
+        <Marker
+          position={[workerPoint.lat, workerPoint.lng]}
+          icon={workerMapIcon}
+          title="Professional's live location"
+        />
+      ) : null}
+    </MapContainer>
+  );
 }
 
 export default function Tracking() {
@@ -135,11 +184,19 @@ export default function Tracking() {
     : 0;
   const inactive = active && lastActivity && now - lastActivity.getTime() >= INACTIVITY_MS;
   const workerPoint =
+    booking.currentLat !== null &&
+    booking.currentLat !== undefined &&
+    booking.currentLng !== null &&
+    booking.currentLng !== undefined &&
     Number.isFinite(Number(booking.currentLat)) &&
     Number.isFinite(Number(booking.currentLng))
       ? { lat: Number(booking.currentLat), lng: Number(booking.currentLng) }
       : null;
   const targetPoint =
+    booking.location?.lat !== null &&
+    booking.location?.lat !== undefined &&
+    booking.location?.lng !== null &&
+    booking.location?.lng !== undefined &&
     Number.isFinite(Number(booking.location?.lat)) &&
     Number.isFinite(Number(booking.location?.lng))
       ? { lat: Number(booking.location.lat), lng: Number(booking.location.lng) }
@@ -150,7 +207,6 @@ export default function Tracking() {
       ? null
       : Math.max(1, Math.round((distance / 20) * 60));
   const mapPoint = workerPoint || targetPoint;
-  const liveMap = mapSrc(mapPoint?.lat, mapPoint?.lng);
   const phaseIndex = TRACKING_PHASES.findIndex((item) => item.id === phase);
   const done = booking.status === "completed" || phase === "completed";
   const history = Array.isArray(booking.statusHistory)
@@ -228,15 +284,9 @@ export default function Tracking() {
             ) : null}
           </div>
 
-          {liveMap ? (
+          {mapPoint ? (
             <div className="track-map">
-              <iframe
-                title="Live professional location"
-                src={liveMap}
-                loading="lazy"
-                referrerPolicy="no-referrer"
-              />
-              <span className="track-map__pulse" aria-hidden="true" />
+              <TrackingMap workerPoint={workerPoint} targetPoint={targetPoint} />
               <span className="track-map__tag">
                 <Radio size={12} /> {workerPoint ? "Worker GPS" : "Your location"}
               </span>

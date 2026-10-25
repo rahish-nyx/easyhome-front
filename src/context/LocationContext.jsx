@@ -11,6 +11,7 @@ import { getDistance } from "geolib";
 import { useCatalogue } from "./CatalogueContext";
 import { api } from "../lib/api";
 import {
+  activeZones,
   evaluateZones,
   normalizeZone,
 } from "../lib/zones";
@@ -37,10 +38,16 @@ function writeJson(key, value) {
 }
 
 function pointOf(item) {
-  const lat = Number(item?.lat ?? item?.latitude);
-  const lng = Number(item?.lng ?? item?.longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  const lat = coordinate(item?.lat ?? item?.latitude);
+  const lng = coordinate(item?.lng ?? item?.longitude);
+  if (lat === null || lng === null) return null;
   return { lat, lng };
+}
+
+function coordinate(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }
 
 function normalizeAreas(areas) {
@@ -51,8 +58,9 @@ function normalizeAreas(areas) {
       if (!name) return null;
       return {
         name,
-        lat: Number.isFinite(Number(area?.lat)) ? Number(area.lat) : null,
-        lng: Number.isFinite(Number(area?.lng)) ? Number(area.lng) : null,
+        lat: coordinate(area?.lat),
+        lng: coordinate(area?.lng),
+        radiusKm: Number(area?.radiusKm) || null,
       };
     })
     .filter(Boolean);
@@ -66,10 +74,10 @@ function safeCity(city) {
     localAreas.find(
       (item) => item.name.toLowerCase() === areaName.toLowerCase(),
     ) || (areaName ? { name: areaName, lat: null, lng: null } : null);
-  const cityLat = Number(city.cityLat ?? city.lat);
-  const cityLng = Number(city.cityLng ?? city.lng);
-  const lat = Number.isFinite(Number(area?.lat)) ? Number(area.lat) : cityLat;
-  const lng = Number.isFinite(Number(area?.lng)) ? Number(area.lng) : cityLng;
+  const cityLat = coordinate(city.cityLat ?? city.lat);
+  const cityLng = coordinate(city.cityLng ?? city.lng);
+  const lat = coordinate(area?.lat) ?? cityLat;
+  const lng = coordinate(area?.lng) ?? cityLng;
   return {
     id: city.id || city.name,
     name: city.name || "Current location",
@@ -77,18 +85,20 @@ function safeCity(city) {
     area: area?.name || "",
     areaName: area?.name || "",
     localAreas,
-    lat: Number.isFinite(lat) ? lat : null,
-    lng: Number.isFinite(lng) ? lng : null,
-    cityLat: Number.isFinite(cityLat) ? cityLat : null,
-    cityLng: Number.isFinite(cityLng) ? cityLng : null,
-    radiusKm: Number(city.radiusKm) || 0,
+    lat,
+    lng,
+    cityLat,
+    cityLng,
+    radiusKm: Number(area?.radiusKm) || Number(city.radiusKm) || 0,
     detected: Boolean(city.detected),
+    locationSource: city.locationSource || "",
+    requiresManualArea: Boolean(city.requiresManualArea),
   };
 }
 
 function nearestAreaName(city, lat, lng) {
   const areas = normalizeAreas(city?.localAreas || city?.areas).filter(
-    (area) => Number.isFinite(Number(area.lat)) && Number.isFinite(Number(area.lng)),
+    (area) => pointOf(area) !== null,
   );
   if (!areas.length) return normalizeAreas(city?.localAreas || city?.areas)[0]?.name || "";
   const ranked = areas
@@ -128,16 +138,69 @@ export function LocationProvider({ children }) {
 
   // Resolve the first usable city during render so the header never flashes
   // "Choose city" while the catalogue is still warming up.
-  const city = savedCity || safeCity(cities[0]) || null;
+  const availableCities = useMemo(() => {
+    const liveZones = activeZones(zones);
+    if (!zones.length) return cities;
+    if (!liveZones.length) return [];
+
+    const grouped = new Map();
+    for (const zone of liveZones) {
+      const name = String(zone.cityName || "").trim();
+      if (!name) continue;
+      const state = String(zone.state || "").trim();
+      const key = `${name.toLowerCase()}|${state.toLowerCase()}`;
+      const current = grouped.get(key) || {
+        name,
+        state,
+        lat: zone.lat,
+        lng: zone.lng,
+        radiusKm: zone.radiusKm,
+        localAreas: [],
+      };
+      if (zone.areaName) {
+        current.localAreas.push({
+          name: zone.areaName,
+          lat: zone.lat,
+          lng: zone.lng,
+          radiusKm: zone.radiusKm,
+        });
+      }
+      grouped.set(key, current);
+    }
+
+    return [...grouped.values()].map((liveCity) => {
+      const configured = cities.find(
+        (item) =>
+          String(item.name || "").toLowerCase() === liveCity.name.toLowerCase() &&
+          String(item.state || "").toLowerCase() === liveCity.state.toLowerCase(),
+      );
+      return {
+        ...configured,
+        ...liveCity,
+        id: configured?.id || liveCity.name,
+        lat: configured?.lat ?? liveCity.lat,
+        lng: configured?.lng ?? liveCity.lng,
+        cityLat: configured?.cityLat ?? configured?.lat ?? liveCity.lat,
+        cityLng: configured?.cityLng ?? configured?.lng ?? liveCity.lng,
+        radiusKm: liveCity.radiusKm || configured?.radiusKm || 0,
+        localAreas: liveCity.localAreas.length
+          ? liveCity.localAreas
+          : normalizeAreas(configured?.localAreas || configured?.areas),
+      };
+    });
+  }, [cities, zones]);
+
+  const city = savedCity || safeCity(availableCities[0]) || null;
 
   useEffect(() => {
-    if (savedCity || !cities.length) return;
-    setCityState(safeCity(cities[0]));
-  }, [cities, savedCity]);
+    if (savedCity || !availableCities.length) return;
+    setCityState(safeCity(availableCities[0]));
+  }, [availableCities, savedCity]);
 
   const point = useMemo(() => {
     const savedPoint = pointOf(coords);
     if (savedPoint) return savedPoint;
+    if (city?.locationSource === "ip") return null;
     return pointOf(city);
   }, [coords, city]);
 
@@ -145,19 +208,23 @@ export function LocationProvider({ children }) {
   const states = useMemo(
     () =>
       Array.from(
-        new Set(cities.map((item) => String(item.state || "").trim()).filter(Boolean)),
+        new Set(
+          availableCities
+            .map((item) => String(item.state || "").trim())
+            .filter(Boolean),
+        ),
       ).sort((a, b) => a.localeCompare(b)),
-    [cities],
+    [availableCities],
   );
   const citiesForState = useCallback(
     (state) =>
-      cities.filter(
+      availableCities.filter(
         (item) =>
           !state ||
           String(item.state || "").trim().toLowerCase() ===
             String(state || "").trim().toLowerCase(),
       ),
-    [cities],
+    [availableCities],
   );
 
   const localCheck = useMemo(
@@ -203,6 +270,7 @@ export function LocationProvider({ children }) {
     (next) => {
       const safe = safeCity(next);
       if (!safe) return;
+      setError("");
       setCityState(safe);
       writeJson(CITY_KEY, safe);
       const nextPoint = pointOf(safe);
@@ -245,60 +313,177 @@ export function LocationProvider({ children }) {
         areaName: area?.name || areaName,
         lat: area?.lat ?? city.cityLat ?? city.lat,
         lng: area?.lng ?? city.cityLng ?? city.lng,
+        locationSource: "manual",
       });
     },
     [city, areas, setCity],
   );
 
   const detectLocation = useCallback(async () => {
-    if (!navigator.geolocation) {
-      throw new Error("This device does not support location.");
-    }
     setDetecting(true);
     setError("");
 
     try {
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 12000,
-          maximumAge: 30000,
+      let position = null;
+      let ipLocation = null;
+      try {
+        if (!navigator.geolocation) {
+          throw new Error("Geolocation is not supported by this device.");
+        }
+        position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0,
+          });
         });
-      });
+      } catch (geolocationError) {
+        try {
+          ipLocation = await api.get("/public/ip-location");
+        } catch {
+          setError(
+            "GPS is unavailable and automatic city lookup failed. Choose your state and city manually.",
+          );
+          return null;
+        }
+        if (!ipLocation?.available || !ipLocation.city) {
+          setError(
+            "GPS is unavailable and your network could not identify a city. Choose your state and city manually.",
+          );
+          return null;
+        }
+        console.info(
+          "Using approximate IP location after geolocation failed:",
+          geolocationError.code || "unsupported",
+        );
+      }
+
+      if (ipLocation) {
+        const reportedCity = String(ipLocation.city).trim();
+        const reportedState = String(ipLocation.state || "").trim();
+        const matched = availableCities.find(
+          (item) =>
+            item.name.toLowerCase() === reportedCity.toLowerCase() &&
+            (!reportedState ||
+              !item.state ||
+              item.state.toLowerCase() === reportedState.toLowerCase()),
+        );
+        const matchingZones = activeZones(zones).filter(
+          (zone) =>
+            String(zone.cityName || "").toLowerCase() ===
+              reportedCity.toLowerCase() &&
+            (!reportedState ||
+              !String(zone.state || "") ||
+              String(zone.state || "").toLowerCase() ===
+                reportedState.toLowerCase()),
+        );
+        const requiresManualArea =
+          matchingZones.some((zone) => zone.areaName) &&
+          !matchingZones.some((zone) => !zone.areaName);
+        const next = safeCity(
+          matched
+            ? {
+                ...matched,
+                area: "",
+                areaName: "",
+                locationSource: "ip",
+                detected: true,
+                requiresManualArea,
+              }
+            : {
+                id: "ip-location",
+                name: reportedCity,
+                state: reportedState,
+                locationSource: "ip",
+                detected: true,
+                requiresManualArea,
+                lat: null,
+                lng: null,
+              },
+        );
+        const check = evaluateZones(zones, {
+          cityName: next.name,
+          state: next.state,
+        });
+        setCityState(next);
+        writeJson(CITY_KEY, next);
+        commitCoords(null, "ip");
+        if (check.configured && !check.allowed && !requiresManualArea) {
+          setZoneNotice({
+            open: true,
+            cityName: next.name,
+            state: next.state,
+            areaName: "",
+            nearestZone: check.nearest?.zone?.cityName || "",
+            distanceMeters: check.nearest?.distanceMeters ?? null,
+            coords: null,
+          });
+        } else {
+          setZoneNotice(null);
+          dismissedKey.current = "";
+        }
+        return {
+          ...next,
+          locationSource: "ip",
+          requiresManualArea,
+          zoneAllowed: check.configured ? check.allowed : true,
+        };
+      }
 
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
       const exact = { lat, lng, accuracy: position.coords.accuracy };
-      let result = null;
-      try {
-        result = await api.get(`/public/service-area?lat=${lat}&lng=${lng}`);
-      } catch {
-        // The local zones cache still provides an immediate answer offline.
-      }
-
-      const matched = result?.city
-        ? cities.find(
+      const [serviceAreaResponse, geocodeResponse] = await Promise.allSettled([
+        api.get(`/public/service-area?lat=${lat}&lng=${lng}`),
+        api.get(`/public/reverse-geocode?lat=${lat}&lng=${lng}`),
+      ]);
+      const result =
+        serviceAreaResponse.status === "fulfilled"
+          ? serviceAreaResponse.value
+          : null;
+      const address =
+        geocodeResponse.status === "fulfilled"
+          ? geocodeResponse.value?.address || null
+          : null;
+      const localLocationZone = evaluateZones(zones, { lat, lng });
+      const reportedCity =
+        result?.city ||
+        localLocationZone.zone?.cityName ||
+        address?.district ||
+        address?.city ||
+        address?.town ||
+        address?.village ||
+        "";
+      const reportedState =
+        result?.state || localLocationZone.zone?.state || address?.state || "";
+      const matched = reportedCity
+        ? availableCities.find(
             (item) =>
-              item.name.toLowerCase() === String(result.city).toLowerCase() &&
-              (!result.state ||
+              item.name.toLowerCase() === String(reportedCity).toLowerCase() &&
+              (!reportedState ||
                 !item.state ||
-                item.state.toLowerCase() === String(result.state).toLowerCase()),
-          ) || cities.find(
-            (item) => item.name.toLowerCase() === String(result.city).toLowerCase(),
+                item.state.toLowerCase() === String(reportedState).toLowerCase()),
+          ) || availableCities.find(
+            (item) => item.name.toLowerCase() === String(reportedCity).toLowerCase(),
           )
         : null;
       const areaName =
         result?.areaName ||
+        result?.zone?.areaName ||
+        localLocationZone.zone?.areaName ||
+        address?.locality ||
+        address?.neighbourhood ||
         (matched ? nearestAreaName(matched, lat, lng) : "");
       const next = safeCity(
         matched
           ? {
               ...matched,
+              locationSource: "gps",
               area: areaName,
               areaName,
               lat,
               lng,
-              state: result?.state || matched.state || "",
+              state: reportedState || matched.state || "",
             }
           : result?.allowed && result?.city
             ? {
@@ -307,30 +492,26 @@ export function LocationProvider({ children }) {
                 lat,
                 lng,
                 radiusKm: result.radiusKm || 20,
-                state: result.state || "",
+                state: reportedState,
                 area: areaName,
                 areaName,
+                locationSource: "gps",
               }
             : {
                 id: "current-location",
-                name: "Current location",
+                name: reportedCity || "Current location",
                 lat,
                 lng,
                 radiusKm: 0,
-                state: result?.state || "",
+                state: reportedState,
                 area: areaName,
                 areaName,
                 detected: true,
+                locationSource: "gps",
               },
       );
 
-      const local = evaluateZones(zones, {
-        lat,
-        lng,
-        cityName: next?.name,
-        state: next?.state,
-        areaName: next?.areaName,
-      });
+      const local = localLocationZone;
       const apiResultZone = apiZone(result?.zone);
       const remote = result
         ? {
@@ -374,22 +555,27 @@ export function LocationProvider({ children }) {
           coords: exact,
         });
       } else {
+        setError("");
         setZoneNotice(null);
         dismissedKey.current = "";
       }
 
-      return { ...next, zoneAllowed: !finalCheck.configured || finalCheck.allowed };
+      return {
+        ...next,
+        zoneAllowed: finalCheck.configured
+          ? finalCheck.allowed
+          : Boolean(result?.allowed),
+      };
     } catch (locationError) {
-      if (locationError.code === 1) {
-        const message = "Location permission denied. Pick your city manually.";
-        setError(message);
-        throw new Error(message);
-      }
-      throw locationError;
+      const message =
+        locationError.message ||
+        "Could not get your current location. Choose your city manually.";
+      setError(message);
+      return null;
     } finally {
       setDetecting(false);
     }
-  }, [cities, zones, commitCoords]);
+  }, [availableCities, zones, commitCoords]);
 
   const openPicker = useCallback(() => {
     setPickerOpen(true);
@@ -421,6 +607,7 @@ export function LocationProvider({ children }) {
   // customer once if their saved city is outside every live operating zone.
   useEffect(() => {
     if (!city || !zoneCheck.configured || zoneCheck.allowed) return;
+    if (city.requiresManualArea) return;
     if (dismissedKey.current === checkKey) return;
     setZoneNotice({
       open: true,
@@ -436,7 +623,7 @@ export function LocationProvider({ children }) {
   const value = useMemo(
     () => ({
       city,
-      cities,
+      cities: availableCities,
       states,
       citiesForState,
       areas,
@@ -459,7 +646,7 @@ export function LocationProvider({ children }) {
     }),
     [
       city,
-      cities,
+      availableCities,
       states,
       citiesForState,
       areas,

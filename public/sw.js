@@ -1,5 +1,5 @@
 /* EasyHome service worker — same-origin app shell only.
- * Firebase Auth/Firestore/Storage and the API are deliberately never cached.
+ * Firebase Auth/Firestore and the API are deliberately never cached.
  */
 
 const VERSION = "easyhome-v8";

@@ -98,7 +98,8 @@ export default function WorkerApply({ existing, onCancel }) {
       const position = await new Promise((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
-          timeout: 12000,
+          timeout: 15000,
+          maximumAge: 0,
         });
       });
       setCoords({

@@ -37,11 +37,17 @@ const THEMES = [
   { id: "orange", label: "Sunset orange" },
 ];
 
+const PLACEMENTS = [
+  { id: "customer_home", label: "Customer home page" },
+  { id: "worker_dashboard", label: "Worker dashboard" },
+];
+
 const EMPTY_PROMO = {
   title: "",
   subtitle: "",
   ctaText: "Book now",
   ctaLink: "/",
+  placement: "customer_home",
   theme: "yellow",
   active: true,
   order: 0,
@@ -80,6 +86,12 @@ export default function AdminPromos() {
   );
 
   const active = promos.filter((promo) => promo.active).length;
+  const customerPromos = sorted.filter(
+    (promo) => promo.active && promo.placement !== "worker_dashboard",
+  );
+  const workerPromos = sorted.filter(
+    (promo) => promo.active && promo.placement === "worker_dashboard",
+  );
 
   const refresh = () => promosState.run().catch(() => {});
 
@@ -87,7 +99,11 @@ export default function AdminPromos() {
     setBusy(`toggle:${promo.id}`);
     try {
       await api.patch(`/admin/promos/${promo.id}`, { active: !promo.active });
-      toast.success(promo.active ? "Promo hidden." : "Promo is live on the home page.");
+      toast.success(
+        promo.active
+          ? "Promo hidden."
+          : `Promo is live on the ${promo.placement === "worker_dashboard" ? "worker dashboard" : "customer home page"}.`,
+      );
       await refresh();
     } catch (error) {
       toast.error(error.message);
@@ -131,7 +147,9 @@ export default function AdminPromos() {
         toast.success("Promo updated.");
       } else {
         await api.upload("/admin/promos", data);
-        toast.success("Promo published to the home page.");
+        toast.success(
+          `Promo published to the ${form.placement === "worker_dashboard" ? "worker dashboard" : "customer home page"}.`,
+        );
       }
       setDraft(null);
       setFile(null);
@@ -163,7 +181,7 @@ export default function AdminPromos() {
     <AdminPage
       eyebrow="Growth"
       title="Promo banners"
-      subtitle="Swipeable campaigns on the customer home page. Reorder them to control the first thing customers see."
+      subtitle="Publish and schedule campaigns for the customer storefront or worker dashboard."
       actions={
         <>
           <Button
@@ -199,7 +217,7 @@ export default function AdminPromos() {
         <StatCard
           label="Live"
           value={active}
-          hint="Visible on the home page"
+          hint="Visible in the selected placement"
           icon={Sparkles}
           tone="green"
         />
@@ -219,15 +237,13 @@ export default function AdminPromos() {
         />
       </section>
 
-      {active ? (
+      {customerPromos.length ? (
         <Panel
-          title="Storefront preview"
-          subtitle="What customers see when they open EasyHome today"
+          title="Customer home preview"
+          subtitle="Active promotions configured for customer home"
         >
           <div className="adm-promo-preview">
-            {sorted
-              .filter((promo) => promo.active)
-              .map((promo) => (
+            {customerPromos.map((promo) => (
                 <div
                   key={promo.id}
                   className={`adm-promo-preview__card is-${promo.theme || "yellow"}`}
@@ -244,6 +260,32 @@ export default function AdminPromos() {
                   </div>
                 </div>
               ))}
+          </div>
+        </Panel>
+      ) : null}
+      {workerPromos.length ? (
+        <Panel
+          title="Worker dashboard preview"
+          subtitle="Promotions appear below the worker earnings summary"
+        >
+          <div className="adm-promo-preview">
+            {workerPromos.map((promo) => (
+              <div
+                key={promo.id}
+                className={`adm-promo-preview__card is-${promo.theme || "blue"}`}
+              >
+                {promo.imagePath ? (
+                  <img src={mediaUrl(promo.imagePath)} alt="" />
+                ) : (
+                  <span className="adm-promo-preview__glow" />
+                )}
+                <div>
+                  <strong>{promo.title}</strong>
+                  <span>{promo.subtitle || "Promotion for EasyHome professionals."}</span>
+                  <em>{promo.ctaText || "Learn more"}</em>
+                </div>
+              </div>
+            ))}
           </div>
         </Panel>
       ) : null}
@@ -279,6 +321,9 @@ export default function AdminPromos() {
                       {promo.ctaLink}
                     </p>
                     <small className="adm-note-inline">
+                      {promo.placement === "worker_dashboard"
+                        ? "Worker dashboard · "
+                        : "Customer home · "}
                       {promo.startsAt || promo.endsAt
                         ? `${promo.startsAt ? formatDate(promo.startsAt) : "Now"} – ${
                             promo.endsAt ? formatDate(promo.endsAt) : "No end"
@@ -312,6 +357,7 @@ export default function AdminPromos() {
                         setFile(null);
                         setDraft({
                           ...promo,
+                          placement: promo.placement || "customer_home",
                           startsAt: toLocalInput(promo.startsAt),
                           endsAt: toLocalInput(promo.endsAt),
                         });
@@ -421,7 +467,7 @@ function PromoModal({ draft, file, onFile, onClose, onSave, loading }) {
       open={Boolean(draft)}
       onClose={onClose}
       title={draft.id ? "Edit promo" : "New promo"}
-      subtitle="Rendered inside the customer home carousel."
+      subtitle="Choose where this promotion appears."
       size="md"
       footer={
         <>
@@ -505,6 +551,19 @@ function PromoModal({ draft, file, onFile, onClose, onSave, loading }) {
             {THEMES.map((theme) => (
               <option key={theme.id} value={theme.id}>
                 {theme.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Placement" htmlFor="promo-placement">
+          <Select
+            id="promo-placement"
+            value={form.placement || "customer_home"}
+            onChange={set("placement")}
+          >
+            {PLACEMENTS.map((placement) => (
+              <option key={placement.id} value={placement.id}>
+                {placement.label}
               </option>
             ))}
           </Select>

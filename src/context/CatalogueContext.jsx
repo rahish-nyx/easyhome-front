@@ -1,7 +1,14 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useLiveDoc, useLiveQuery } from "../hooks/useLive";
 import { api } from "../lib/api";
-import { appSettingsRef, qCities, qPromos, qServiceZones, qServices } from "../lib/queries";
+import {
+  appSettingsRef,
+  qCities,
+  qFooterLinks,
+  qPromos,
+  qServiceZones,
+  qServices,
+} from "../lib/queries";
 import { FALLBACK_CITIES, FALLBACK_SERVICES } from "../lib/constants";
 
 const CatalogueContext = createContext(null);
@@ -26,17 +33,32 @@ const SETTINGS_DEFAULTS = {
   announcement: { title: "", body: "", active: false },
 };
 
+const FOOTER_FALLBACK = [
+  { id: "footer-about", label: "About us", href: "/legal/about", group: "company", order: 1 },
+  { id: "footer-faq", label: "FAQ", href: "/faq", group: "support", order: 1 },
+  { id: "footer-terms", label: "Terms and Conditions", href: "/legal/terms", group: "legal", order: 1 },
+  { id: "footer-privacy", label: "Privacy policy", href: "/legal/privacy", group: "legal", order: 2 },
+  { id: "footer-refunds", label: "Refund & cancellation policy", href: "/legal/refunds", group: "legal", order: 3 },
+  { id: "footer-disclaimer", label: "Disclaimer", href: "/legal/disclaimer", group: "legal", order: 4 },
+  { id: "footer-support", label: "Support", href: "/chat", group: "support", order: 2 },
+  { id: "footer-become-pro", label: "Become a pro", href: "/auth?role=worker", group: "professionals", order: 1 },
+  { id: "footer-worker", label: "Worker dashboard", href: "/worker", group: "professionals", order: 2 },
+  { id: "footer-membership", label: "EasyHome Pro", href: "/subscription", group: "professionals", order: 3 },
+];
+
 export function CatalogueProvider({ children }) {
   const servicesQuery = useMemo(() => qServices(), []);
   const citiesQuery = useMemo(() => qCities(), []);
   const zonesQuery = useMemo(() => qServiceZones(), []);
   const promosQuery = useMemo(() => qPromos(), []);
+  const footerLinksQuery = useMemo(() => qFooterLinks(), []);
   const settingsRef = useMemo(() => appSettingsRef(), []);
 
   const servicesState = useLiveQuery(servicesQuery);
   const citiesState = useLiveQuery(citiesQuery);
   const zonesState = useLiveQuery(zonesQuery);
   const promosState = useLiveQuery(promosQuery);
+  const footerLinksState = useLiveQuery(footerLinksQuery);
   const settingsState = useLiveDoc(settingsRef);
 
   // If Firestore reads are still denied (rules not released yet) or the
@@ -51,6 +73,7 @@ export function CatalogueProvider({ children }) {
           citiesState.error ||
           zonesState.error ||
           promosState.error ||
+          footerLinksState.error ||
           settingsState.error,
       ),
     [
@@ -59,6 +82,7 @@ export function CatalogueProvider({ children }) {
       citiesState.error,
       zonesState.error,
       promosState.error,
+      footerLinksState.error,
       settingsState.error,
     ],
   );
@@ -102,6 +126,31 @@ export function CatalogueProvider({ children }) {
       return true;
     });
   }, [promosState.data, promosState.error, bootstrap, now]);
+  const footerLinks = useMemo(() => {
+    const source = footerLinksState.error
+      ? bootstrap?.footerLinks ?? FOOTER_FALLBACK
+      : footerLinksState.loading
+        ? FOOTER_FALLBACK
+        : footerLinksState.data;
+    const hiddenHrefs = footerLinksState.error
+      ? bootstrap?.hiddenFooterHrefs || []
+      : source
+          .filter((item) => item.active === false)
+          .map((item) => item.href);
+    const restoredDefaults = FOOTER_FALLBACK.filter(
+      (fallback) =>
+        !source.some((item) => item.href === fallback.href) &&
+        !hiddenHrefs.includes(fallback.href),
+    );
+    return [...source, ...restoredDefaults]
+      .filter((link) => link.active !== false)
+      .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+  }, [
+    footerLinksState.data,
+    footerLinksState.error,
+    footerLinksState.loading,
+    bootstrap,
+  ]);
 
   // Keep the storefront usable on a cold/offline start or if the ruleset is
   // still being deployed. Live documents always win once they arrive.
@@ -133,7 +182,7 @@ export function CatalogueProvider({ children }) {
       : zonesState.error
         ? bootstrap?.zones || []
         : [];
-    return source.filter((zone) => zone && zone.isActive !== false);
+    return source.filter(Boolean);
   }, [zonesState.data, zonesState.error, bootstrap]);
 
   const settings = useMemo(
@@ -155,6 +204,8 @@ export function CatalogueProvider({ children }) {
       zonesLoading: zonesState.loading,
       promos,
       promosLoading: promosState.loading,
+      footerLinks,
+      footerLinksLoading: footerLinksState.loading,
       settings,
       settingsLoading: settingsState.loading,
     }),
@@ -168,6 +219,8 @@ export function CatalogueProvider({ children }) {
       zonesState.loading,
       promos,
       promosState.loading,
+      footerLinks,
+      footerLinksState.loading,
       settings,
       settingsState.loading,
     ],

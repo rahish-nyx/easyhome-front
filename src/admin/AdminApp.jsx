@@ -5,6 +5,7 @@ import {
   ExternalLink,
   LayoutDashboard,
   Layers,
+  Link2,
   LogOut,
   MapPin,
   Megaphone,
@@ -46,6 +47,7 @@ const ICONS = {
   settings: Settings,
   navigation: Navigation,
   "map-pin": MapPin,
+  link: Link2,
 };
 
 export default function AdminApp() {
