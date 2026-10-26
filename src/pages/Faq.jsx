@@ -33,7 +33,7 @@ const GROUPS = [
       },
       {
         q: "What if I need help urgently?",
-        a: "Choose the Urgent option when booking. Urgent requests are dispatched first and include a 10% priority fee. Active EasyHome membership customers are exempt from that fee.",
+        a: "Choose the Urgent option when booking. Urgent requests get priority dispatch and include a 10% urgent fee. Active EasyHome Pro customers pay no urgent fee, and their requests are matched first. Free cancellation is available for 20 minutes for Pro members and 7 minutes for everyone else, enforced from the time the booking is created.",
       },
     ],
   },
@@ -61,7 +61,7 @@ const GROUPS = [
     items: [
       {
         q: "How does EasyHome membership work?",
-        a: "Membership is an optional paid plan for customers. It includes priority matching, member pricing and support benefits. Active members also skip the 10% urgent priority fee.",
+        a: "Membership is an optional paid plan for customers. Active Pro members get priority worker matching, no 10% urgent fee, 24×7 priority support, a 20-minute free cancellation window instead of 7 minutes, and a Verified Pro badge. All benefits apply only while the membership is active.",
       },
       {
         q: "How do professionals pay commission?",

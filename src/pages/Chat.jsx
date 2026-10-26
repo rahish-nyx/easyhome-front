@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   Sparkles,
   XCircle,
+  Zap,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -30,7 +31,7 @@ const QUICK_REPLIES = [
 export default function Chat({ backTo = "/", embedded = false }) {
   usePageMeta("Support", "Chat with the EasyHome support team about bookings, payments and membership.");
 
-  const { fbUser } = useAuth();
+  const { fbUser, isPremium } = useAuth();
   const toast = useToast();
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -123,7 +124,9 @@ export default function Chat({ backTo = "/", embedded = false }) {
             <strong style={{ fontSize: 14 }}>EasyHome Support</strong>
             <p className="tiny muted">
               <span className="online-dot" style={{ display: "inline-block", marginRight: 5 }} />
-              Usually replies in a few minutes
+              {isPremium
+                ? "Priority support · your chats are answered first"
+                : "Usually replies in a few minutes"}
             </p>
           </div>
           <div className="chat-head__actions">
@@ -144,9 +147,15 @@ export default function Chat({ backTo = "/", embedded = false }) {
             >
               End chat
             </Button>
-            <span className="badge badge--green chat-head__secure">
-              <ShieldCheck size={11} /> Secure
-            </span>
+            {isPremium ? (
+              <span className="badge badge--yellow chat-head__secure">
+                <Zap size={11} /> Priority
+              </span>
+            ) : (
+              <span className="badge badge--green chat-head__secure">
+                <ShieldCheck size={11} /> Secure
+              </span>
+            )}
           </div>
         </header>
 

@@ -17,10 +17,11 @@ const SETTINGS_DEFAULTS = {
   commissionPct: 10,
   subscriptionPrice: 199,
   customerBenefits: [
-    "Priority worker matching",
-    "Discounted service visits",
+    "Active priority worker matching",
+    "No 10% urgent-job extra charge",
     "24×7 priority support",
-    "Free cancellation up to 1 hour",
+    "Free cancellation for 20 minutes (7 for non-Pro)",
+    "Verified Pro badge",
   ],
   workerBenefits: [
     "0% commission on every job",
@@ -33,6 +34,40 @@ const SETTINGS_DEFAULTS = {
   announcement: { title: "", body: "", active: false },
 };
 
+function normaliseSettings(data) {
+  const merged = { ...SETTINGS_DEFAULTS, ...(data || {}) };
+  const benefits = Array.isArray(merged.customerBenefits)
+    ? merged.customerBenefits
+    : [];
+  if (benefits.length) {
+    const replacements = {
+      "Priority matching": "Active priority worker matching",
+      "Priority worker matching": "Active priority worker matching",
+      "Discounted service visits": "No 10% urgent-job extra charge",
+      "Member pricing": "No 10% urgent-job extra charge",
+      "No 10% extra charge on urgent jobs": "No 10% urgent-job extra charge",
+      "No 10% urgent-job fee": "No 10% urgent-job extra charge",
+      "No urgent-job fee": "No 10% urgent-job extra charge",
+      "Free cancellation up to 1 hour": "Free cancellation for 20 minutes (7 for non-Pro)",
+      "Free cancellation up to 20 minutes": "Free cancellation for 20 minutes (7 for non-Pro)",
+      "Free cancellation up to 7 minutes": "Free cancellation for 20 minutes (7 for non-Pro)",
+      "20-minute free cancellation": "Free cancellation for 20 minutes (7 for non-Pro)",
+      "24x7 priority support": "24×7 priority support",
+    };
+    const normalized = benefits.map((benefit) => replacements[benefit] || benefit);
+    if (!normalized.some((benefit) => /verified pro badge/i.test(benefit))) {
+      normalized.push("Verified Pro badge");
+    }
+    merged.customerBenefits = [...new Set(normalized)];
+  } else {
+    merged.customerBenefits = [...SETTINGS_DEFAULTS.customerBenefits];
+  }
+  if (!Array.isArray(merged.workerBenefits) || !merged.workerBenefits.length) {
+    merged.workerBenefits = [...SETTINGS_DEFAULTS.workerBenefits];
+  }
+  return merged;
+}
+
 const FOOTER_FALLBACK = [
   { id: "footer-about", label: "About us", href: "/legal/about", group: "company", order: 1 },
   { id: "footer-faq", label: "FAQ", href: "/faq", group: "support", order: 1 },
@@ -41,6 +76,7 @@ const FOOTER_FALLBACK = [
   { id: "footer-refunds", label: "Refund & cancellation policy", href: "/legal/refunds", group: "legal", order: 3 },
   { id: "footer-disclaimer", label: "Disclaimer", href: "/legal/disclaimer", group: "legal", order: 4 },
   { id: "footer-support", label: "Support", href: "/chat", group: "support", order: 2 },
+  { id: "footer-refer", label: "Refer & Earn", href: "/refer", group: "support", order: 3 },
   { id: "footer-become-pro", label: "Become a pro", href: "/auth?role=worker", group: "professionals", order: 1 },
   { id: "footer-worker", label: "Worker dashboard", href: "/worker", group: "professionals", order: 2 },
   { id: "footer-membership", label: "EasyHome Pro", href: "/subscription", group: "professionals", order: 3 },
@@ -186,10 +222,10 @@ export function CatalogueProvider({ children }) {
   }, [zonesState.data, zonesState.error, bootstrap]);
 
   const settings = useMemo(
-    () => ({
-      ...SETTINGS_DEFAULTS,
-      ...(settingsState.data || (settingsState.error ? bootstrap?.settings : null) || {}),
-    }),
+    () =>
+      normaliseSettings(
+        settingsState.data || (settingsState.error ? bootstrap?.settings : null),
+      ),
     [settingsState.data, settingsState.error, bootstrap],
   );
 

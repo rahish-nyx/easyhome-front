@@ -127,6 +127,7 @@ const STATUS_MAP = {
   completed: { label: "Completed", tone: "green" },
   cancelled: { label: "Cancelled", tone: "red" },
   approved: { label: "Approved", tone: "green" },
+  service_completed: { label: "Needs review", tone: "blue" },
   verified: { label: "Verified", tone: "green" },
   rejected: { label: "Rejected", tone: "red" },
   suspended: { label: "Suspended", tone: "red" },

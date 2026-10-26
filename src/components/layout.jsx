@@ -13,6 +13,7 @@ import {
   CalendarCheck,
   ChevronDown,
   Crown,
+  Gift,
   Home,
   LayoutGrid,
   LogOut,
@@ -131,6 +132,7 @@ export function SiteHeader() {
             <NavLink to="/services">Services</NavLink>
             <NavLink to="/bookings">My bookings</NavLink>
             <NavLink to="/subscription">Membership</NavLink>
+            <NavLink to="/refer">Refer &amp; Earn</NavLink>
           </nav>
 
           <div className="header-actions">
@@ -174,6 +176,9 @@ export function SiteHeader() {
                       </Link>
                       <Link className="menu__item" to="/subscription" onClick={() => setMenuOpen(false)}>
                         <Crown size={16} /> Membership
+                      </Link>
+                      <Link className="menu__item" to="/refer" onClick={() => setMenuOpen(false)}>
+                        <Gift size={16} /> Refer &amp; Earn
                       </Link>
                       {isWorker ? (
                         <Link className="menu__item" to="/worker" onClick={() => setMenuOpen(false)}>
@@ -658,6 +663,10 @@ export function SiteFooter() {
                   {item.label}
                 </Link>
               ))}
+              {group.id === "legal" &&
+              !links.some((item) => item.href === "/refer") ? (
+                <Link to="/refer">Refer &amp; Earn</Link>
+              ) : null}
             </div>
           );
         })}

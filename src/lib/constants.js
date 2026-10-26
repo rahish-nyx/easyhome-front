@@ -354,6 +354,7 @@ export const ADMIN_NAV = [
   { to: "/admin/footer", label: "Footer links", icon: "link" },
   { to: "/admin/broadcast", label: "Broadcast", icon: "send" },
   { to: "/admin/chats", label: "Support", icon: "messages-square" },
+  { to: "/admin/referrals", label: "Referrals", icon: "gift" },
   { to: "/admin/settings", label: "Settings", icon: "settings" },
 ];
 

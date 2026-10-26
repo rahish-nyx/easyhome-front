@@ -3,6 +3,7 @@ import {
   CalendarCheck,
   ChevronRight,
   ExternalLink,
+  Gift,
   LayoutDashboard,
   Layers,
   Link2,
@@ -48,6 +49,7 @@ const ICONS = {
   navigation: Navigation,
   "map-pin": MapPin,
   link: Link2,
+  gift: Gift,
 };
 
 export default function AdminApp() {

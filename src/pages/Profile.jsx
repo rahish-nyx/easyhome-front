@@ -6,6 +6,7 @@ import {
   CalendarCheck,
   CheckCircle2,
   Crown,
+  Gift,
   Headphones,
   Home,
   MapPin,
@@ -123,7 +124,7 @@ export default function Profile() {
     }
     setSaving(true);
     try {
-      await api.patch("/me", {
+      await api.patch("/auth/me", {
         name: name.trim(),
         ...(phone ? { phone } : {}),
         city: city.trim(),
@@ -139,7 +140,7 @@ export default function Profile() {
 
   const saveAddresses = async (next) => {
     try {
-      await api.patch("/me", {
+      await api.patch("/auth/me", {
         addresses: next.map(({ id, ...rest }) => ({ ...rest, ...(id ? { id } : {}) })),
       });
       await refreshProfile();
@@ -209,7 +210,7 @@ export default function Profile() {
               )}
               {isPremium ? (
                 <Badge tone="yellow">
-                  <Crown size={11} /> {planLabel(profile?.subscription?.plan)}
+                  <Crown size={11} /> Verified Pro
                 </Badge>
               ) : null}
               {isWorker ? <Badge tone="blue">EasyHome Pro</Badge> : null}
@@ -472,8 +473,8 @@ export default function Profile() {
                   </strong>
                   <p className="tiny muted">
                     {isActiveUntil(profile?.subscription?.endAt)
-                      ? `Renews / ends ${formatDate(profile.subscription.endAt)}`
-                      : "Upgrade for priority matching and discounts."}
+                      ? `Ends ${formatDate(profile.subscription.endAt)}`
+                      : "Upgrade for active priority matching, no 10% urgent-job extra charge and 24×7 priority support."}
                   </p>
                 </div>
               </div>
@@ -482,6 +483,25 @@ export default function Profile() {
                   <Crown size={14} /> Go Pro
                 </Link>
               ) : null}
+            </div>
+
+            <Divider />
+
+            <div className="row row--between" style={{ flexWrap: "wrap", gap: 12 }}>
+              <div className="row" style={{ gap: 10 }}>
+                <span className="stat__icon">
+                  <Gift size={18} />
+                </span>
+                <div>
+                  <strong style={{ fontSize: 13.5 }}>Refer &amp; Earn</strong>
+                  <p className="tiny muted">
+                    Share your code. You and your friend can each get ₹51 approved after their first service.
+                  </p>
+                </div>
+              </div>
+              <Link to="/refer" className="btn btn--outline btn--sm">
+                View referrals
+              </Link>
             </div>
 
             <Divider />

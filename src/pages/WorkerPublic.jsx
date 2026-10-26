@@ -17,7 +17,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../lib/api";
-import { formatDate, inr } from "../lib/format";
+import { formatDate, inr, isActiveUntil } from "../lib/format";
 import { SERVICE_META } from "../lib/constants";
 import { usePageMeta } from "../lib/usePageMeta";
 import {
@@ -44,6 +44,9 @@ export default function WorkerPublic() {
   const worker = data?.worker;
   const reviews = data?.reviews || [];
   const meta = SERVICE_META[worker?.serviceKey] || {};
+  const isPro =
+    isActiveUntil(worker?.premiumUntil) ||
+    (worker?.isPremium === true && !worker?.premiumUntil);
 
   usePageMeta(
     worker ? `${worker.name} — ${worker.service || meta.name}` : "Verified professional",
@@ -113,16 +116,16 @@ export default function WorkerPublic() {
 
       <div className="worker-public">
         <Card className="worker-public__hero">
-          <Avatar name={worker.name} path={worker.photoPath} size={112} ring={worker.isPremium} />
+          <Avatar name={worker.name} path={worker.photoPath} size={112} ring={isPro} />
           <h1>{worker.name}</h1>
           <p className="small muted" style={{ marginTop: 4 }}>
             {worker.service || meta.name} · {worker.area || "Local pro"}
           </p>
 
           <div className="worker-public__meta">
-            {worker.isPremium ? (
+            {isPro ? (
               <Badge tone="yellow">
-                <Star size={11} /> Pro
+                <BadgeCheck size={11} /> Verified Pro
               </Badge>
             ) : null}
             {worker.kycStatus === "verified" ? (

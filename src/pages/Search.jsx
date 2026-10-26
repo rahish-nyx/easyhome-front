@@ -13,6 +13,7 @@ import { useLocation } from "../context/LocationContext";
 import { useLiveQuery } from "../hooks/useLive";
 import { qWorkers } from "../lib/queries";
 import { usePageMeta } from "../lib/usePageMeta";
+import { isActiveUntil } from "../lib/format";
 import { workerInServiceArea } from "../lib/geo";
 import { SERVICE_META } from "../lib/constants";
 import { EmptyState, SectionHeader } from "../components/ui";
@@ -148,7 +149,16 @@ export default function SearchPage() {
           <div className="worker-grid">
             {workerMatches
               .slice()
-              .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+              .sort((a, b) => {
+                const aPro =
+                  isActiveUntil(a.premiumUntil) ||
+                  (a.isPremium === true && !a.premiumUntil);
+                const bPro =
+                  isActiveUntil(b.premiumUntil) ||
+                  (b.isPremium === true && !b.premiumUntil);
+                if (aPro !== bPro) return aPro ? -1 : 1;
+                return (b.rating || 0) - (a.rating || 0);
+              })
               .map((worker) => (
                 <WorkerCard key={worker.id} worker={worker} />
               ))}

@@ -20,6 +20,11 @@ import { useCatalogue } from "../context/CatalogueContext";
 import { useLocation } from "../context/LocationContext";
 import { useToast } from "../context/ToastContext";
 import { SERVICE_META } from "../lib/constants";
+import {
+  clearReferralCode,
+  pendingReferralCode,
+  storeReferralCode,
+} from "../lib/referral";
 import { usePageMeta } from "../lib/usePageMeta";
 import { Button, Field, Input, PageLoader, Select } from "../components/ui";
 import logo from "../assets/logo.png";
@@ -96,6 +101,7 @@ export default function Auth() {
     email: "",
     password: "",
     phone: "",
+    referralCode: pendingReferralCode(),
     serviceKey: services[0]?.key || "",
     area: city?.name || "",
     pricePerWork: "",
@@ -165,6 +171,19 @@ export default function Auth() {
       setError("Accept the terms and privacy policy to continue.");
       return;
     }
+    const referralCode = form.referralCode.trim().toUpperCase();
+    if (
+      role === "customer" &&
+      referralCode &&
+      !/^[A-Z0-9]{6,12}$/.test(referralCode)
+    ) {
+      setError("Referral codes are 6–12 letters or numbers. Check the code and try again.");
+      return;
+    }
+    if (role === "customer") {
+      if (referralCode) storeReferralCode(referralCode);
+      else clearReferralCode();
+    }
 
     setBusy(true);
     try {
@@ -210,6 +229,11 @@ export default function Auth() {
 
   const handleGoogle = async () => {
     setError("");
+    if (role === "customer") {
+      const referralCode = form.referralCode.trim().toUpperCase();
+      if (referralCode) storeReferralCode(referralCode);
+      else clearReferralCode();
+    }
     setGoogleBusy(true);
     try {
       const result = await googleSignIn();
@@ -548,6 +572,31 @@ export default function Auth() {
                   required
                 />
               </Field>
+              {role === "customer" ? (
+                <Field
+                  label="Referral code (optional)"
+                  htmlFor="signup-referral"
+                  hint="Enter a friend's code to link their referral. Only new customer accounts are eligible."
+                  className="span-2"
+                >
+                  <Input
+                    id="signup-referral"
+                    value={form.referralCode}
+                    maxLength={12}
+                    autoComplete="off"
+                    spellCheck={false}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        referralCode: event.target.value
+                          .replace(/[^a-zA-Z0-9]/g, "")
+                          .toUpperCase(),
+                      }))
+                    }
+                    placeholder="A1B2C3D4"
+                  />
+                </Field>
+              ) : null}
               <Field label="Password" htmlFor="signup-password" hint="At least 8 characters." required className="span-2">
                 <div className="input-group">
                   <Input

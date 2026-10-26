@@ -191,6 +191,7 @@ export default function WorkerDashboard() {
         distance: distanceKm(worker, job),
       }))
       .sort((a, b) => {
+        if (a.priority !== b.priority) return a.priority === "pro" ? -1 : 1;
         if (a.urgency !== b.urgency) return a.urgency === "urgent" ? -1 : 1;
         if (a.distance !== null && b.distance !== null) return a.distance - b.distance;
         return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);

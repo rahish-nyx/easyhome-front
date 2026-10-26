@@ -4,11 +4,10 @@ import {
   BadgeCheck,
   Check,
   CheckCircle2,
-  Crown,
   ExternalLink,
-  ShieldCheck,
+  Headphones,
   Sparkles,
-  Star,
+  Timer,
   Wallet,
   Zap,
 } from "lucide-react";
@@ -34,7 +33,7 @@ import RazorpayPayment from "../components/RazorpayPayment";
 export default function Subscription() {
   usePageMeta(
     "EasyHome Pro membership",
-    "Priority pros, discounted visits and dedicated support with EasyHome Pro.",
+    "Active priority worker matching, no urgent-job extra charge, 24×7 priority support and a 20-minute free cancellation window with EasyHome Pro.",
   );
 
   const { profile, isWorker, premiumUntil, refreshProfile } = useAuth();
@@ -78,12 +77,13 @@ export default function Subscription() {
           <p>
             {isWorker
               ? "Zero commission, priority job placement and a verified Pro badge."
-              : "Priority matching, discounted visits and a dedicated support line for every home."}
+              : "Active priority matching, no urgent-job extra charge, 24×7 priority support and a 20-minute free cancellation window."}
           </p>
         </div>
         {active ? (
           <Badge tone="yellow">
-            <Crown size={12} /> Active until {formatDate(premiumUntil || profile?.subscription?.endAt)}
+            <BadgeCheck size={12} /> Verified Pro · until{" "}
+            {formatDate(premiumUntil || profile?.subscription?.endAt)}
           </Badge>
         ) : (
           <Badge tone="outline">Free account</Badge>
@@ -101,7 +101,7 @@ export default function Subscription() {
               <p>
                 {isWorker
                   ? "You keep 100% of every job payment while Pro is active."
-                  : "Priority pros, member pricing and priority support are live on your account."}
+                  : "Active priority worker matching, no urgent-job extra charge and 24×7 priority support are live on your account."}
               </p>
             </div>
             <span
@@ -137,47 +137,41 @@ export default function Subscription() {
           <SectionHeader
             eyebrow="Membership"
             title={active ? "Plan options" : "Choose your plan"}
-            subtitle="All plans include the full Pro benefits. Cancel anytime before renewal."
+            subtitle="All plans include the full Pro benefits. No auto-renewal — your plan ends on the date shown."
           />
 
-          <div className="plan-grid" style={{ gridTemplateColumns: "1fr" }}>
-            {plans.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`plan-card${plan === item.id ? " is-active" : ""}`}
-                onClick={() => setPlan(item.id)}
-                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}
-              >
-                {item.badge ? <span className="plan-card__badge">{item.badge}</span> : null}
-                <div style={{ textAlign: "left" }}>
-                  <strong>{item.label}</strong>
-                  <p className="plan-card__sub">{item.blurb}</p>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div className="plan-card__price" style={{ margin: 0 }}>
-                    {inr(item.amount)}
-                  </div>
-                  <div className="plan-card__sub">
-                    {item.id === "monthly" ? "per month" : `${inr(item.perMonth)}/mo`}
-                  </div>
-                </div>
-                <span
-                  className="icon-btn"
-                  style={{
-                    width: 26,
-                    height: 26,
-                    border: "1.5px solid var(--line-strong)",
-                    borderRadius: "50%",
-                    background: plan === item.id ? "var(--ink)" : "#fff",
-                    color: plan === item.id ? "#fff" : "transparent",
-                  }}
-                  aria-hidden="true"
+          <div className="plan-grid plan-grid--stack">
+            {plans.map((item) => {
+              const selectedPlan = plan === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`plan-card${selectedPlan ? " is-active" : ""}`}
+                  onClick={() => setPlan(item.id)}
+                  aria-pressed={selectedPlan}
                 >
-                  <Check size={15} />
-                </span>
-              </button>
-            ))}
+                  <span className="plan-card__radio" aria-hidden="true">
+                    {selectedPlan ? <Check size={13} /> : null}
+                  </span>
+                  <span className="plan-card__body">
+                    <span className="plan-card__title-row">
+                      <strong>{item.label}</strong>
+                      {item.badge ? (
+                        <span className="plan-card__badge">{item.badge}</span>
+                      ) : null}
+                    </span>
+                    <span className="plan-card__sub">{item.blurb}</span>
+                  </span>
+                  <span className="plan-card__amount">
+                    <span className="plan-card__price">{inr(item.amount)}</span>
+                    <span className="plan-card__sub">
+                      {item.id === "monthly" ? "per month" : `${inr(item.perMonth)}/mo`}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
           <div style={{ marginTop: 18 }}>
@@ -223,18 +217,28 @@ export default function Subscription() {
               {[
                 {
                   icon: Zap,
-                  title: "Priority matching",
-                  body: "Requests from members are dispatched to top-rated pros first.",
+                  title: "Active priority worker matching",
+                  body: "Your requests are dispatched to top-rated pros first while Pro is active.",
                 },
                 {
                   icon: Wallet,
-                  title: "Member pricing",
-                  body: "Discounted service visits and no booking fees.",
+                  title: "No urgent-job extra charge",
+                  body: "Urgent bookings cost the same as normal — we waive the 10% extra fee.",
                 },
                 {
-                  icon: ShieldCheck,
-                  title: "Protected support",
-                  body: "A dedicated line for changes, disputes and rework.",
+                  icon: Headphones,
+                  title: "24×7 priority support",
+                  body: "Pro support chats are flagged and answered first, day or night.",
+                },
+                {
+                  icon: Timer,
+                  title: "20-minute free cancellation",
+                  body: "Cancel free within 20 minutes. Free accounts get 7 minutes.",
+                },
+                {
+                  icon: BadgeCheck,
+                  title: "Verified Pro badge",
+                  body: "Your active Pro badge appears on your profile and bookings.",
                 },
               ].map((item) => (
                 <div className="row" style={{ gap: 11, alignItems: "flex-start" }} key={item.title}>

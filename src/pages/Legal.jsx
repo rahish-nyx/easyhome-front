@@ -71,7 +71,7 @@ const PAGES = {
       {
         heading: "Cancellations",
         body: [
-          "Customers may cancel while a booking is pending or accepted. Once a job is in progress, cancellation must go through support so the professional's time can be handled fairly.",
+          "Customers may cancel free of charge within 20 minutes of creating a booking for active EasyHome Pro members, or within 7 minutes for all other customers. This window is enforced in the app. After it closes while the job is still pending or accepted, contact support so the professional's time can be handled fairly.",
           "EasyHome may cancel a booking for safety, fraud, repeated abuse or if no professional can be matched.",
         ],
       },
@@ -170,7 +170,7 @@ const PAGES = {
       {
         heading: "Pricing and urgency",
         body: [
-          "Budgets, quotes and final prices are shown in the app. Urgent requests include a 10% priority fee for non-members; active membership customers are exempt.",
+          "Budgets, quotes and final prices are shown in the app. Urgent requests include a 10% urgent fee for non-members; active EasyHome Pro customers are exempt. Urgent and priority benefits apply only while the membership is active.",
           "EasyHome commission and membership fees are separate from the amount paid to the professional for the service.",
         ],
       },

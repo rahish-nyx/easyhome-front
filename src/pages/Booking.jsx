@@ -519,7 +519,7 @@ export default function Booking() {
                   id: "urgent",
                   title: "Urgent",
                   sub: isPremium
-                    ? "ASAP · 10% priority fee waived for members"
+                    ? "ASAP · no urgent fee for Pro members"
                     : "ASAP · priority dispatch + 10% fee",
                 },
               ].map((option) => (
@@ -630,7 +630,7 @@ export default function Booking() {
             </div>
             {urgency === "urgent" ? (
               <div className="summary-row">
-                <span>Urgent priority fee</span>
+                <span>Urgent fee (10%)</span>
                 <strong style={{ color: urgentFee ? "var(--red)" : "var(--green)" }}>
                   {urgentFee ? inr(urgentFee) : "Waived"}
                 </strong>

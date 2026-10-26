@@ -22,6 +22,7 @@ import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { auth, db, firebaseReady } from "../firebase";
 import { api, bindAuth } from "../lib/api";
 import { isActiveUntil } from "../lib/format";
+import { clearReferralCode, pendingReferralCode } from "../lib/referral";
 
 const AuthContext = createContext(null);
 
@@ -191,7 +192,9 @@ export function AuthProvider({ children }) {
                 await api.post("/auth/session", {
                   name: user.displayName || "",
                   role: "customer",
+                  referralCode: pendingReferralCode(),
                 });
+                clearReferralCode();
               }
             }
           }
@@ -236,8 +239,10 @@ export function AuthProvider({ children }) {
           name,
           phone,
           role,
+          referralCode: role === "customer" ? pendingReferralCode() : "",
           ...workerFields,
         });
+        clearReferralCode();
 
         setFbUser(credential.user);
         attach(credential.user);
@@ -306,7 +311,9 @@ export function AuthProvider({ children }) {
         await api.post("/auth/session", {
           name: credential.user.displayName || "",
           role: "customer",
+          referralCode: pendingReferralCode(),
         });
+        clearReferralCode();
       }
     }
     return loadAccount(credential.user);

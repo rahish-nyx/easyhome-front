@@ -418,11 +418,11 @@ export default function Home() {
                 <Crown size={12} /> EasyHome Pro
               </span>
               <h2 className="membership__title" style={{ marginTop: 12 }}>
-                Priority help. Better prices. Zero guesswork.
+                Priority help. No urgent-job extra charge. Zero guesswork.
               </h2>
               <p className="membership__sub">
-                One membership for the whole home. Get priority matching, discounted visits and
-                a dedicated support line for every booking.
+                One membership for the whole home. Get active priority matching, no 10%
+                urgent-job extra charge and 24×7 priority support on every booking.
               </p>
               <div className="membership__perks">
                 {(settings.customerBenefits || []).slice(0, 4).map((benefit) => (
@@ -435,7 +435,7 @@ export default function Home() {
             <div>
               <div className="membership__price">
                 <strong>{inr(settings.subscriptionPrice || 199)}</strong>
-                <small>/ month · cancel anytime</small>
+                <small>/ month · no auto-renewal</small>
               </div>
               <Link
                 to="/subscription"

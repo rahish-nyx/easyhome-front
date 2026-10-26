@@ -22,12 +22,15 @@ import Bookings from "./pages/Bookings";
 import Tracking from "./pages/Tracking";
 import Profile from "./pages/Profile";
 import Subscription from "./pages/Subscription";
+import Refer from "./pages/Refer";
 import Chat from "./pages/Chat";
 import WorkerPublic from "./pages/WorkerPublic";
 import Auth from "./pages/Auth";
 import Legal from "./pages/Legal";
 import Faq from "./pages/Faq";
 import { NotFound, Offline } from "./pages/Fallback";
+import AdminReferrals from "./admin/AdminReferrals";
+import { captureReferral } from "./lib/referral";
 const WorkerApp = lazy(() => import("./worker/WorkerApp"));
 const WorkerSupport = lazy(() => import("./worker/WorkerSupport"));
 const AdminApp = lazy(() => import("./admin/AdminApp"));
@@ -51,6 +54,16 @@ function ScrollToTop() {
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [pathname]);
+
+  return null;
+}
+
+function ReferralCapture() {
+  const { search } = useLocation();
+
+  useEffect(() => {
+    captureReferral(search);
+  }, [search]);
 
   return null;
 }
@@ -80,6 +93,7 @@ export default function App() {
             <CatalogueProvider>
               <LocationProvider>
                 <ScrollToTop />
+                <ReferralCapture />
                 <Routes>
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/login" element={<Navigate to="/auth" replace />} />
@@ -126,6 +140,7 @@ export default function App() {
                     <Route path="footer" element={<AdminFooterLinks />} />
                     <Route path="broadcast" element={<AdminBroadcast />} />
                     <Route path="chats" element={<AdminChats />} />
+                    <Route path="referrals" element={<AdminReferrals />} />
                     <Route path="settings" element={<AdminSettings />} />
                     <Route
                       path="*"
@@ -178,6 +193,7 @@ export default function App() {
                         </ProtectCustomer>
                       }
                     />
+                    <Route path="refer" element={<Refer />} />
                     <Route
                       path="chat"
                       element={

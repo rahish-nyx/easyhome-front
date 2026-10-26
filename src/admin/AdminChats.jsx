@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   UserRound,
   XCircle,
+  Zap,
 } from "lucide-react";
 import { useToast } from "../context/ToastContext";
 import { useAsync } from "../hooks/useAsync";
@@ -184,6 +185,7 @@ export default function AdminChats() {
                   <p>
                     <a href={`tel:${request.phone}`}>{request.phone}</a>
                     <span> · {request.role === "worker" ? "Professional" : "Customer"}</span>
+                    {request.priority === "pro" ? <span> · Pro priority</span> : null}
                     <span> · {timeAgo(request.createdAt)}</span>
                   </p>
                 </div>
@@ -241,7 +243,14 @@ export default function AdminChats() {
                     <Avatar name={item.name} path={item.photoPath} size={40} />
                     <span className="grow">
                       <span className="adm-chat-thread__top">
-                        <strong>{item.name || "User"}</strong>
+                        <strong>
+                          {item.name || "User"}
+                          {item.priority === "pro" ? (
+                            <span className="adm-chat-thread__pro">
+                              <Zap size={9} /> Pro
+                            </span>
+                          ) : null}
+                        </strong>
                         <small>{timeAgo(item.lastAt)}</small>
                       </span>
                       <span className="adm-chat-thread__bottom">
@@ -296,6 +305,11 @@ export default function AdminChats() {
                       <UserRound size={14} /> Customer
                     </span>
                   )}
+                  {selectedThread.priority === "pro" ? (
+                    <span className="adm-chat__role adm-chat__role--pro">
+                      <Zap size={14} /> Pro priority
+                    </span>
+                  ) : null}
                   <Button
                     size="sm"
                     variant="outline"

@@ -24,7 +24,7 @@ import { useToast } from "../context/ToastContext";
 import { useLiveQuery } from "../hooks/useLive";
 import { qBookingsForCustomer } from "../lib/queries";
 import { api } from "../lib/api";
-import { formatDateTime, inr } from "../lib/format";
+import { formatDateTime, inr, toDate } from "../lib/format";
 import { SERVICE_META, STATUS_META, STATUS_TABS } from "../lib/constants";
 import { usePageMeta } from "../lib/usePageMeta";
 import {
@@ -52,7 +52,7 @@ export default function Bookings() {
     "Track every EasyHome request — live status, agreed prices, payments and reviews.",
   );
 
-  const { fbUser, profile } = useAuth();
+  const { fbUser, profile, isPremium } = useAuth();
   const toast = useToast();
   const [params] = useSearchParams();
   const created = params.get("created");
@@ -165,6 +165,7 @@ export default function Bookings() {
               key={booking.id}
               booking={booking}
               busy={busyId === booking.id}
+              isPremium={isPremium}
               onAccept={() => acceptPrice(booking)}
               onCancel={() => setCancelTarget(booking)}
               onOffer={() => setOfferTarget(booking)}
@@ -221,6 +222,7 @@ export default function Bookings() {
 
       <CancelModal
         booking={cancelTarget}
+        isPremium={isPremium}
         onClose={() => setCancelTarget(null)}
         onDone={() => {
           setCancelTarget(null);
@@ -259,7 +261,16 @@ export default function Bookings() {
   );
 }
 
-function BookingCard({ booking, busy, onAccept, onCancel, onOffer, onPay, onReview }) {
+function BookingCard({
+  booking,
+  busy,
+  isPremium,
+  onAccept,
+  onCancel,
+  onOffer,
+  onPay,
+  onReview,
+}) {
   const meta = STATUS_META[booking.status] || { hint: "" };
   const worker = booking.workerName;
   const price =
@@ -267,7 +278,17 @@ function BookingCard({ booking, busy, onAccept, onCancel, onOffer, onPay, onRevi
     booking.pricing?.workerPrice ||
     booking.pricing?.customerOffer ||
     booking.budget;
-  const canCancel = ["pending", "accepted"].includes(booking.status);
+  const windowMinutes = isPremium ? 20 : 7;
+  const createdAt = toDate(booking.createdAt);
+  const deadline = createdAt
+    ? new Date(createdAt.getTime() + windowMinutes * 60_000)
+    : toDate(booking.freeCancellationUntil);
+  const windowOpen = !deadline || Date.now() <= deadline.getTime();
+  const canCancel =
+    ["pending", "accepted"].includes(booking.status) && windowOpen;
+  const minutesLeft = deadline
+    ? Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 60_000))
+    : null;
   const quoteReady =
     booking.status === "accepted" &&
     booking.pricing?.workerPrice &&
@@ -297,6 +318,11 @@ function BookingCard({ booking, busy, onAccept, onCancel, onOffer, onPay, onRevi
           </div>
         </div>
         <div className="row" style={{ gap: 8 }}>
+          {isPremium ? (
+            <Badge tone="yellow">
+              <BadgeCheck size={11} /> Verified Pro
+            </Badge>
+          ) : null}
           {booking.urgency === "urgent" ? <Badge tone="red">Urgent</Badge> : null}
           <StatusBadge status={booking.status} />
         </div>
@@ -350,9 +376,11 @@ function BookingCard({ booking, busy, onAccept, onCancel, onOffer, onPay, onRevi
           </small>
           {booking.urgency === "urgent" ? (
             <small style={{ display: "block", marginTop: 3 }}>
-              {booking.urgentFee
-                ? `+ ${inr(booking.urgentFee)} priority fee`
-                : "Priority fee waived"}
+              {Number(booking.urgentFee) > 0
+                ? `+ ${inr(booking.urgentFee)} urgent fee`
+                : booking.urgentFeeWaived || booking.customerPremium
+                  ? "No urgent fee — Pro benefit"
+                  : "No urgent fee"}
             </small>
           ) : null}
         </div>
@@ -414,9 +442,23 @@ function BookingCard({ booking, busy, onAccept, onCancel, onOffer, onPay, onRevi
 
       <div className="booking-card__actions">
         {canCancel ? (
-          <Button variant="ghost" size="sm" onClick={onCancel}>
-            Cancel request
-          </Button>
+          <>
+            <Button variant="ghost" size="sm" onClick={onCancel}>
+              Cancel request
+            </Button>
+            {minutesLeft !== null ? (
+              <span className="tiny muted">
+                <Timer size={12} /> Free cancellation for {minutesLeft} more min
+              </span>
+            ) : null}
+          </>
+        ) : null}
+
+        {["pending", "accepted"].includes(booking.status) && !windowOpen ? (
+          <span className="tiny muted">
+            Cancellation window closed.{" "}
+            <Link to="/chat">Chat support</Link>
+          </span>
         ) : null}
 
         {booking.status === "completed" && !booking.paidAt ? (
@@ -456,10 +498,17 @@ function BookingCard({ booking, busy, onAccept, onCancel, onOffer, onPay, onRevi
   );
 }
 
-function CancelModal({ booking, onClose, onDone }) {
+function CancelModal({ booking, isPremium, onClose, onDone }) {
   const toast = useToast();
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const windowMinutes = isPremium ? 20 : 7;
+  const createdAt = toDate(booking?.createdAt);
+  const deadline = createdAt
+    ? new Date(createdAt.getTime() + windowMinutes * 60_000)
+    : toDate(booking?.freeCancellationUntil);
+  const closed = Boolean(deadline && Date.now() > deadline.getTime());
 
   const submit = async () => {
     if (!booking) return;
@@ -480,29 +529,57 @@ function CancelModal({ booking, onClose, onDone }) {
       open={Boolean(booking)}
       onClose={onClose}
       title="Cancel this booking?"
-      subtitle="Free cancellation before the job starts. Repeated cancellations may affect your account."
+      subtitle={
+        booking
+          ? `Free cancellation is available for the first ${windowMinutes} minutes after booking (${
+              isPremium ? "Pro member" : "free account"
+            }). After that, support can help.`
+          : ""
+      }
       size="sm"
       footer={
-        <>
+        closed ? (
           <Button variant="ghost" onClick={onClose}>
-            Keep booking
+            Close
           </Button>
-          <Button variant="danger" loading={busy} onClick={submit}>
-            Cancel booking
-          </Button>
-        </>
+        ) : (
+          <>
+            <Button variant="ghost" onClick={onClose}>
+              Keep booking
+            </Button>
+            <Button variant="danger" loading={busy} onClick={submit}>
+              Cancel booking
+            </Button>
+          </>
+        )
       }
     >
-      <Field label="Reason (optional)" htmlFor="cancel-reason">
-        <Textarea
-          id="cancel-reason"
-          rows={3}
-          value={reason}
-          maxLength={300}
-          onChange={(event) => setReason(event.target.value)}
-          placeholder="Plans changed, found another pro, timing no longer works…"
-        />
-      </Field>
+      {closed ? (
+        <div className="notice notice--danger">
+          <CircleAlert size={18} />
+          <div>
+            <strong>Free cancellation window closed</strong>
+            <p>
+              This booking is past the {windowMinutes}-minute free cancellation
+              window. Chat with support and we will help you resolve it.
+            </p>
+            <Link to="/chat" className="btn btn--dark btn--sm" style={{ marginTop: 8 }}>
+              <MessageSquare size={14} /> Chat support
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <Field label="Reason (optional)" htmlFor="cancel-reason">
+          <Textarea
+            id="cancel-reason"
+            rows={3}
+            value={reason}
+            maxLength={300}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder="Plans changed, found another pro, timing no longer works…"
+          />
+        </Field>
+      )}
     </Modal>
   );
 }
@@ -574,11 +651,13 @@ function PaymentModal({ booking, profile, onClose, onDone }) {
   const [reference, setReference] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const amount =
+  const baseAmount =
     booking?.pricing?.finalPrice ||
     booking?.pricing?.workerPrice ||
     booking?.budget ||
     0;
+  const urgentFee = Number(booking?.urgentFee) || 0;
+  const amount = baseAmount + urgentFee;
 
   const submit = async () => {
     if (!booking) return;
@@ -624,9 +703,18 @@ function PaymentModal({ booking, profile, onClose, onDone }) {
           className="row row--between"
           style={{ background: "var(--paper-2)", padding: 14, borderRadius: 12 }}
         >
-          <span className="small muted">Agreed amount</span>
+          <span className="small muted">
+            {urgentFee > 0 ? "Total including urgent fee" : "Agreed amount"}
+          </span>
           <strong style={{ fontSize: 20 }}>{inr(amount)}</strong>
         </div>
+
+        {urgentFee > 0 ? (
+          <p className="tiny muted">
+            Includes {inr(urgentFee)} urgent-job fee (10% of your booking budget). Pro members
+            have this fee waived.
+          </p>
+        ) : null}
 
         <Field label="Payment method" htmlFor="pay-mode">
           <Select id="pay-mode" value={mode} onChange={(event) => setMode(event.target.value)}>

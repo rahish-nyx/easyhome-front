@@ -5833,3 +5833,46 @@ body.adm-mode .modal .upload__copy small {
 .adm-utr button:hover {
   text-decoration: underline;
 }
+
+/* ------------------------------- Referrals -------------------------------- */
+
+.adm-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 13px;
+  border: 1px solid var(--adm-line, #e6e3d8);
+  border-radius: 12px;
+  background: var(--adm-soft, #faf9f4);
+  color: var(--adm-ink-soft, #5f5b50);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.adm-note svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--adm-green, #15803d);
+}
+
+/* --------------------------- Priority support ----------------------------- */
+
+.adm-chat-thread__pro {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(255, 230, 128, 0.16);
+  color: #ffe680;
+  font-size: 8.5px;
+  font-weight: 800;
+  line-height: 1.5;
+  vertical-align: middle;
+}
+
+.adm-chat__role--pro {
+  background: rgba(255, 230, 128, 0.14);
+  color: #ffe680;
+}

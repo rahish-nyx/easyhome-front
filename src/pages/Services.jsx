@@ -131,7 +131,7 @@ function ServicesList({ filtered, query, city, services }) {
               Keep the whole home running for less.
             </h2>
             <p className="membership__sub">
-              Members get priority pros, discounted visits and a dedicated support line.
+              Members get active priority matching, no 10% urgent-job extra charge and 24×7 priority support.
             </p>
           </div>
           <Link to="/subscription" className="btn btn--dark btn--lg">

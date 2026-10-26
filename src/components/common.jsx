@@ -29,7 +29,7 @@ import {
 import { API_BASE } from "../lib/api";
 import { api } from "../lib/api";
 import { mediaUrl } from "../lib/media";
-import { cx, inr, timeAgo } from "../lib/format";
+import { cx, inr, isActiveUntil, timeAgo } from "../lib/format";
 import { STATUS_META, SERVICE_META } from "../lib/constants";
 import { iconFor } from "../lib/iconMap";
 import { useAuth } from "../context/AuthContext";
@@ -617,17 +617,20 @@ export function UrgentMini({ job }) {
 
 export function WorkerCard({ worker, onBook }) {
   const name = worker.name || "EasyHome Pro";
+  const isPro =
+    isActiveUntil(worker.premiumUntil) ||
+    (worker.isPremium === true && !worker.premiumUntil);
   return (
     <article className="worker-card">
-      {worker.isPremium ? (
+      {isPro ? (
         <span className="worker-card__pro">
           <Badge tone="yellow">
-            <Crown size={11} /> Pro
+            <BadgeCheck size={11} /> Verified Pro
           </Badge>
         </span>
       ) : null}
       <div className="worker-card__head">
-        <Avatar name={name} path={worker.photoPath} size={48} ring={worker.isPremium} />
+        <Avatar name={name} path={worker.photoPath} size={48} ring={isPro} />
         <div style={{ minWidth: 0 }}>
           <Link to={`/workers/${worker.id}`} className="worker-card__name">
             {name}
