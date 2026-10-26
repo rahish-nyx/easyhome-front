@@ -63,6 +63,9 @@ export default function AdminBookings() {
   const [payTarget, setPayTarget] = useState(null);
   const [payMode, setPayMode] = useState("cash");
   const [busy, setBusy] = useState("");
+  const payUrgentFee = Math.max(0, Number(payTarget?.urgentFee) || 0);
+  const payAmount =
+    Number(payTarget?.pricing?.finalPrice || payTarget?.budget || 0) + payUrgentFee;
 
   const [cityId, setCityId] = useState("");
   const [radius, setRadius] = useState(15);
@@ -629,8 +632,13 @@ export default function AdminBookings() {
         <div className="stack">
           <div className="adm-pay-summary">
             <span>Amount collected</span>
-            <strong>{inr(payTarget?.pricing?.finalPrice || payTarget?.budget)}</strong>
+            <strong>{inr(payAmount)}</strong>
           </div>
+          {payUrgentFee > 0 ? (
+            <p className="tiny muted" style={{ marginTop: -6 }}>
+              Includes {inr(payUrgentFee)} urgent-job fee, paid directly to the professional.
+            </p>
+          ) : null}
           <label className="field">
             <span className="field__label">Payment method</span>
             <select
