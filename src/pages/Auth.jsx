@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ArrowRight,
   BadgeCheck,
+  BriefcaseBusiness,
   CheckCircle2,
   Eye,
   EyeOff,
@@ -11,6 +12,7 @@ import {
   MapPin,
   ShieldCheck,
   Sparkles,
+  UserRound,
   Wallet,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -55,6 +57,11 @@ export default function Auth() {
     const nextParams = new URLSearchParams(params);
     if (nextMode === "signin") nextParams.delete("mode");
     else nextParams.set("mode", nextMode);
+    setParams(nextParams, { replace: true });
+  };
+  const pickRole = (picked) => {
+    const nextParams = new URLSearchParams(params);
+    nextParams.set("role", picked);
     setParams(nextParams, { replace: true });
   };
 
@@ -376,6 +383,14 @@ export default function Auth() {
             </div>
           </div>
         </div>
+      </AuthShell>
+    );
+  }
+
+  if (!roleParam) {
+    return (
+      <AuthShell>
+        <RoleSelectionScreen onPick={pickRole} next={next} />
       </AuthShell>
     );
   }
@@ -716,6 +731,58 @@ export default function Auth() {
         </p>
       </div>
     </AuthShell>
+  );
+}
+
+function RoleSelectionScreen({ onPick, next }) {
+  return (
+    <div className="auth-card auth-role-select">
+      <div className="auth-card__head">
+        <h2>Choose your account type</h2>
+        <p>
+          Pick how you want to use EasyHome. Customer and professional accounts stay completely
+          separate.
+        </p>
+      </div>
+
+      <div className="auth-role-select__grid">
+        <button
+          type="button"
+          className="auth-role-select__card"
+          onClick={() => onPick("customer")}
+        >
+          <span className="auth-role-select__icon">
+            <UserRound size={26} />
+          </span>
+          <strong>Sign in / Register as Customer</strong>
+          <small>Book home services, track visits, chat and pay after the job.</small>
+          <span className="auth-role-select__cta">
+            Continue as customer <ArrowRight size={15} />
+          </span>
+        </button>
+
+        <button
+          type="button"
+          className="auth-role-select__card auth-role-select__card--worker"
+          onClick={() => onPick("worker")}
+        >
+          <span className="auth-role-select__icon">
+            <BriefcaseBusiness size={26} />
+          </span>
+          <strong>Sign in / Register as Professional / Worker</strong>
+          <small>Receive local jobs, manage your availability and payouts.</small>
+          <span className="auth-role-select__cta">
+            Continue as professional <ArrowRight size={15} />
+          </span>
+        </button>
+      </div>
+
+      {next ? (
+        <p className="auth-note" style={{ textAlign: "center", marginTop: 14 }}>
+          After signing in you will return to the page you came from.
+        </p>
+      ) : null}
+    </div>
   );
 }
 

@@ -47,7 +47,7 @@ export default function WorkerSupport() {
             </p>
           </div>
         </div>
-        <Chat backTo="/worker" />
+        <Chat backTo="/worker" embedded />
       </main>
     </div>
   );

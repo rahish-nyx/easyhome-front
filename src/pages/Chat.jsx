@@ -27,7 +27,7 @@ const QUICK_REPLIES = [
   "Payment or refund help",
 ];
 
-export default function Chat({ backTo = "/" }) {
+export default function Chat({ backTo = "/", embedded = false }) {
   usePageMeta("Support", "Chat with the EasyHome support team about bookings, payments and membership.");
 
   const { fbUser } = useAuth();
@@ -109,7 +109,7 @@ export default function Chat({ backTo = "/" }) {
   };
 
   return (
-    <div className="page page--narrow">
+    <div className={`page page--narrow${embedded ? "" : " page--chat"}`}>
       <Link to={backTo} className="btn btn--ghost btn--sm" style={{ marginBottom: 12, paddingLeft: 0 }}>
         <ArrowLeft size={15} /> Back
       </Link>
@@ -172,7 +172,7 @@ export default function Chat({ backTo = "/" }) {
                   <button
                     key={reply}
                     type="button"
-                    className="badge badge--outline"
+                    className="badge badge--outline chat-suggestion"
                     style={{ cursor: "pointer", background: "#fff" }}
                     onClick={() => send(reply)}
                   >
@@ -229,7 +229,7 @@ export default function Chat({ backTo = "/" }) {
               <span className="sr-only">Send</span>
             </Button>
           </form>
-          <p className="tiny muted" style={{ padding: "0 16px 10px" }}>
+          <p className="tiny muted chat-footnote">
             <Clock3 size={11} style={{ display: "inline", marginRight: 4 }} />
             Never share OTPs, passwords or card details. Messages are deleted when either side
             ends the chat.

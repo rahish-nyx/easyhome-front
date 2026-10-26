@@ -73,6 +73,20 @@ export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Keep guests on the account-choice page first, but remember where they came
+  // from so sign-in can return them to the page they were browsing.
+  const returnNext =
+    location.pathname !== "/" && !location.pathname.startsWith("/auth")
+      ? `${location.pathname}${location.search}`
+      : "";
+  const authHref = (extra = {}) => {
+    const nextParams = new URLSearchParams(extra);
+    if (returnNext) nextParams.set("next", returnNext);
+    const query = nextParams.toString();
+    return query ? `/auth?${query}` : "/auth";
+  };
 
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -184,10 +198,10 @@ export function SiteHeader() {
               </>
             ) : (
               <>
-                <Link to="/auth" className="btn btn--ghost btn--sm">
+                <Link to={authHref()} className="btn btn--ghost btn--sm">
                   Sign in
                 </Link>
-                <Link to="/auth?mode=signup" className="btn btn--dark btn--sm user-join">
+                <Link to={authHref({ mode: "signup" })} className="btn btn--dark btn--sm user-join">
                   Create account
                 </Link>
               </>
@@ -530,12 +544,23 @@ export function CityModal({ open, onClose }) {
 
 export function BottomNav() {
   const { fbUser, isWorker } = useAuth();
+  const location = useLocation();
+  const returnNext =
+    location.pathname !== "/" && !location.pathname.startsWith("/auth")
+      ? `${location.pathname}${location.search}`
+      : "";
   const items = [
     { to: "/", label: "Home", icon: Home, end: true },
     { to: "/services", label: "Services", icon: LayoutGrid },
     { to: "/bookings", label: "Bookings", icon: CalendarCheck },
     {
-      to: fbUser ? (isWorker ? "/worker" : "/profile") : "/auth",
+      to: fbUser
+        ? isWorker
+          ? "/worker"
+          : "/profile"
+        : returnNext
+          ? `/auth?next=${encodeURIComponent(returnNext)}`
+          : "/auth",
       label: fbUser ? (isWorker ? "Work" : "Profile") : "Sign in",
       icon: fbUser ? (isWorker ? BriefcaseBusiness : User) : User,
     },
