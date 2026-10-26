@@ -1,4 +1,15 @@
-export const API_BASE = (import.meta.env.VITE_API_URL || "/api").replace(/\/$/, "");
+function resolveApiBase(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "/api";
+  // fetch() resolves a bare hostname against the app origin, so a value like
+  // "api.example.com" silently calls the frontend instead of the API. Only
+  // accept absolute URLs or root-relative paths, and fall back to the
+  // same-origin proxy (see vercel.json) for anything else.
+  if (!/^https?:\/\//i.test(raw) && !raw.startsWith("/")) return "/api";
+  return raw.replace(/\/+$/, "");
+}
+
+export const API_BASE = resolveApiBase(import.meta.env.VITE_API_URL);
 
 export class ApiError extends Error {
   constructor(message, { status = 0, code = "ERROR", details } = {}) {
