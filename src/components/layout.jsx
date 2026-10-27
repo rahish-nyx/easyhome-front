@@ -637,9 +637,17 @@ function FooterSocialLink({ item }) {
 }
 
 export function SiteFooter() {
-  const { services, cities, footerLinks } = useCatalogue();
+  const { services, footerLinks, zones } = useCatalogue();
   const serviceLinks = footerLinks.filter((item) => item.group === "services");
   const socialLinks = footerLinks.filter((item) => item.group === "social");
+  const liveCities = Array.from(
+    new Set(
+      zones
+        .filter((zone) => zone.isActive !== false)
+        .map((zone) => String(zone.cityName || "").trim())
+        .filter(Boolean),
+    ),
+  );
   const footerGroups = [
     { id: "legal", label: "Legal" },
     { id: "professionals", label: "For professionals" },
@@ -733,8 +741,8 @@ export function SiteFooter() {
       <div className="footer-bottom">
         <span>© {new Date().getFullYear()} EasyHome. All rights reserved.</span>
         <div className="footer-cities" aria-label="Service cities">
-          {cities.slice(0, 7).map((item) => (
-            <span key={item.id}>{item.name}</span>
+          {liveCities.slice(0, 7).map((name) => (
+            <span key={name}>{name}</span>
           ))}
         </div>
         <span>Made for Indian homes 🇮🇳</span>

@@ -2,7 +2,7 @@ import { getDistance } from "geolib";
 import { isInsideZone, zoneRadiusKm } from "./zones";
 
 function hasCoords(point) {
-  return (
+  if (
     point &&
     point.lat !== null &&
     point.lat !== undefined &&
@@ -12,7 +12,18 @@ function hasCoords(point) {
     point.lng !== "" &&
     Number.isFinite(Number(point.lat)) &&
     Number.isFinite(Number(point.lng))
-  );
+  ) {
+    const lat = Number(point.lat);
+    const lng = Number(point.lng);
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
+    return !(lat === 0 && lng === 0);
+  }
+  return false;
+}
+
+function coordinatePoint(point) {
+  if (!hasCoords(point)) return null;
+  return { lat: Number(point.lat ?? point.latitude), lng: Number(point.lng ?? point.longitude) };
 }
 
 /** Distance in kilometres, or null when coordinates are missing. */
@@ -108,9 +119,10 @@ function jobArea(job) {
 }
 
 /**
- * Customer-side availability check. A worker is shown only when they are
- * online, approved (public docs are approval-gated), and inside the selected
- * city/local area.
+ * Customer-side availability check. Coordinates are authoritative: an online
+ * professional inside the live radius is shown even when their city, district
+ * or local-area label differs from the customer's reverse-geocoded label.
+ * Text matching is only a fallback for legacy records without coordinates.
  */
 export function workerInServiceArea(worker, location, zone = null) {
   if (!worker || worker.online !== true) return false;
@@ -119,45 +131,38 @@ export function workerInServiceArea(worker, location, zone = null) {
   const city = String(location.name || location.cityName || "").trim();
   const state = String(location.state || location.stateName || "").trim();
   const area = String(location.areaName || location.area || "").trim();
+  const target = coordinatePoint(location);
+  const point = coordinatePoint(worker);
+
+  if (target && point) {
+    if (zone) {
+      if (zone.isActive === false || !isInsideZone(zone, target)) return false;
+    }
+    const outer = zone
+      ? zoneRadiusKm(zone)
+      : Number(location.radiusKm) || Number(worker.radiusKm) || 10;
+    const personal = Number(worker.radiusKm);
+    const radius = Number.isFinite(personal) && personal > 0
+      ? Math.min(outer, personal)
+      : outer;
+    const distance = distanceKm(target, point);
+    return distance !== null && distance <= radius;
+  }
 
   if (!city) return false;
-
-  if (city) {
-    const ownCity = workerCity(worker);
-    if (!ownCity || !sameText(ownCity, city)) return false;
-  }
-
-  if (state) {
-    const ownState = workerState(worker);
-    if (!ownState || !sameText(ownState, state)) return false;
-  }
-
-  if (area) {
-    const ownArea = workerArea(worker);
-    if (!ownArea || !sameText(ownArea, area)) return false;
-  }
-
+  if (!sameText(workerCity(worker), city)) return false;
+  if (state && !sameText(workerState(worker), state)) return false;
+  if (area && !sameText(workerArea(worker), area)) return false;
   if (zone) {
     if (
-      zone.isActive !== true ||
+      zone.isActive === false ||
       !sameText(zone.cityName, city) ||
-      (state && !sameText(zone.state, state)) ||
-      (zone.areaName && !sameText(zone.areaName, area)) ||
-      !isInsideZone(zone, location) ||
-      !isInsideZone(zone, worker)
+      (state && zone.state && !sameText(zone.state, state)) ||
+      (zone.areaName && area && !sameText(zone.areaName, area))
     ) {
       return false;
     }
   }
-
-  const distance = distanceKm(location, worker);
-  const radius = zone
-    ? zoneRadiusKm(zone)
-    : Number(location.radiusKm) || 0;
-  if (radius > 0 && (distance === null || distance > radius)) {
-    return false;
-  }
-
   return true;
 }
 

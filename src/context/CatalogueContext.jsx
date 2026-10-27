@@ -9,7 +9,7 @@ import {
   qServiceZones,
   qServices,
 } from "../lib/queries";
-import { FALLBACK_CITIES, FALLBACK_SERVICES } from "../lib/constants";
+import { FALLBACK_SERVICES } from "../lib/constants";
 import {
   DEFAULT_CUSTOMER_RULES,
   DEFAULT_WORKER_RULES,
@@ -134,20 +134,6 @@ function normaliseSettings(data) {
   return merged;
 }
 
-const FOOTER_FALLBACK = [
-  { id: "footer-about", label: "About us", href: "/legal/about", group: "company", order: 1 },
-  { id: "footer-faq", label: "FAQ", href: "/faq", group: "support", order: 1 },
-  { id: "footer-terms", label: "Terms and Conditions", href: "/legal/terms", group: "legal", order: 1 },
-  { id: "footer-privacy", label: "Privacy policy", href: "/legal/privacy", group: "legal", order: 2 },
-  { id: "footer-refunds", label: "Refund & cancellation policy", href: "/legal/refunds", group: "legal", order: 3 },
-  { id: "footer-disclaimer", label: "Disclaimer", href: "/legal/disclaimer", group: "legal", order: 4 },
-  { id: "footer-support", label: "Support", href: "/chat", group: "support", order: 2 },
-  { id: "footer-refer", label: "Refer & Earn", href: "/refer", group: "support", order: 3 },
-  { id: "footer-become-pro", label: "Become a pro", href: "/auth?role=worker", group: "professionals", order: 1 },
-  { id: "footer-worker", label: "Worker dashboard", href: "/worker", group: "professionals", order: 2 },
-  { id: "footer-membership", label: "EasyHome Pro", href: "/subscription", group: "professionals", order: 3 },
-];
-
 export function CatalogueProvider({ children }) {
   const servicesQuery = useMemo(() => qServices(), []);
   const citiesQuery = useMemo(() => qCities(), []);
@@ -243,21 +229,11 @@ export function CatalogueProvider({ children }) {
       ? catalogueCache.footerLinks
       : null;
     const source = footerLinksState.error
-      ? cachedLinks || bootstrap?.footerLinks || FOOTER_FALLBACK
+      ? cachedLinks || bootstrap?.footerLinks || []
       : footerLinksState.loading
-        ? cachedLinks || FOOTER_FALLBACK
+        ? cachedLinks || []
         : footerLinksState.data;
-    const hiddenHrefs = footerLinksState.error
-      ? bootstrap?.hiddenFooterHrefs || []
-      : source
-          .filter((item) => item.active === false)
-          .map((item) => item.href);
-    const restoredDefaults = FOOTER_FALLBACK.filter(
-      (fallback) =>
-        !source.some((item) => item.href === fallback.href) &&
-        !hiddenHrefs.includes(fallback.href),
-    );
-    return [...source, ...restoredDefaults]
+    return source
       .filter((link) => link.active !== false)
       .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
   }, [
@@ -281,17 +257,16 @@ export function CatalogueProvider({ children }) {
     return source.filter((service) => service.active !== false);
   }, [servicesState.data, bootstrap, catalogueCache]);
   const cities = useMemo(() => {
-    // Only admin-active locations may appear in customer dropdowns. The
-    // hardcoded list is a cold-start fallback while the live listener is still
-    // warming up; once Firestore answers, an empty result stays empty.
+    // Only admin-active locations may appear in customer dropdowns. There is
+    // no hardcoded city list: live zone data (or a cached bootstrap response)
+    // is the only source, so the public picker never advertises a city that
+    // admins have not published.
     const source = citiesState.data.length
       ? citiesState.data
       : citiesState.error || citiesState.loading
         ? catalogueCache?.cities?.length
           ? catalogueCache.cities
-          : bootstrap?.cities?.length
-            ? bootstrap.cities
-            : FALLBACK_CITIES
+          : bootstrap?.cities || []
         : [];
     return source.filter((city) => city.active !== false);
   }, [

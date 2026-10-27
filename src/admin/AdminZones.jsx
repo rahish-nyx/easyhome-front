@@ -16,11 +16,10 @@ import {
   Users,
 } from "lucide-react";
 import { useToast } from "../context/ToastContext";
-import { useCatalogue } from "../context/CatalogueContext";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../lib/api";
 import { formatDateTime, timeAgo } from "../lib/format";
-import { Button, Field, Input, Modal, Select } from "../components/ui";
+import { Button, Field, Input, Modal } from "../components/ui";
 import {
   AdminPage,
   ConfirmModal,
@@ -45,7 +44,7 @@ const EMPTY_ZONE = {
   isActive: true,
 };
 
-const DEFAULT_MAP_CENTER = [22.9734, 78.6569];
+const DEFAULT_MAP_CENTER = [20.5937, 78.9629];
 const ZONE_PIN = L.divIcon({
   className: "adm-zone-map__pin",
   html: "<span></span>",
@@ -55,7 +54,6 @@ const ZONE_PIN = L.divIcon({
 
 export default function AdminZones() {
   const toast = useToast();
-  const { cities } = useCatalogue();
   const [tab, setTab] = useState("zones");
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState(null);
@@ -385,8 +383,6 @@ export default function AdminZones() {
         <ZoneModal
           key={draft.id || "new"}
           draft={draft}
-          cities={cities}
-          zones={zones}
           loading={busy === "zone"}
           onClose={() => setDraft(null)}
           onSave={saveZone}
@@ -411,7 +407,7 @@ export default function AdminZones() {
   );
 }
 
-function ZoneModal({ draft, cities, zones, onClose, onSave, loading }) {
+function ZoneModal({ draft, onClose, onSave, loading }) {
   const [form, setForm] = useState(draft || EMPTY_ZONE);
   const [error, setError] = useState("");
 
@@ -419,55 +415,6 @@ function ZoneModal({ draft, cities, zones, onClose, onSave, loading }) {
 
   const set = (key) => (event) =>
     setForm((current) => ({ ...current, [key]: event.target.value }));
-
-  const selectedCity = cities.find((item) => item.name === form.cityName);
-  const areaOptions = (selectedCity?.localAreas || [])
-    .map((area) =>
-      typeof area === "string"
-        ? { name: area }
-        : {
-            ...area,
-            name: area?.name || area?.area,
-            lat: area?.lat ?? area?.latitude,
-            lng: area?.lng ?? area?.longitude,
-          },
-    )
-    .filter(Boolean);
-
-  const chooseCity = (event) => {
-    const name = event.target.value;
-    const existing = zones.find((item) => item.cityName === name);
-    const city = cities.find(
-      (item) =>
-        item.name === name &&
-        (!existing?.state || item.state === existing.state),
-    ) || cities.find((item) => item.name === name);
-    setForm((current) => ({
-      ...current,
-      cityName: name,
-      areaName: "",
-      state: city?.state || existing?.state || current.state || "",
-      latitude: city ? Number(city.lat) : current.latitude,
-      longitude: city ? Number(city.lng) : current.longitude,
-      radiusKm: city?.radiusKm || existing?.radiusKm || current.radiusKm,
-    }));
-  };
-
-  const chooseArea = (event) => {
-    const name = event.target.value;
-    const area = areaOptions.find((item) => item.name === name);
-    setForm((current) => ({
-      ...current,
-      areaName: name,
-      latitude: area?.lat != null && Number.isFinite(Number(area.lat))
-        ? String(area.lat)
-        : current.latitude,
-      longitude: area?.lng != null && Number.isFinite(Number(area.lng))
-        ? String(area.lng)
-        : current.longitude,
-      radiusKm: Number(area?.radiusKm) || current.radiusKm,
-    }));
-  };
 
   const submit = () => {
     setError("");
@@ -516,45 +463,37 @@ function ZoneModal({ draft, cities, zones, onClose, onSave, loading }) {
       }
     >
       <div className="adm-form-grid">
-        <Field label="City" htmlFor="zone-city" required>
-          <Select id="zone-city" value={form.cityName} onChange={chooseCity}>
-            <option value="">Select a city…</option>
-            {cities.map((city) => (
-              <option key={city.id || city.name} value={city.name}>
-                {city.name}
-              </option>
-            ))}
-            {form.cityName && !cities.some((city) => city.name === form.cityName) ? (
-              <option value={form.cityName}>{form.cityName}</option>
-            ) : null}
-          </Select>
+        <Field label="City name" htmlFor="zone-city" required>
+          <Input
+            id="zone-city"
+            value={form.cityName}
+            maxLength={80}
+            onChange={set("cityName")}
+            placeholder="e.g. Giridih"
+          />
         </Field>
 
         <Field
           label="Local area"
           htmlFor="zone-area"
-          hint="Leave blank for a city-wide zone, or pick one area for precise coverage."
+          hint="Optional. Leave blank for a city-wide zone."
         >
-          <Select id="zone-area" value={form.areaName || ""} onChange={chooseArea}>
-            <option value="">All areas in the city</option>
-            {areaOptions.map((area) => (
-              <option key={area.name} value={area.name}>
-                {area.name}
-              </option>
-            ))}
-            {form.areaName && !areaOptions.some((area) => area.name === form.areaName) ? (
-              <option value={form.areaName}>{form.areaName}</option>
-            ) : null}
-          </Select>
+          <Input
+            id="zone-area"
+            value={form.areaName || ""}
+            maxLength={80}
+            onChange={set("areaName")}
+            placeholder="e.g. Makatpur"
+          />
         </Field>
 
-        <Field label="State" htmlFor="zone-state" required>
+        <Field label="State name" htmlFor="zone-state" required>
           <Input
             id="zone-state"
             value={form.state}
             maxLength={80}
             onChange={set("state")}
-            placeholder="Madhya Pradesh"
+            placeholder="e.g. Jharkhand"
           />
         </Field>
 
@@ -567,7 +506,7 @@ function ZoneModal({ draft, cities, zones, onClose, onSave, loading }) {
             max={90}
             value={form.latitude}
             onChange={set("latitude")}
-            placeholder="22.7196"
+            placeholder="24.180000"
           />
         </Field>
 
@@ -580,7 +519,7 @@ function ZoneModal({ draft, cities, zones, onClose, onSave, loading }) {
             max={180}
             value={form.longitude}
             onChange={set("longitude")}
-            placeholder="75.8577"
+            placeholder="86.300000"
           />
         </Field>
 

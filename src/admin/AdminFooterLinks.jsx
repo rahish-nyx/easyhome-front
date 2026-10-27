@@ -3,7 +3,6 @@ import {
   ArrowDown,
   ArrowUp,
   ExternalLink,
-  Link2,
   Pencil,
   Plus,
   RefreshCw,
@@ -15,7 +14,6 @@ import { api } from "../lib/api";
 import { Button, Field, Input, Modal, Select } from "../components/ui";
 import {
   AdminPage,
-  EmptyBlock,
   LoadingBlock,
   PageError,
   Panel,
@@ -65,6 +63,23 @@ export default function AdminFooterLinks() {
   );
   const refresh = () => state.run().catch(() => {});
 
+  const groupKeys = (groupId) =>
+    groupId === "legal" ? ["company", "legal", "support"] : [groupId];
+
+  const nextOrder = (groupId) =>
+    links
+      .filter((link) => groupKeys(groupId).includes(link.group))
+      .reduce((highest, link) => Math.max(highest, Number(link.order) || 0), 0) + 1;
+
+  const openAdd = (groupId = "services") => {
+    setDraft({
+      ...EMPTY_LINK,
+      group: groupId,
+      icon: groupId === "social" ? "instagram" : "",
+      order: nextOrder(groupId),
+    });
+  };
+
   const save = async (form) => {
     setBusy("save");
     try {
@@ -107,16 +122,23 @@ export default function AdminFooterLinks() {
   };
 
   const move = async (item, direction) => {
-    const groupLinks = sorted.filter((link) => link.group === item.group);
+    const groupLinks = sorted.filter((link) =>
+      groupKeys(item.group).includes(link.group),
+    );
     const index = groupLinks.findIndex((link) => link.id === item.id);
-    const neighbor = groupLinks[index + direction];
+    const nextIndex = index + direction;
+    const neighbor = groupLinks[nextIndex];
     if (!neighbor) return;
+    const reordered = [...groupLinks];
+    reordered.splice(index, 1);
+    reordered.splice(nextIndex, 0, item);
     setBusy(`move:${item.id}`);
     try {
-      await Promise.all([
-        api.patch(`/admin/footer-links/${item.id}`, { order: Number(neighbor.order) || 0 }),
-        api.patch(`/admin/footer-links/${neighbor.id}`, { order: Number(item.order) || 0 }),
-      ]);
+      await Promise.all(
+        reordered.map((link, position) =>
+          api.patch(`/admin/footer-links/${link.id}`, { order: position + 1 }),
+        ),
+      );
       await refresh();
     } catch (error) {
       toast.error(error.message);
@@ -130,7 +152,7 @@ export default function AdminFooterLinks() {
     setBusy(`delete:${deleteTarget.id}`);
     try {
       await api.del(`/admin/footer-links/${deleteTarget.id}`);
-      toast.success("Footer link removed from the public site.");
+      toast.success("Footer link deleted.");
       setDeleteTarget(null);
       await refresh();
     } catch (error) {
@@ -152,7 +174,7 @@ export default function AdminFooterLinks() {
           </Button>
           <Button
             icon={Plus}
-            onClick={() => setDraft({ ...EMPTY_LINK, order: sorted.length })}
+            onClick={() => openAdd("services")}
           >
             Add link
           </Button>
@@ -162,98 +184,106 @@ export default function AdminFooterLinks() {
       <PageError error={state.error} onRetry={refresh} />
       {state.loading && !state.data ? (
         <LoadingBlock label="Loading footer links…" />
-      ) : sorted.length ? (
+      ) : (
         <div className="adm-stack">
           {GROUPS.map((group) => {
             const groupLinks = sorted.filter((link) =>
-              group.id === "legal"
-                ? ["company", "legal", "support"].includes(link.group)
-                : link.group === group.id,
+              groupKeys(group.id).includes(link.group),
             );
-            if (!groupLinks.length) return null;
             return (
-              <Panel key={group.id} title={group.label} subtitle="Displayed in this footer section">
-                <div className="adm-footer-links">
-                  {groupLinks.map((item, index) => (
-                    <article className="adm-footer-link" key={item.id}>
-                      <span className="adm-footer-link__order">{index + 1}</span>
-                      <div className="grow">
-                        <div className="adm-approval__title">
-                          <strong>{item.label}</strong>
-                          <StatusPill
-                            status={item.active ? "active" : "expired"}
-                            label={item.active ? "Published" : "Hidden"}
-                          />
-                          {item.group === "social" ? (
-                            <span className="adm-footer-link__icon">
-                              {item.icon || "website"}
-                            </span>
-                          ) : null}
+              <Panel
+                key={group.id}
+                title={group.label}
+                subtitle="Displayed in this footer section"
+                action={
+                  <Button
+                    variant="outline"
+                    icon={Plus}
+                    onClick={() => openAdd(group.id)}
+                  >
+                    Add link
+                  </Button>
+                }
+              >
+                {groupLinks.length ? (
+                  <div className="adm-footer-links">
+                    {groupLinks.map((item, index) => (
+                      <article className="adm-footer-link" key={item.id}>
+                        <span className="adm-footer-link__order">{index + 1}</span>
+                        <div className="grow">
+                          <div className="adm-approval__title">
+                            <strong>{item.label}</strong>
+                            <StatusPill
+                              status={item.active ? "active" : "expired"}
+                              label={item.active ? "Published" : "Hidden"}
+                            />
+                            {item.group === "social" ? (
+                              <span className="adm-footer-link__icon">
+                                {item.icon || "website"}
+                              </span>
+                            ) : null}
+                          </div>
+                          <a href={item.href} target="_blank" rel="noreferrer">
+                            {item.href} <ExternalLink size={12} />
+                          </a>
                         </div>
-                        <a href={item.href} target="_blank" rel="noreferrer">
-                          {item.href} <ExternalLink size={12} />
-                        </a>
-                      </div>
-                      <div className="adm-footer-link__actions">
-                        <button
-                          type="button"
-                          className="adm-icon-action"
-                          aria-label={`Move ${item.label} up`}
-                          disabled={index === 0 || Boolean(busy)}
-                          onClick={() => move(item, -1)}
-                        >
-                          <ArrowUp size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          className="adm-icon-action"
-                          aria-label={`Move ${item.label} down`}
-                          disabled={index === groupLinks.length - 1 || Boolean(busy)}
-                          onClick={() => move(item, 1)}
-                        >
-                          <ArrowDown size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          className="adm-icon-action"
-                          aria-label={`Edit ${item.label}`}
-                          onClick={() => setDraft({ ...item })}
-                        >
-                          <Pencil size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          className="adm-text-action"
-                          disabled={busy === `toggle:${item.id}`}
-                          onClick={() => toggle(item)}
-                        >
-                          {item.active ? "Hide" : "Publish"}
-                        </button>
-                        <button
-                          type="button"
-                          className="adm-icon-action is-danger"
-                          aria-label={`Remove ${item.label}`}
-                          onClick={() => setDeleteTarget(item)}
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </article>
-                  ))}
-                </div>
+                        <div className="adm-footer-link__actions">
+                          <button
+                            type="button"
+                            className="adm-icon-action"
+                            aria-label={`Move ${item.label} up`}
+                            disabled={index === 0 || Boolean(busy)}
+                            onClick={() => move(item, -1)}
+                          >
+                            <ArrowUp size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            className="adm-icon-action"
+                            aria-label={`Move ${item.label} down`}
+                            disabled={index === groupLinks.length - 1 || Boolean(busy)}
+                            onClick={() => move(item, 1)}
+                          >
+                            <ArrowDown size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            className="adm-icon-action"
+                            aria-label={`Edit ${item.label}`}
+                            onClick={() => setDraft({ ...item })}
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            className="adm-text-action"
+                            disabled={busy === `toggle:${item.id}`}
+                            onClick={() => toggle(item)}
+                          >
+                            {item.active ? "Hide" : "Publish"}
+                          </button>
+                          <button
+                            type="button"
+                            className="adm-icon-action is-danger"
+                            aria-label={`Delete ${item.label}`}
+                            onClick={() => setDeleteTarget(item)}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="small muted" style={{ margin: 0 }}>
+                    No links in this section yet. Use “Add link” to publish the
+                    first one.
+                  </p>
+                )}
               </Panel>
             );
           })}
         </div>
-      ) : (
-        <Panel flush>
-          <EmptyBlock
-            icon={Link2}
-            title="No footer links configured"
-            body="Add a link to start managing the public website footer."
-            action={<Button icon={Plus} onClick={() => setDraft({ ...EMPTY_LINK })}>Add first link</Button>}
-          />
-        </Panel>
       )}
 
       {draft && (
@@ -268,7 +298,7 @@ export default function AdminFooterLinks() {
       <Modal
         open={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
-        title="Remove this footer link?"
+        title="Delete this footer link?"
         subtitle={deleteTarget?.label}
         size="sm"
         footer={
@@ -279,13 +309,14 @@ export default function AdminFooterLinks() {
               loading={busy === `delete:${deleteTarget?.id}`}
               onClick={remove}
             >
-              Remove link
+              Delete link
             </Button>
           </>
         }
       >
         <p className="small muted">
-          This safely hides the link from the public site. You can restore it later from the hidden links list.
+          This permanently removes the link from the customer and worker
+          footers. Use Hide instead if you may publish it again later.
         </p>
       </Modal>
     </AdminPage>

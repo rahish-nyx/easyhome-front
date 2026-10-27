@@ -43,7 +43,7 @@ export default function Home() {
     "Book verified cleaners, plumbers, electricians, AC technicians and more near you. Transparent prices, pay after the job.",
   );
 
-  const { fbUser } = useAuth();
+  const { fbUser, loading: authLoading } = useAuth();
   const { services, promos, settings } = useCatalogue();
   const { city, point, zoneCheck } = useLocation();
   const location = useMemo(
@@ -65,6 +65,11 @@ export default function Home() {
     error: "",
   });
   const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [topRated, setTopRated] = useState({
+    workers: [],
+    loading: false,
+    error: "",
+  });
   const nearbyLocationKey = location
     ? [
         location.name,
@@ -141,6 +146,35 @@ export default function Home() {
     nearbyLocationKey,
   ]);
 
+  useEffect(() => {
+    if (authLoading || fbUser) return undefined;
+
+    let active = true;
+    setTopRated((current) => ({ ...current, loading: true, error: "" }));
+    api
+      .get("/public/workers/top-rated?limit=5")
+      .then((result) => {
+        if (active) {
+          setTopRated({
+            workers: result.workers || [],
+            loading: false,
+            error: "",
+          });
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          setTopRated({ workers: [], loading: false, error: error.message });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [authLoading, fbUser]);
+
+  const showingTopRated = !authLoading && !fbUser;
+
   const nearbyWithDistance = useMemo(
     () =>
       nearby
@@ -155,6 +189,9 @@ export default function Home() {
   );
 
   const popular = services.slice(0, 10);
+  const displayWorkers = showingTopRated ? topRated.workers : nearbyWithDistance;
+  const displayLoading = showingTopRated ? topRated.loading : nearbyLoading;
+  const displayError = showingTopRated ? topRated.error : nearbyResult.error;
 
   return (
     <>
@@ -343,35 +380,39 @@ export default function Home() {
 
         <section className="section">
           <SectionHeader
-            eyebrow="Around you"
+            eyebrow={showingTopRated ? "Top rated" : "Around you"}
             title={
-              nearbyWithDistance.length
-                ? city?.name
-                  ? `Available pros in ${city.name}`
-                  : "Available near you"
-                : "Available services near you"
+              showingTopRated
+                ? "Available Pros in Your Area"
+                : nearbyWithDistance.length
+                  ? city?.name
+                    ? `Available pros in ${city.name}`
+                    : "Available near you"
+                  : "Available services near you"
             }
             subtitle={
-              nearbyWithDistance.length
-                ? "Independent professionals with verified IDs, real ratings and transparent starting prices."
-                : "Pick a service and we will match a verified professional for your slot."
+              showingTopRated
+                ? "The five highest-rated verified professionals on EasyHome, ranked by customer ratings."
+                : nearbyWithDistance.length
+                  ? "Independent professionals with verified IDs, real ratings and transparent starting prices."
+                  : "Pick a service and we will match a verified professional for your slot."
             }
             action={
               <Link
-                to={nearbyWithDistance.length ? "/search?q=" : "/services"}
+                to={displayWorkers.length ? "/search?q=" : "/services"}
                 className="btn btn--outline btn--sm"
               >
-                {nearbyWithDistance.length ? "Find a pro" : "Browse services"} <ArrowRight size={15} />
+                {displayWorkers.length ? "Find a pro" : "Browse services"} <ArrowRight size={15} />
               </Link>
             }
           />
 
-          {nearbyWithDistance.length ? (
+          {displayWorkers.length ? (
             <div className="worker-grid">
-              {nearbyWithDistance.map((worker) => (
+              {displayWorkers.map((worker) => (
                 <div key={worker.id}>
                   <WorkerCard worker={worker} />
-                  {worker.distance !== null ? (
+                  {!showingTopRated && worker.distance !== null ? (
                     <p className="tiny muted" style={{ marginTop: 6, paddingLeft: 4 }}>
                       {distanceLabel(worker.distance)} from {city?.name}
                     </p>
@@ -379,13 +420,13 @@ export default function Home() {
                 </div>
               ))}
             </div>
-          ) : nearbyLoading ? (
+          ) : displayLoading ? (
             <div className="urgent-placeholder">
               <p className="muted small">Finding verified professionals inside your live service radius…</p>
             </div>
-          ) : nearbyResult.key === nearbyLocationKey && nearbyResult.error ? (
+          ) : displayError ? (
             <div className="urgent-placeholder">
-              <p className="muted small">{nearbyResult.error}</p>
+              <p className="muted small">{displayError}</p>
             </div>
           ) : (
             <div className="urgent-placeholder">

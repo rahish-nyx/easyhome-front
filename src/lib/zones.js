@@ -9,11 +9,17 @@ function numberOrNull(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function validPoint(lat, lng) {
+  if (lat === null || lng === null) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  if (lat === 0 && lng === 0) return null;
+  return { lat, lng };
+}
+
 export function zonePoint(zone) {
   const lat = numberOrNull(zone?.latitude ?? zone?.lat);
   const lng = numberOrNull(zone?.longitude ?? zone?.lng);
-  if (lat === null || lng === null) return null;
-  return { lat, lng };
+  return validPoint(lat, lng);
 }
 
 export function zoneRadiusKm(zone) {
@@ -138,10 +144,10 @@ export function evaluateZones(zones, { lat, lng, cityName, state, areaName } = {
 
   if (hasPoint) {
     const point = { lat: latitude, lng: longitude };
-    const coordinateCandidates = active.filter((zone) =>
-      cityMatches(zone, cityName, state),
-    );
-    const inside = coordinateCandidates
+    // Radius is the source of truth. Text labels (district, city or local
+    // area) can differ between reverse geocoding and admin data, and must not
+    // hide a live zone that contains the customer.
+    const inside = active
       .filter((zone) => isInsideZone(zone, point))
       .sort(
         (a, b) =>
@@ -157,10 +163,7 @@ export function evaluateZones(zones, { lat, lng, cityName, state, areaName } = {
         message: `We serve ${inside[0].areaName || inside[0].cityName || "your area"}.`,
       };
     }
-    const nearest = nearestZone(
-      coordinateCandidates.length ? coordinateCandidates : active,
-      point,
-    );
+    const nearest = nearestZone(active, point);
     return {
       configured: true,
       allowed: false,

@@ -8,6 +8,7 @@ import {
   BriefcaseBusiness,
   CalendarCheck,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   CircleAlert,
   Clock3,
@@ -43,6 +44,7 @@ import { useCatalogue } from "../context/CatalogueContext";
 import { useToast } from "../context/ToastContext";
 import { useAsync } from "../hooks/useAsync";
 import { useLiveQuery } from "../hooks/useLive";
+import { useStandalone } from "../hooks/useDevice";
 import { qBookingsForWorker, qJobFeed } from "../lib/queries";
 import { api } from "../lib/api";
 import {
@@ -88,6 +90,9 @@ const TABS = [
   { id: "membership", label: "Membership", icon: Crown },
   { id: "profile", label: "Profile", icon: UserRound },
 ];
+
+const PRIMARY_TAB_IDS = ["home", "jobs", "earnings", "profile"];
+const PRIMARY_TABS = TABS.filter((item) => PRIMARY_TAB_IDS.includes(item.id));
 
 const PHASE_TOAST = {
   [TRACKING_PHASES.EN_ROUTE]: "Customer notified — you are on the way.",
@@ -404,7 +409,9 @@ export default function WorkerDashboard() {
               profile={profile}
               isPremium={isPremium}
               onProfile={() => setTab("profile")}
+              onBookings={() => setTab("jobs")}
               onMembership={() => setTab("membership")}
+              onRefer={() => setTab("refer")}
               onLogout={logout}
             />
           </div>
@@ -524,6 +531,11 @@ export default function WorkerDashboard() {
               worker.serviceKey,
               worker.service,
               worker.area,
+              worker.areaName,
+              worker.city,
+              worker.state,
+              worker.lat,
+              worker.lng,
               worker.pricePerWork,
               worker.bio,
               worker.upiId,
@@ -539,20 +551,26 @@ export default function WorkerDashboard() {
       </main>
 
       <nav className="worker-nav" aria-label="Worker navigation">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={tab === item.id ? "is-active" : ""}
-            onClick={() => setTab(item.id)}
-          >
-            <item.icon size={21} />
-            <span>{item.label}</span>
-            {item.id === "jobs" && activeJobs.length ? (
-              <em className="worker-nav__count">{activeJobs.length}</em>
-            ) : null}
-          </button>
-        ))}
+        {PRIMARY_TABS.map((item) => {
+          const active =
+            tab === item.id ||
+            (item.id === "profile" &&
+              ["profile", "membership", "refer"].includes(tab));
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={active ? "is-active" : ""}
+              onClick={() => setTab(item.id)}
+            >
+              <item.icon size={21} />
+              <span>{item.label}</span>
+              {item.id === "jobs" && activeJobs.length ? (
+                <em className="worker-nav__count">{activeJobs.length}</em>
+              ) : null}
+            </button>
+          );
+        })}
       </nav>
 
       <PriceModal
@@ -654,7 +672,9 @@ function WorkerProfileMenu({
   profile,
   isPremium,
   onProfile,
+  onBookings,
   onMembership,
+  onRefer,
   onLogout,
 }) {
   const [open, setOpen] = useState(false);
@@ -679,6 +699,11 @@ function WorkerProfileMenu({
     };
   }, [open]);
 
+  const choose = (action) => {
+    setOpen(false);
+    action();
+  };
+
   return (
     <div className="wk-profile-menu" ref={menuRef}>
       <button
@@ -699,42 +724,49 @@ function WorkerProfileMenu({
           <strong>{worker.name || profile?.name}</strong>
           <span>{worker.service || "EasyHome Pro"}</span>
         </span>
-        <ChevronRight size={15} className="wk-profile-menu__chevron" aria-hidden="true" />
+        <ChevronDown
+          size={15}
+          className="wk-profile-menu__chevron"
+          aria-hidden="true"
+        />
       </button>
       {open ? (
         <div className="wk-profile-menu__dropdown" role="menu" aria-label="Profile options">
           <button
             type="button"
             role="menuitem"
-            onClick={() => {
-              onProfile();
-              setOpen(false);
-            }}
+            onClick={() => choose(onProfile)}
           >
-            <UserRound size={16} /> Profile &amp; KYC
+            <UserRound size={16} /> My Profile
           </button>
           <button
             type="button"
             role="menuitem"
-            onClick={() => {
-              onMembership();
-              setOpen(false);
-            }}
+            onClick={() => choose(onBookings)}
+          >
+            <CalendarCheck size={16} /> My Bookings
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => choose(onMembership)}
           >
             <Crown size={16} /> Membership
           </button>
-          <Link to="/worker/support" role="menuitem" onClick={() => setOpen(false)}>
-            <Headphones size={16} /> Worker support
-          </Link>
           <button
             type="button"
             role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              onLogout();
-            }}
+            onClick={() => choose(onRefer)}
           >
-            <LogOut size={16} /> Sign out
+            <Gift size={16} /> Refer &amp; Earn
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="is-danger"
+            onClick={() => choose(onLogout)}
+          >
+            <LogOut size={16} /> Sign Out
           </button>
         </div>
       ) : null}
@@ -1250,13 +1282,22 @@ function WorkerReferTab({ worker, profile }) {
 }
 
 function WorkerFooter() {
-  const { footerLinks } = useCatalogue();
-  const legalLinks = footerLinks.filter(
-    (item) => item.group === "legal" || item.group === "support",
+  const standalone = useStandalone();
+  const { footerLinks, services } = useCatalogue();
+  const serviceLinks = footerLinks.filter((item) => item.group === "services");
+  const legalLinks = footerLinks.filter((item) =>
+    ["company", "legal", "support"].includes(item.group),
+  );
+  const professionalLinks = footerLinks.filter(
+    (item) => item.group === "professionals",
   );
 
+  // Installed PWAs already provide app navigation; a marketing footer only
+  // adds noise and can collide with the fixed bottom navigation.
+  if (standalone) return null;
+
   return (
-    <footer className="wk-footer">
+    <footer className="wk-footer wk-footer--compact">
       <div className="wk-footer__main">
         <div className="wk-footer__brand">
           <div className="wk-footer__logo">
@@ -1264,8 +1305,7 @@ function WorkerFooter() {
             <em>PRO</em>
           </div>
           <p>
-            Local work, transparent payouts and a support team that knows your
-            jobs. Built for independent professionals across India.
+            Local work, transparent payouts and support that knows your jobs.
           </p>
           <div className="wk-footer__badges">
             <span>
@@ -1278,27 +1318,57 @@ function WorkerFooter() {
         </div>
 
         <div className="wk-footer__col">
-          <h3>Worker console</h3>
-          <Link to="/worker">Dashboard</Link>
-          <Link to="/worker?tab=jobs">Jobs</Link>
-          <Link to="/worker?tab=earnings">Earnings</Link>
-          <Link to="/worker?tab=profile">Profile &amp; KYC</Link>
-          <Link to="/worker?tab=membership">Membership</Link>
+          <h3>Services</h3>
+          {serviceLinks.length
+            ? serviceLinks.map((item) => (
+                <Link key={item.id} to={item.href}>
+                  {item.label}
+                </Link>
+              ))
+            : services.slice(0, 6).map((service) => (
+                <Link key={service.id} to={`/services/${service.key}`}>
+                  {service.name}
+                </Link>
+              ))}
+          {!serviceLinks.length ? (
+            <Link to="/services" className="wk-footer__more">
+              …and many more
+            </Link>
+          ) : null}
         </div>
 
         <div className="wk-footer__col">
-          <h3>Support</h3>
-          <Link to="/worker/support">Chat with support</Link>
-          {legalLinks.map((item) => (
-            <Link key={item.id} to={item.href}>{item.label}</Link>
-          ))}
+          <h3>Legal</h3>
+          {legalLinks.length ? (
+            legalLinks.map((item) => (
+              <Link key={item.id} to={item.href}>
+                {item.label}
+              </Link>
+            ))
+          ) : (
+            <>
+              <Link to="/faq">Help &amp; FAQ</Link>
+              <Link to="/legal/terms">Terms of service</Link>
+              <Link to="/legal/privacy">Privacy policy</Link>
+            </>
+          )}
         </div>
 
         <div className="wk-footer__col">
-          <h3>Grow with EasyHome</h3>
-          <Link to="/worker?tab=membership">Membership &amp; upgrade</Link>
-          <Link to="/worker?tab=earnings">Fees &amp; payouts</Link>
-          <Link to="/worker/support">Report an issue</Link>
+          <h3>For professionals</h3>
+          {professionalLinks.length ? (
+            professionalLinks.map((item) => (
+              <Link key={item.id} to={item.href}>
+                {item.label}
+              </Link>
+            ))
+          ) : (
+            <>
+              <Link to="/worker">Worker console</Link>
+              <Link to="/worker?tab=membership">Membership</Link>
+              <Link to="/worker/support">Support</Link>
+            </>
+          )}
         </div>
       </div>
 
@@ -2083,7 +2153,6 @@ function ProfileTab({ worker, onLogout }) {
     phone: worker.phone || "",
     serviceKey: worker.serviceKey || "",
     service: worker.service || "",
-    area: worker.area || "",
     pricePerWork: worker.pricePerWork || "",
     bio: worker.bio || "",
     upiId: worker.upiId || "",
@@ -2095,6 +2164,11 @@ function ProfileTab({ worker, onLogout }) {
   const [coords, setCoords] = useState(
     worker.lat && worker.lng ? { lat: worker.lat, lng: worker.lng } : null,
   );
+  const [place, setPlace] = useState({
+    city: worker.city || worker.cityName || "",
+    areaName: worker.areaName || "",
+    state: worker.state || worker.stateName || "",
+  });
 
   const set = (field) => (event) =>
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
@@ -2109,19 +2183,19 @@ function ProfileTab({ worker, onLogout }) {
       toast.error("Enter a valid 10-digit mobile number.");
       return;
     }
-    if (form.area.trim().length < 2) {
-      toast.error("Add your service area.");
-      return;
-    }
     setSaving(true);
     try {
       const service = services.find((item) => item.key === form.serviceKey);
+      const areaLabel = [place.areaName, place.city].filter(Boolean).join(", ");
       await api.patch("/worker/profile", {
         name: form.name.trim(),
         ...(form.phone ? { phone: form.phone } : {}),
         service: service?.name || form.service || SERVICE_META[form.serviceKey]?.name || form.service,
         serviceKey: form.serviceKey,
-        area: form.area.trim(),
+        ...(areaLabel ? { area: areaLabel } : {}),
+        ...(place.city ? { city: place.city } : {}),
+        ...(place.state ? { state: place.state } : {}),
+        ...(place.areaName ? { areaName: place.areaName } : {}),
         pricePerWork: Number(form.pricePerWork) || 199,
         bio: form.bio.trim(),
         upiId: form.upiId.trim(),
@@ -2138,7 +2212,7 @@ function ProfileTab({ worker, onLogout }) {
 
   const capture = async () => {
     if (!navigator.geolocation) {
-      toast.error("This browser does not support location. Add your service area manually.");
+      toast.error("This browser does not support device location.");
       return;
     }
     setLocating(true);
@@ -2150,18 +2224,43 @@ function ProfileTab({ worker, onLogout }) {
           maximumAge: 0,
         });
       });
-      setCoords({
+      const nextCoords = {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
-      });
-      toast.success("Location updated. Save changes to apply it.");
+      };
+      setCoords(nextCoords);
+
+      try {
+        const result = await api.get(
+          `/public/reverse-geocode?lat=${nextCoords.lat}&lng=${nextCoords.lng}`,
+        );
+        const address = result.address || {};
+        const city = address.city || address.district || place.city || "";
+        const areaName =
+          address.locality ||
+          (address.district && address.district !== city ? address.district : "") ||
+          place.areaName ||
+          "";
+        const state = address.state || place.state || "";
+        setPlace({ city, areaName, state });
+        const resolved = [areaName, city, state].filter(Boolean).join(", ");
+        toast.success(
+          resolved
+            ? `Location found: ${resolved}. Confirm and save.`
+            : "Location pinned. Confirm and save to apply it.",
+        );
+      } catch {
+        toast.info(
+          "Location pinned, but City and Area could not be detected. Try Update Location again.",
+        );
+      }
     } catch (error) {
       const messages = {
-        1: "Location permission was denied. Allow location access in your browser or add your service area manually.",
-        2: "Your location is unavailable right now. Check device location settings or add your service area manually.",
-        3: "Location request timed out. Try again or add your service area manually.",
+        1: "Location permission was denied. Allow location access in your browser, then try again.",
+        2: "Your location is unavailable right now. Check device location settings and try again.",
+        3: "Location request timed out. Move to an open area and try again.",
       };
-      toast.error(messages[error?.code] || "Could not access location. Add your service area manually.");
+      toast.error(messages[error?.code] || "Could not access device location. Try again.");
     } finally {
       setLocating(false);
     }
@@ -2349,9 +2448,6 @@ function ProfileTab({ worker, onLogout }) {
                   onChange={set("pricePerWork")}
                 />
               </Field>
-              <Field label="Service area" htmlFor="wk-area" className="wk-span-2" required>
-                <Input id="wk-area" value={form.area} maxLength={120} onChange={set("area")} />
-              </Field>
               <Field
                 label="UPI ID for payouts"
                 htmlFor="wk-upi"
@@ -2383,22 +2479,36 @@ function ProfileTab({ worker, onLogout }) {
               </Field>
             </div>
 
-            <div className="wk-inline-actions">
+            <div className="wk-location-card">
+              <span className="wk-location-card__icon">
+                <MapPin size={18} />
+              </span>
+              <div className="wk-location-card__copy">
+                <p className="wk-eyebrow">Service location</p>
+                <strong>
+                  {[place.areaName, place.city, place.state].filter(Boolean).join(", ") ||
+                    "Location not set"}
+                </strong>
+                <span>
+                  {coords
+                    ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)} · confirm before saving`
+                    : "Use your device location to receive nearby jobs."}
+                </span>
+              </div>
               <button
                 type="button"
                 className="wk-chip-btn"
                 onClick={capture}
                 disabled={locating}
               >
-                <Crosshair size={14} />
-                {coords ? "Update location" : "Pin location"}
+                {locating ? <Spinner size={14} /> : <Crosshair size={14} />}
+                {locating ? "Finding…" : "Update Location"}
               </button>
-              <span className="wk-fineprint">
-                {coords
-                  ? `Pinned ${coords.lat.toFixed(3)}, ${coords.lng.toFixed(3)}`
-                  : "Add location for accurate nearby jobs."}
-              </span>
             </div>
+            <p className="wk-fineprint">
+              We read your device location once and use it for nearby dispatch.
+              No manual service-area entry is needed.
+            </p>
 
             <Button
               type="submit"
