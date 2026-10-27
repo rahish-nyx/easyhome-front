@@ -10,8 +10,7 @@ import {
 } from "lucide-react";
 import { useCatalogue } from "../context/CatalogueContext";
 import { useLocation } from "../context/LocationContext";
-import { useLiveQuery } from "../hooks/useLive";
-import { qWorkers } from "../lib/queries";
+import { useCachedWorkers } from "../hooks/useCachedWorkers";
 import { usePageMeta } from "../lib/usePageMeta";
 import { isActiveUntil } from "../lib/format";
 import { workerInServiceArea } from "../lib/geo";
@@ -32,8 +31,7 @@ export default function SearchPage() {
         : null,
     [city, point, zoneCheck],
   );
-  const workersQuery = useMemo(() => qWorkers("", 40), []);
-  const { data: workers, loading } = useLiveQuery(workersQuery);
+  const { data: workers, loading } = useCachedWorkers("", 40);
 
   usePageMeta(
     query ? `Search results for “${query}”` : "Search EasyHome",

@@ -37,6 +37,34 @@ import {
   WorkerCard,
 } from "../components/common";
 
+const TOP_RATED_CACHE_KEY = "easyhome:top-rated:v1";
+const TOP_RATED_CACHE_TTL_MS = 15 * 60 * 1000;
+
+function readTopRatedCache() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(TOP_RATED_CACHE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !Array.isArray(data.workers)) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function writeTopRatedCache(workers) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      TOP_RATED_CACHE_KEY,
+      JSON.stringify({ workers, cachedAt: Date.now() }),
+    );
+  } catch {
+    /* Storage can be unavailable in private mode. */
+  }
+}
+
 export default function Home() {
   usePageMeta(
     "Home services on demand",
@@ -65,10 +93,13 @@ export default function Home() {
     error: "",
   });
   const [nearbyLoading, setNearbyLoading] = useState(false);
-  const [topRated, setTopRated] = useState({
-    workers: [],
-    loading: false,
-    error: "",
+  const [topRated, setTopRated] = useState(() => {
+    const cached = readTopRatedCache();
+    return {
+      workers: cached?.workers || [],
+      loading: !cached,
+      error: "",
+    };
   });
   const nearbyLocationKey = location
     ? [
@@ -100,7 +131,11 @@ export default function Home() {
 
     let active = true;
     let firstRequest = true;
+    let inFlight = false;
     const loadNearby = async () => {
+      // Do not spend Firestore reads polling a tab that is in the background.
+      if (inFlight || document.visibilityState !== "visible") return;
+      inFlight = true;
       if (firstRequest) setNearbyLoading(true);
       const query = new URLSearchParams({
         city: location.name,
@@ -121,13 +156,16 @@ export default function Home() {
         }
       } catch (error) {
         if (active) {
-          setNearbyResult({
+          // Keep the last known list for this location on a transient error.
+          setNearbyResult((current) => ({
             key: nearbyLocationKey,
-            workers: [],
+            workers:
+              current.key === nearbyLocationKey ? current.workers || [] : [],
             error: error.message,
-          });
+          }));
         }
       } finally {
+        inFlight = false;
         if (active && firstRequest) {
           firstRequest = false;
           setNearbyLoading(false);
@@ -135,11 +173,19 @@ export default function Home() {
       }
     };
 
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") loadNearby();
+    };
+
     loadNearby();
-    const timer = window.setInterval(loadNearby, 30_000);
+    // A one-minute cadence keeps the nearby list current without turning every
+    // open home page into a continuous stream of Firestore reads.
+    const timer = window.setInterval(loadNearby, 60_000);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       active = false;
       window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [
     location,
@@ -149,22 +195,34 @@ export default function Home() {
   useEffect(() => {
     if (authLoading || fbUser) return undefined;
 
+    const cached = readTopRatedCache();
+    if (cached && Date.now() - Number(cached.cachedAt) < TOP_RATED_CACHE_TTL_MS) {
+      setTopRated({ workers: cached.workers, loading: false, error: "" });
+      return undefined;
+    }
+
     let active = true;
-    setTopRated((current) => ({ ...current, loading: true, error: "" }));
+    setTopRated((current) => ({
+      workers: current.workers || cached?.workers || [],
+      loading: !current.workers?.length && !cached?.workers?.length,
+      error: "",
+    }));
     api
       .get("/public/workers/top-rated?limit=5")
       .then((result) => {
+        const workers = result.workers || [];
+        writeTopRatedCache(workers);
         if (active) {
-          setTopRated({
-            workers: result.workers || [],
-            loading: false,
-            error: "",
-          });
+          setTopRated({ workers, loading: false, error: "" });
         }
       })
       .catch((error) => {
         if (active) {
-          setTopRated({ workers: [], loading: false, error: error.message });
+          setTopRated((current) => ({
+            workers: current.workers || [],
+            loading: false,
+            error: current.workers?.length ? "" : error.message,
+          }));
         }
       });
 

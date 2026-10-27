@@ -18,8 +18,7 @@ import {
 } from "lucide-react";
 import { useCatalogue } from "../context/CatalogueContext";
 import { useLocation } from "../context/LocationContext";
-import { useLiveQuery } from "../hooks/useLive";
-import { qWorkers } from "../lib/queries";
+import { useCachedWorkers } from "../hooks/useCachedWorkers";
 import { usePageMeta } from "../lib/usePageMeta";
 import { inr } from "../lib/format";
 import {
@@ -164,8 +163,7 @@ function ServiceDetail({ serviceKey }) {
       description: meta.blurb || "Verified help for your home.",
     };
 
-  const workersQuery = useMemo(() => qWorkers(serviceKey, 24), [serviceKey]);
-  const { data: workers } = useLiveQuery(workersQuery);
+  const { data: workers } = useCachedWorkers(serviceKey, 24);
 
   usePageMeta(
     service.name,

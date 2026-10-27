@@ -1,14 +1,13 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { useLiveDoc, useLiveQuery } from "../hooks/useLive";
-import { api } from "../lib/api";
 import {
-  appSettingsRef,
-  qCities,
-  qFooterLinks,
-  qPromos,
-  qServiceZones,
-  qServices,
-} from "../lib/queries";
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { api } from "../lib/api";
 import { FALLBACK_SERVICES } from "../lib/constants";
 import {
   DEFAULT_CUSTOMER_RULES,
@@ -18,7 +17,12 @@ import {
 
 const CatalogueContext = createContext(null);
 
+// The catalogue is almost static. Keep it in localStorage for 15 minutes and
+// let the API's in-memory/CDN cache absorb repeat requests. This avoids one
+// Firestore listener per collection on every page view, which is the main
+// source of read quota usage on the Spark plan.
 const CACHE_KEY = "easyhome:catalogue:v2";
+const CACHE_TTL_MS = 15 * 60 * 1000;
 
 const SETTINGS_DEFAULTS = {
   commissionPct: 10,
@@ -49,23 +53,59 @@ function readCache() {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(CACHE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    // Validate the shape so a partially-written cache (for example one saved
+    // while a Firestore listener was failing) cannot leave empty menus.
+    if (
+      !data ||
+      !Array.isArray(data.services) ||
+      !Array.isArray(data.cities) ||
+      !Array.isArray(data.zones) ||
+      !Array.isArray(data.footerLinks)
+    ) {
+      return null;
+    }
+    return data;
   } catch {
     return null;
   }
 }
 
-function writeCache(patch) {
+function isCacheFresh(cache) {
+  const cachedAt = Number(cache?.cachedAt);
+  return Number.isFinite(cachedAt) && Date.now() - cachedAt < CACHE_TTL_MS;
+}
+
+function writeCache(data) {
   if (typeof window === "undefined") return;
   try {
-    const current = readCache() || {};
     window.localStorage.setItem(
       CACHE_KEY,
-      JSON.stringify({ ...current, ...patch, cachedAt: Date.now() }),
+      JSON.stringify({ ...data, cachedAt: Date.now() }),
     );
   } catch {
-    /* Storage can be unavailable in private mode; live data still works. */
+    /* Storage can be unavailable in private mode; the in-memory copy works. */
   }
+}
+
+function normalizePayload(payload) {
+  return {
+    services: Array.isArray(payload?.services) ? payload.services : [],
+    cities: Array.isArray(payload?.cities) ? payload.cities : [],
+    zones: Array.isArray(payload?.zones) ? payload.zones : [],
+    promos: Array.isArray(payload?.promos) ? payload.promos : [],
+    footerLinks: Array.isArray(payload?.footerLinks) ? payload.footerLinks : [],
+    hiddenFooterHrefs: Array.isArray(payload?.hiddenFooterHrefs)
+      ? payload.hiddenFooterHrefs
+      : [],
+    settings:
+      payload?.settings && typeof payload.settings === "object"
+        ? payload.settings
+        : null,
+    version: payload?.version || 2,
+    fetchedAt: payload?.fetchedAt || new Date().toISOString(),
+  };
 }
 
 function normaliseSettings(data) {
@@ -134,63 +174,84 @@ function normaliseSettings(data) {
   return merged;
 }
 
+function visiblePromos(promos, now) {
+  return promos.filter((promo) => {
+    if (promo.active === false) return false;
+    const starts =
+      promo.startsAt?.toDate?.() ||
+      (promo.startsAt ? new Date(promo.startsAt) : null);
+    const ends =
+      promo.endsAt?.toDate?.() ||
+      (promo.endsAt ? new Date(promo.endsAt) : null);
+    if (starts && !Number.isNaN(starts.getTime()) && starts.getTime() > now) {
+      return false;
+    }
+    if (ends && !Number.isNaN(ends.getTime()) && ends.getTime() < now) {
+      return false;
+    }
+    return true;
+  });
+}
+
 export function CatalogueProvider({ children }) {
-  const servicesQuery = useMemo(() => qServices(), []);
-  const citiesQuery = useMemo(() => qCities(), []);
-  const zonesQuery = useMemo(() => qServiceZones(), []);
-  const promosQuery = useMemo(() => qPromos(), []);
-  const footerLinksQuery = useMemo(() => qFooterLinks(), []);
-  const settingsRef = useMemo(() => appSettingsRef(), []);
-
-  const servicesState = useLiveQuery(servicesQuery);
-  const citiesState = useLiveQuery(citiesQuery);
-  const zonesState = useLiveQuery(zonesQuery);
-  const promosState = useLiveQuery(promosQuery);
-  const footerLinksState = useLiveQuery(footerLinksQuery);
-  const settingsState = useLiveDoc(settingsRef);
-  const [catalogueCache] = useState(readCache);
-
-  // If Firestore reads are still denied (rules not released yet) or the
-  // listener fails offline, use the API's index-free bootstrap as a
-  // read-only fallback. Live documents always win once they arrive.
-  const [bootstrap, setBootstrap] = useState(null);
-  const needsBootstrap = useMemo(
-    () =>
-      !bootstrap &&
-      Boolean(
-        servicesState.error ||
-          citiesState.error ||
-          zonesState.error ||
-          promosState.error ||
-          footerLinksState.error ||
-          settingsState.error,
-      ),
-    [
-      bootstrap,
-      servicesState.error,
-      citiesState.error,
-      zonesState.error,
-      promosState.error,
-      footerLinksState.error,
-      settingsState.error,
-    ],
-  );
+  const [initial] = useState(() => {
+    const cached = readCache();
+    return { cached, fresh: isCacheFresh(cached) };
+  });
+  const [catalogue, setCatalogue] = useState(initial.cached);
+  const [loading, setLoading] = useState(!initial.cached);
+  const [error, setError] = useState("");
+  const inFlightRef = useRef(false);
+  const hasDataRef = useRef(Boolean(initial.cached));
 
   useEffect(() => {
-    if (!needsBootstrap) return undefined;
-    let active = true;
-    api
-      .get("/public/bootstrap")
-      .then((data) => {
-        if (active && data) setBootstrap(data);
-      })
-      .catch(() => {
-        /* offline or API unavailable: hardcoded fallbacks still render */
-      });
-    return () => {
-      active = false;
+    hasDataRef.current = Boolean(catalogue);
+  }, [catalogue]);
+
+  const loadCatalogue = useCallback(async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+    if (!hasDataRef.current) setLoading(true);
+    setError("");
+
+    try {
+      const payload = await api.get("/public/bootstrap");
+      const next = normalizePayload(payload);
+      setCatalogue(next);
+      hasDataRef.current = true;
+      writeCache(next);
+    } catch (err) {
+      // The last successful catalogue stays on screen when a refresh fails.
+      setError(err?.message || "Could not refresh the catalogue.");
+    } finally {
+      inFlightRef.current = false;
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!initial.fresh) loadCatalogue();
+
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      if (!isCacheFresh(readCache())) loadCatalogue();
     };
-  }, [needsBootstrap]);
+    const onStorage = (event) => {
+      if (event.key !== CACHE_KEY || !event.newValue) return;
+      const next = readCache();
+      if (!next) return;
+      setCatalogue(next);
+      hasDataRef.current = true;
+      setLoading(false);
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [initial.fresh, loadCatalogue]);
 
   // A stable clock keeps promo expiry deterministic during render while still
   // letting a banner roll over without a page reload.
@@ -200,171 +261,70 @@ export function CatalogueProvider({ children }) {
     return () => window.clearInterval(timer);
   }, []);
 
-  const promos = useMemo(() => {
-    const source = promosState.data.length
-      ? promosState.data
-      : promosState.error || promosState.loading
-        ? catalogueCache?.promos?.length
-          ? catalogueCache.promos
-          : bootstrap?.promos || []
-        : [];
-    return source.filter((promo) => {
-      if (promo.active === false) return false;
-      const starts = promo.startsAt?.toDate?.() || (promo.startsAt ? new Date(promo.startsAt) : null);
-      const ends = promo.endsAt?.toDate?.() || (promo.endsAt ? new Date(promo.endsAt) : null);
-      if (starts && !Number.isNaN(starts.getTime()) && starts.getTime() > now) return false;
-      if (ends && !Number.isNaN(ends.getTime()) && ends.getTime() < now) return false;
-      return true;
-    });
-  }, [
-    promosState.data,
-    promosState.error,
-    promosState.loading,
-    bootstrap,
-    catalogueCache,
-    now,
-  ]);
-  const footerLinks = useMemo(() => {
-    const cachedLinks = catalogueCache?.footerLinks?.length
-      ? catalogueCache.footerLinks
-      : null;
-    const source = footerLinksState.error
-      ? cachedLinks || bootstrap?.footerLinks || []
-      : footerLinksState.loading
-        ? cachedLinks || []
-        : footerLinksState.data;
-    return source
-      .filter((link) => link.active !== false)
-      .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
-  }, [
-    footerLinksState.data,
-    footerLinksState.error,
-    footerLinksState.loading,
-    bootstrap,
-    catalogueCache,
-  ]);
-
-  // Keep the storefront usable on a cold/offline start or if the ruleset is
-  // still being deployed. Live documents always win once they arrive.
   const services = useMemo(() => {
-    const source = servicesState.data.length
-      ? servicesState.data
-      : catalogueCache?.services?.length
-        ? catalogueCache.services
-        : bootstrap?.services?.length
-          ? bootstrap.services
-          : FALLBACK_SERVICES;
+    const source = catalogue?.services?.length
+      ? catalogue.services
+      : FALLBACK_SERVICES;
     return source.filter((service) => service.active !== false);
-  }, [servicesState.data, bootstrap, catalogueCache]);
-  const cities = useMemo(() => {
-    // Only admin-active locations may appear in customer dropdowns. There is
-    // no hardcoded city list: live zone data (or a cached bootstrap response)
-    // is the only source, so the public picker never advertises a city that
-    // admins have not published.
-    const source = citiesState.data.length
-      ? citiesState.data
-      : citiesState.error || citiesState.loading
-        ? catalogueCache?.cities?.length
-          ? catalogueCache.cities
-          : bootstrap?.cities || []
-        : [];
-    return source.filter((city) => city.active !== false);
-  }, [
-    citiesState.data,
-    citiesState.loading,
-    citiesState.error,
-    bootstrap,
-    catalogueCache,
-  ]);
+  }, [catalogue]);
 
-  const zones = useMemo(() => {
-    const source = zonesState.data.length
-      ? zonesState.data
-      : zonesState.error || zonesState.loading
-        ? catalogueCache?.zones?.length
-          ? catalogueCache.zones
-          : bootstrap?.zones || []
-        : [];
-    return source.filter(Boolean);
-  }, [
-    zonesState.data,
-    zonesState.error,
-    zonesState.loading,
-    bootstrap,
-    catalogueCache,
-  ]);
-
-  const settings = useMemo(
-    () =>
-      normaliseSettings(
-        settingsState.data ||
-          (settingsState.error || settingsState.loading
-            ? catalogueCache?.settings || bootstrap?.settings
-            : null),
-      ),
-    [
-      settingsState.data,
-      settingsState.error,
-      settingsState.loading,
-      bootstrap,
-      catalogueCache,
-    ],
+  const cities = useMemo(
+    () => (catalogue?.cities || []).filter((city) => city.active !== false),
+    [catalogue],
   );
 
-  // Warm the local cache after live data arrives. This keeps the shell, menu
-  // and catalogue instant on the next launch while Firestore reconnects.
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const patch = { settings };
-      if (servicesState.data.length) patch.services = servicesState.data;
-      if (citiesState.data.length) patch.cities = citiesState.data;
-      if (zonesState.data.length) patch.zones = zonesState.data;
-      if (promosState.data.length) patch.promos = promosState.data;
-      if (footerLinksState.data.length) {
-        patch.footerLinks = footerLinksState.data;
-      }
-      writeCache(patch);
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [
-    servicesState.data,
-    citiesState.data,
-    zonesState.data,
-    promosState.data,
-    footerLinksState.data,
-    settings,
-  ]);
+  const zones = useMemo(
+    () => (catalogue?.zones || []).filter(Boolean),
+    [catalogue],
+  );
+
+  const promos = useMemo(
+    () => visiblePromos(catalogue?.promos || [], now),
+    [catalogue, now],
+  );
+
+  const footerLinks = useMemo(
+    () =>
+      (catalogue?.footerLinks || [])
+        .filter((link) => link.active !== false)
+        .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0)),
+    [catalogue],
+  );
+
+  const settings = useMemo(
+    () => normaliseSettings(catalogue?.settings),
+    [catalogue],
+  );
 
   const value = useMemo(
     () => ({
       services,
-      servicesLoading: servicesState.loading,
-      servicesError: servicesState.error,
+      servicesLoading: loading,
+      servicesError: error || null,
       cities,
-      citiesLoading: citiesState.loading,
+      citiesLoading: loading,
       zones,
-      zonesLoading: zonesState.loading,
+      zonesLoading: loading,
       promos,
-      promosLoading: promosState.loading,
+      promosLoading: loading,
       footerLinks,
-      footerLinksLoading: footerLinksState.loading,
+      footerLinksLoading: loading,
       settings,
-      settingsLoading: settingsState.loading,
+      settingsLoading: loading,
+      catalogueUpdatedAt: catalogue?.fetchedAt || null,
+      refreshCatalogue: loadCatalogue,
     }),
     [
       services,
-      servicesState.loading,
-      servicesState.error,
+      loading,
+      error,
       cities,
-      citiesState.loading,
       zones,
-      zonesState.loading,
       promos,
-      promosState.loading,
       footerLinks,
-      footerLinksState.loading,
       settings,
-      settingsState.loading,
+      catalogue,
+      loadCatalogue,
     ],
   );
 
