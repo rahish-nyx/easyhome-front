@@ -376,7 +376,7 @@ function WorkerDetail({
         <KeyValue label="Email" value={worker.email} />
         <KeyValue label="Phone" value={worker.phone} />
         <KeyValue label="Starting price" value={inr(worker.pricePerWork || 0)} />
-        <KeyValue label="Commission dues" value={inr(worker.dues || 0)} tone={worker.dues ? "red" : ""} />
+        <KeyValue label="Fees due" value={inr(worker.dues || 0)} tone={worker.dues ? "red" : ""} />
         <KeyValue label="Rating" value={worker.rating ? `${Number(worker.rating).toFixed(1)} ★` : "New"} />
         <KeyValue label="Jobs completed" value={worker.jobsCompleted || 0} />
         <KeyValue label="Applied" value={formatDateTime(worker.createdAt)} />

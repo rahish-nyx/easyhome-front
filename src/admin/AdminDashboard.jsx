@@ -137,7 +137,7 @@ export default function AdminDashboard() {
           to="/admin/revenue"
         />
         <StatCard
-          label="Commission to verify"
+          label="Fees to verify"
           value={inr(stats?.pendingCommissions)}
           hint={`${stats?.pendingCommissionCount || 0} payment submissions`}
           icon={Wallet}
@@ -173,7 +173,7 @@ export default function AdminDashboard() {
       <div className="adm-grid-2">
         <Panel
           title="Revenue momentum"
-          subtitle="Memberships + commission, last six months"
+          subtitle="Memberships + fees, last six months"
           action={<Link to="/admin/revenue" className="adm-view-link">Revenue <ArrowRight size={13} /></Link>}
         >
           <RevenueChart months={months} height={220} />
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
               <strong>{inr(months[months.length - 1]?.subscriptions)}</strong>
             </div>
             <div>
-              <span>Commission</span>
+              <span>Fees</span>
               <strong>{inr(months[months.length - 1]?.commissions)}</strong>
             </div>
           </div>
@@ -369,11 +369,11 @@ export default function AdminDashboard() {
                 <IndianRupee size={17} />
               </span>
               <div>
-                <strong>Reconcile commissions</strong>
+                <strong>Reconcile fees</strong>
                 <small>
                   {stats?.pendingCommissionCount
                     ? `${stats.pendingCommissionCount} worker payments to check.`
-                    : "All commission payments reconciled."}
+                    : "All fee payments reconciled."}
                 </small>
               </div>
               <ArrowRight size={15} />

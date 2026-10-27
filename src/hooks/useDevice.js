@@ -60,6 +60,26 @@ export function useInstallPrompt() {
   return { canInstall: Boolean(deferred) && !installed, promptInstall, installed };
 }
 
+/** True when the site is running as an installed app (PWA / standalone shell). */
+export function useStandalone() {
+  const [standalone, setStandalone] = useState(
+    typeof window === "undefined"
+      ? false
+      : window.matchMedia?.("(display-mode: standalone)")?.matches ||
+          window.navigator.standalone === true,
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia?.("(display-mode: standalone)");
+    if (!media) return undefined;
+    const onChange = (event) => setStandalone(event.matches);
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+
+  return standalone;
+}
+
 export function useLockBody(locked) {
   useEffect(() => {
     if (!locked) return undefined;

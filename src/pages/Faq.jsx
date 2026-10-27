@@ -64,8 +64,8 @@ const GROUPS = [
         a: "Membership is an optional paid plan for customers. Active Pro members get priority worker matching, no 10% urgent fee, 24×7 priority support, a 20-minute free cancellation window instead of 7 minutes, and a Verified Pro badge. All benefits apply only while the membership is active.",
       },
       {
-        q: "How do professionals pay commission?",
-        a: "Professionals pay a small commission on completed non-premium jobs. Pro members pay 0% commission. Commission payments are verified before new jobs unlock.",
+        q: "How do professionals pay fees?",
+        a: "Professionals pay a small fee on completed non-premium jobs. Pro members pay 0% fees. Fee payments are verified before new jobs unlock.",
       },
       {
         q: "Is my payment information safe?",

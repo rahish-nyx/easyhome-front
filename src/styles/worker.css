@@ -3482,3 +3482,245 @@
     font-size: 9px;
   }
 }
+
+/* Offer Zone embed */
+.wk-ad-slot {
+  position: relative;
+}
+
+.wk-ad-slot__tag {
+  display: inline-flex;
+  margin: 12px 18px 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--wk-blue);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.wk-ad-slot__embed {
+  padding: 10px 18px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.wk-ad-slot__embed iframe,
+.wk-ad-slot__embed video,
+.wk-ad-slot__embed img {
+  display: block;
+  max-width: 100%;
+  border: 0;
+  border-radius: 10px;
+}
+
+.wk-ad-slot__embed a {
+  color: var(--wk-blue);
+  font-weight: 700;
+}
+
+/* Worker referrals */
+.wk-refer-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(240px, 0.85fr);
+  gap: 22px;
+  margin-top: 14px;
+  padding: clamp(18px, 3vw, 26px);
+  border: 1px solid #d6e5f6;
+  border-radius: 20px;
+  background: linear-gradient(130deg, #edf5ff, #fff 68%);
+  box-shadow: 0 10px 30px rgba(24, 55, 91, 0.06);
+}
+
+.wk-refer-card__main h2 {
+  margin: 4px 0 6px;
+  font-size: clamp(26px, 4vw, 38px);
+  letter-spacing: 0.12em;
+  color: var(--wk-blue);
+}
+
+.wk-refer-card__main p {
+  color: var(--wk-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.wk-refer-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.wk-refer-card__actions .wk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wk-refer-card__rules {
+  padding: 14px 16px;
+  border: 1px solid #dbe7f5;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.wk-refer-card__rules strong {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--wk-muted);
+}
+
+.wk-refer-card__rules ul {
+  margin: 8px 0 0;
+  padding-left: 16px;
+  color: var(--wk-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.wk-refer-card__rules li + li {
+  margin-top: 5px;
+}
+
+.wk-refer-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.wk-refer-stat {
+  display: grid;
+  gap: 2px;
+  padding: 14px;
+  border: 1px solid #dde8f4;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.wk-refer-stat strong {
+  font-size: 22px;
+  color: var(--wk-text);
+}
+
+.wk-refer-stat span {
+  color: var(--wk-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.wk-refer-list {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid #dde8f4;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.wk-refer-list__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.wk-refer-list__head h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.wk-refer-list__head span {
+  color: var(--wk-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.wk-refer-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid #edf2f8;
+}
+
+.wk-refer-row strong {
+  font-size: 13px;
+}
+
+.wk-refer-row small {
+  display: block;
+  margin-top: 2px;
+  color: var(--wk-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.wk-refer-row__amount {
+  color: var(--wk-blue);
+  white-space: nowrap;
+}
+
+.wk-refer-empty {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 26px 12px;
+  color: var(--wk-muted);
+  text-align: center;
+}
+
+.wk-refer-empty strong {
+  color: var(--wk-text);
+  font-size: 14px;
+}
+
+.wk-refer-empty p {
+  margin: 0;
+  font-size: 12px;
+}
+
+.wk-text-red {
+  color: #b42318;
+}
+
+.wk-badge--amber {
+  background: #fff7e6;
+  color: #a15c00;
+}
+
+.wk-badge--blue {
+  background: #eaf3ff;
+  color: #1d4ed8;
+}
+
+.wk-badge--red {
+  background: #fef2f2;
+  color: #b42318;
+}
+
+@media (max-width: 760px) {
+  .wk-refer-card {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .wk-refer-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .wk-refer-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .wk-refer-row__amount {
+    grid-column: 2;
+  }
+}

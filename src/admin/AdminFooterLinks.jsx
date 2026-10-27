@@ -26,9 +26,28 @@ const GROUPS = [
   { id: "services", label: "Services" },
   { id: "legal", label: "Legal" },
   { id: "professionals", label: "For professionals" },
+  { id: "social", label: "Social media" },
 ];
 
-const EMPTY_LINK = { label: "", href: "", group: "services", active: true, order: 0 };
+const SOCIAL_ICONS = [
+  { id: "instagram", label: "Instagram" },
+  { id: "facebook", label: "Facebook" },
+  { id: "youtube", label: "YouTube" },
+  { id: "linkedin", label: "LinkedIn" },
+  { id: "x", label: "X / Twitter" },
+  { id: "whatsapp", label: "WhatsApp" },
+  { id: "telegram", label: "Telegram" },
+  { id: "website", label: "Website" },
+];
+
+const EMPTY_LINK = {
+  label: "",
+  href: "",
+  group: "services",
+  icon: "",
+  active: true,
+  order: 0,
+};
 
 export default function AdminFooterLinks() {
   const toast = useToast();
@@ -53,6 +72,7 @@ export default function AdminFooterLinks() {
         label: form.label.trim(),
         href: form.href.trim(),
         group: form.group,
+        icon: form.group === "social" ? String(form.icon || "").trim() : "",
         active: Boolean(form.active),
         order: Number(form.order) || 0,
       };
@@ -164,6 +184,11 @@ export default function AdminFooterLinks() {
                             status={item.active ? "active" : "expired"}
                             label={item.active ? "Published" : "Hidden"}
                           />
+                          {item.group === "social" ? (
+                            <span className="adm-footer-link__icon">
+                              {item.icon || "website"}
+                            </span>
+                          ) : null}
                         </div>
                         <a href={item.href} target="_blank" rel="noreferrer">
                           {item.href} <ExternalLink size={12} />
@@ -280,7 +305,17 @@ function FooterLinkModal({ draft, loading, onClose, onSave }) {
       setError("Enter a link label of at least 2 characters.");
       return;
     }
-    if (!href.startsWith("/") || href.startsWith("//") || href.includes("\\")) {
+    const isExternal = /^https:\/\//i.test(href);
+    if (form.group === "social") {
+      if (!isExternal) {
+        setError("Social links must be a full https:// URL (for example, https://instagram.com/easyhome).");
+        return;
+      }
+    } else if (
+      !href.startsWith("/") ||
+      href.startsWith("//") ||
+      href.includes("\\")
+    ) {
       setError("Use a site path beginning with / (for example, /faq).");
       return;
     }
@@ -293,7 +328,11 @@ function FooterLinkModal({ draft, loading, onClose, onSave }) {
       open={Boolean(draft)}
       onClose={onClose}
       title={draft.id ? "Edit footer link" : "Add footer link"}
-      subtitle="Footer destinations must be internal routes."
+      subtitle={
+        form.group === "social"
+          ? "Social links open in a new tab and can show an icon."
+          : "Footer destinations must be internal EasyHome routes."
+      }
       size="sm"
       footer={
         <>
@@ -316,19 +355,53 @@ function FooterLinkModal({ draft, loading, onClose, onSave }) {
             id="footer-link-href"
             value={form.href || ""}
             maxLength={200}
-            placeholder="/legal/terms"
+            placeholder={
+              form.group === "social"
+                ? "https://instagram.com/easyhome"
+                : "/legal/terms"
+            }
             onChange={(event) => setForm((prev) => ({ ...prev, href: event.target.value }))}
           />
         </Field>
         <Field label="Footer section" htmlFor="footer-link-group">
           <Select
             id="footer-link-group"
-            value={form.group || "company"}
-            onChange={(event) => setForm((prev) => ({ ...prev, group: event.target.value }))}
+            value={form.group || "services"}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                group: event.target.value,
+                icon:
+                  event.target.value === "social"
+                    ? prev.icon || "instagram"
+                    : "",
+              }))
+            }
           >
             {GROUPS.map((group) => <option key={group.id} value={group.id}>{group.label}</option>)}
           </Select>
         </Field>
+        {form.group === "social" ? (
+          <Field
+            label="Social icon"
+            htmlFor="footer-link-icon"
+            hint="Shown next to the label in the footer."
+          >
+            <Select
+              id="footer-link-icon"
+              value={form.icon || "website"}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, icon: event.target.value }))
+              }
+            >
+              {SOCIAL_ICONS.map((icon) => (
+                <option key={icon.id} value={icon.id}>
+                  {icon.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        ) : null}
         <Field label="Display order" htmlFor="footer-link-order">
           <Input
             id="footer-link-order"

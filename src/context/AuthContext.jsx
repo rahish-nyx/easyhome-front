@@ -239,7 +239,7 @@ export function AuthProvider({ children }) {
           name,
           phone,
           role,
-          referralCode: role === "customer" ? pendingReferralCode() : "",
+          referralCode: pendingReferralCode(),
           ...workerFields,
         });
         clearReferralCode();

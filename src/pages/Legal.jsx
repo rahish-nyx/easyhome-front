@@ -35,7 +35,7 @@ const PAGES = {
       {
         heading: "How we make money",
         body: [
-          "Customers pay professionals directly for the service. EasyHome earns a small commission from professionals on completed, non-premium jobs and sells an optional Pro membership.",
+          "Customers pay professionals directly for the service. EasyHome earns a small fee from professionals on completed, non-premium jobs and sells an optional Pro membership.",
           "Prices are always shown in the app before work begins. We do not add hidden customer-side booking fees.",
         ],
       },
@@ -65,7 +65,7 @@ const PAGES = {
         heading: "Bookings and pricing",
         body: [
           "A booking is a request, not a confirmed contract, until an approved professional accepts it. The professional then quotes a final price. The customer may accept it or send one counter-offer.",
-          "No work should begin before the final price is confirmed in the app. The customer pays the professional directly after completion. EasyHome records the payment confirmation for support and commission purposes.",
+          "No work should begin before the final price is confirmed in the app. The customer pays the professional directly after completion. EasyHome records the payment confirmation for support and fee purposes.",
         ],
       },
       {
@@ -107,13 +107,13 @@ const PAGES = {
         heading: "What we collect",
         body: [
           "Account data: name, email, phone, role and profile photo. Booking data: service, description, area, budget, urgency, optional photo and location coordinates.",
-          "Worker data: trade, service area, pricing, UPI ID for commission settlement, ratings and KYC status. KYC images are stored as private Cloudinary assets and sent to the configured admin Telegram chat; access to the images is restricted to authorised administrators.",
+          "Worker data: trade, service area, pricing, UPI ID for fee settlement, ratings and KYC status. KYC images are stored as private Cloudinary assets and sent to the configured admin Telegram chat; access to the images is restricted to authorised administrators.",
         ],
       },
       {
         heading: "How we use it",
         body: [
-          "We use your data to authenticate you, match bookings, show relevant services, process payments and commission, prevent fraud and provide support.",
+          "We use your data to authenticate you, match bookings, show relevant services, process payments and fees, prevent fraud and provide support.",
           "If you choose current-location detection, your coordinates are used to identify service coverage and resolve your locality through OpenStreetMap Nominatim. If GPS is unavailable, EasyHome may use your network IP to estimate your city and state through ipapi.co; this estimate is approximate and does not provide precise coordinates. When a professional is assigned to an active booking, their live location is shared with that booking's customer while tracking is active.",
           "We do not sell personal data. We do not show your phone number publicly or to workers until the final price is confirmed.",
         ],
@@ -171,7 +171,7 @@ const PAGES = {
         heading: "Pricing and urgency",
         body: [
           "Budgets, quotes and final prices are shown in the app. Urgent requests include a 10% urgent fee for non-members; active EasyHome Pro customers are exempt. Urgent and priority benefits apply only while the membership is active.",
-          "EasyHome commission and membership fees are separate from the amount paid to the professional for the service.",
+          "EasyHome service fees and membership fees are separate from the amount paid to the professional for the service.",
         ],
       },
       {
@@ -217,9 +217,9 @@ const PAGES = {
         ],
       },
       {
-        heading: "Commission payments (workers)",
+        heading: "Service fee payments (workers)",
         body: [
-          "Workers pay EasyHome commission on completed non-premium jobs. Commission payments are verified manually. If a payment was submitted but not credited, send the reference to support and we will reconcile it.",
+          "Workers pay EasyHome a service fee on completed non-premium jobs. Fee payments are verified manually. If a payment was submitted but not credited, send the reference to support and we will reconcile it.",
           "Rejected payments do not disappear from your dues. Re-check the reference and submit again.",
         ],
       },

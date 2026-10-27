@@ -42,7 +42,7 @@ export default function WorkerSupport() {
             <p className="wk-eyebrow">EasyHome Pro support</p>
             <h1>We are here for every job.</h1>
             <p>
-              Ask about payouts, commission, customer issues or account verification.
+              Ask about payouts, fees, customer issues or account verification.
               Ending the chat deletes the whole conversation for both sides.
             </p>
           </div>

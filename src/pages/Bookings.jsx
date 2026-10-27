@@ -743,7 +743,7 @@ function PaymentModal({ booking, profile, onClose, onDone }) {
 
         <p className="tiny muted">
           EasyHome does not collect the service amount. Pay the professional directly; the
-          platform records the completion and commission separately.
+          platform records the completion and service fees separately.
         </p>
 
         {profile?.phone ? (

@@ -182,12 +182,12 @@ export default function AdminReferrals() {
               <table className="adm-table">
                 <thead>
                   <tr>
-                    <th>Referred friend</th>
+                    <th>Referred user</th>
                     <th>Referrer</th>
                     <th>Status</th>
                     <th>Reward</th>
                     <th>Signed up</th>
-                    <th>First service</th>
+                    <th>First job / service</th>
                     <th aria-label="Actions" />
                   </tr>
                 </thead>
@@ -198,15 +198,17 @@ export default function AdminReferrals() {
                     return (
                       <tr key={item.id}>
                         <td>
-                          <strong>{item.referredName || "Customer"}</strong>
+                          <strong>{item.referredName || "User"}</strong>
                           <small className="tiny muted" style={{ display: "block" }}>
-                            {item.referredEmail || item.referredId}
+                            {item.referredRole === "worker" ? "Professional" : "Customer"}
+                            {item.referredEmail ? ` · ${item.referredEmail}` : ""}
                           </small>
                         </td>
                         <td>
-                          <strong>{item.referrerName || "Customer"}</strong>
+                          <strong>{item.referrerName || "User"}</strong>
                           <small className="tiny muted" style={{ display: "block" }}>
-                            {item.referrerEmail || item.referrerId}
+                            {item.referrerRole === "worker" ? "Professional" : "Customer"}
+                            {item.referrerEmail ? ` · ${item.referrerEmail}` : ""}
                           </small>
                         </td>
                         <td>
@@ -253,8 +255,18 @@ export default function AdminReferrals() {
                                   : "Reviewed"}
                             </span>
                           ) : (
-                            <span className="tiny muted" title="The friend must complete their first service first">
-                              <ShieldCheck size={14} /> Awaiting service
+                            <span
+                              className="tiny muted"
+                              title={
+                                item.referredRole === "worker"
+                                  ? "The professional must complete their first job first"
+                                  : "The friend must complete their first service first"
+                              }
+                            >
+                              <ShieldCheck size={14} />{" "}
+                              {item.referredRole === "worker"
+                                ? "Awaiting first job"
+                                : "Awaiting first service"}
                             </span>
                           )}
                         </td>
@@ -284,8 +296,12 @@ export default function AdminReferrals() {
         }
         subtitle={
           dialog
-            ? `${dialog.referral.referredName || "The friend"} referred by ${
-                dialog.referral.referrerName || "a customer"
+            ? `${dialog.referral.referredName || "The user"} (${
+                dialog.referral.referredRole === "worker"
+                  ? "professional"
+                  : "customer"
+              }) referred by ${
+                dialog.referral.referrerName || "another user"
               }.`
             : ""
         }

@@ -22,6 +22,7 @@ import {
   planLabel,
 } from "../lib/format";
 import { PLANS } from "../lib/constants";
+import { rolePlans } from "../lib/plans";
 import { usePageMeta } from "../lib/usePageMeta";
 import {
   Badge,
@@ -41,27 +42,72 @@ export default function Subscription() {
   const toast = useToast();
   const [plan, setPlan] = useState("monthly");
 
-  const monthly = Number(settings.subscriptionPrice) || 199;
-  const plans = PLANS.map((item) => ({
-    ...item,
-    amount:
-      item.id === "quarterly"
-        ? Math.round(monthly * 3 * 0.9)
-        : item.id === "yearly"
-          ? Math.round(monthly * 12 * 0.8)
-          : monthly,
-    perMonth:
-      item.id === "quarterly"
-        ? Math.round((monthly * 3 * 0.9) / 3)
-        : item.id === "yearly"
-          ? Math.round((monthly * 12 * 0.8) / 12)
-          : monthly,
-  }));
+  const role = isWorker ? "worker" : "customer";
+  const prices = rolePlans(settings, role);
+  const monthly = prices.monthly;
+  const plans = PLANS.map((item) => {
+    const amount = prices[item.id] ?? monthly;
+    return {
+      ...item,
+      amount,
+      perMonth: Math.round(amount / item.months),
+    };
+  });
   const selected = plans.find((item) => item.id === plan) || plans[0];
   const benefits = isWorker
     ? settings.workerBenefits || []
     : settings.customerBenefits || [];
   const active = isActiveUntil(premiumUntil || profile?.subscription?.endAt);
+  const reasons = isWorker
+    ? [
+        {
+          icon: Zap,
+          title: "Priority job placement",
+          body: "Your profile is shown to nearby customers before non-Pro professionals.",
+        },
+        {
+          icon: Wallet,
+          title: "0% service fees",
+          body: "You keep the full agreed service amount while Pro is active. Urgent fees are always yours.",
+        },
+        {
+          icon: Headphones,
+          title: "24×7 priority support",
+          body: "Pro queries are flagged and answered first by the worker support desk.",
+        },
+        {
+          icon: BadgeCheck,
+          title: "Verified Pro badge",
+          body: "Your active Pro badge appears on your worker profile and job offers.",
+        },
+      ]
+    : [
+        {
+          icon: Zap,
+          title: "Active priority worker matching",
+          body: "Your requests are dispatched to top-rated pros first while Pro is active.",
+        },
+        {
+          icon: Wallet,
+          title: "No urgent-job extra charge",
+          body: "Urgent bookings cost the same as normal — we waive the extra fee.",
+        },
+        {
+          icon: Headphones,
+          title: "24×7 priority support",
+          body: "Pro support chats are flagged and answered first, day or night.",
+        },
+        {
+          icon: Timer,
+          title: "Free cancellation window",
+          body: `${settings.customerRules?.proCancellationMinutes || 20}-minute free cancellation. Free accounts get ${settings.customerRules?.cancellationMinutes || 7} minutes.`,
+        },
+        {
+          icon: BadgeCheck,
+          title: "Verified Pro badge",
+          body: "Your active Pro badge appears on your profile and bookings.",
+        },
+      ];
 
   const onPaid = async () => {
     await refreshProfile();
@@ -76,7 +122,7 @@ export default function Subscription() {
           <h1>{active ? "Your membership" : "A little more peace of mind."}</h1>
           <p>
             {isWorker
-              ? "Zero commission, priority job placement and a verified Pro badge."
+              ? "Zero fees, priority job placement and a verified Pro badge."
               : "Active priority matching, no urgent-job extra charge, 24×7 priority support and a 20-minute free cancellation window."}
           </p>
         </div>
@@ -126,7 +172,7 @@ export default function Subscription() {
             </div>
             <div>
               <strong>{isWorker ? "0%" : "Priority"}</strong>
-              <small>{isWorker ? "Commission" : "Support"}</small>
+              <small>{isWorker ? "Fees" : "Support"}</small>
             </div>
           </div>
         </div>
@@ -214,33 +260,7 @@ export default function Subscription() {
           <Card className="card--pad">
             <h3 style={{ fontSize: 15, marginBottom: 10 }}>Why members stay</h3>
             <div className="stack stack--sm">
-              {[
-                {
-                  icon: Zap,
-                  title: "Active priority worker matching",
-                  body: "Your requests are dispatched to top-rated pros first while Pro is active.",
-                },
-                {
-                  icon: Wallet,
-                  title: "No urgent-job extra charge",
-                  body: "Urgent bookings cost the same as normal — we waive the 10% extra fee.",
-                },
-                {
-                  icon: Headphones,
-                  title: "24×7 priority support",
-                  body: "Pro support chats are flagged and answered first, day or night.",
-                },
-                {
-                  icon: Timer,
-                  title: "20-minute free cancellation",
-                  body: "Cancel free within 20 minutes. Free accounts get 7 minutes.",
-                },
-                {
-                  icon: BadgeCheck,
-                  title: "Verified Pro badge",
-                  body: "Your active Pro badge appears on your profile and bookings.",
-                },
-              ].map((item) => (
+              {reasons.map((item) => (
                 <div className="row" style={{ gap: 11, alignItems: "flex-start" }} key={item.title}>
                   <span className="stat__icon">
                     <item.icon size={17} />

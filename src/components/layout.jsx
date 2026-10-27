@@ -8,19 +8,26 @@ import {
   useNavigate,
 } from "react-router-dom";
 import {
+  AtSign,
   Bell,
   BriefcaseBusiness,
   CalendarCheck,
+  Camera,
   ChevronDown,
   Crown,
   Gift,
+  Globe,
   Home,
   LayoutGrid,
   LogOut,
   MapPin,
   Menu,
+  MessageCircle,
+  Play,
   Search,
+  Send,
   Shield,
+  ThumbsUp,
   User,
   WifiOff,
   X,
@@ -29,7 +36,7 @@ import logo from "../assets/logo.png";
 import { useAuth } from "../context/AuthContext";
 import { useLocation as useCity } from "../context/LocationContext";
 import { useCatalogue } from "../context/CatalogueContext";
-import { useOnline } from "../hooks/useDevice";
+import { useOnline, useStandalone } from "../hooks/useDevice";
 import { Avatar, Badge, Button, IconButton, Modal, Spinner } from "./ui";
 import { NotificationBell } from "./common";
 import { OutOfZoneModal } from "./geofence";
@@ -590,9 +597,49 @@ export function BottomNav() {
 
 /* ---------------------------------- Footer -------------------------------- */
 
+const SOCIAL_ICONS = {
+  facebook: ThumbsUp,
+  instagram: Camera,
+  youtube: Play,
+  linkedin: BriefcaseBusiness,
+  x: AtSign,
+  twitter: AtSign,
+  whatsapp: MessageCircle,
+  whatsappbusiness: MessageCircle,
+  telegram: Send,
+  website: Globe,
+  web: Globe,
+};
+
+function FooterSocialLink({ item }) {
+  const Icon = SOCIAL_ICONS[String(item.icon || "").toLowerCase()] || Globe;
+  const external = /^https:\/\//i.test(item.href || "");
+  const content = (
+    <>
+      <Icon size={16} aria-hidden="true" />
+      <span>{item.label}</span>
+    </>
+  );
+  return external ? (
+    <a
+      href={item.href}
+      className="footer-social__link"
+      target="_blank"
+      rel="noreferrer"
+    >
+      {content}
+    </a>
+  ) : (
+    <Link to={item.href} className="footer-social__link">
+      {content}
+    </Link>
+  );
+}
+
 export function SiteFooter() {
   const { services, cities, footerLinks } = useCatalogue();
   const serviceLinks = footerLinks.filter((item) => item.group === "services");
+  const socialLinks = footerLinks.filter((item) => item.group === "social");
   const footerGroups = [
     { id: "legal", label: "Legal" },
     { id: "professionals", label: "For professionals" },
@@ -672,6 +719,17 @@ export function SiteFooter() {
         })}
       </div>
 
+      {socialLinks.length ? (
+        <div className="footer-social">
+          <h2>Follow EasyHome</h2>
+          <div className="footer-social__links">
+            {socialLinks.map((item) => (
+              <FooterSocialLink key={item.id} item={item} />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <div className="footer-bottom">
         <span>© {new Date().getFullYear()} EasyHome. All rights reserved.</span>
         <div className="footer-cities" aria-label="Service cities">
@@ -689,6 +747,7 @@ export function SiteFooter() {
 
 export function CustomerLayout() {
   const location = useLocation();
+  const standalone = useStandalone();
   const { isWorker } = useAuth();
   const {
     pickerOpen,
@@ -727,7 +786,7 @@ export function CustomerLayout() {
       <main id="main">
         <Outlet />
       </main>
-      <SiteFooter />
+      {standalone ? null : <SiteFooter />}
       <BottomNav />
       <CityModal open={pickerOpen} onClose={closePicker} />
       <OutOfZoneModal

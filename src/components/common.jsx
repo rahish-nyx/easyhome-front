@@ -102,6 +102,9 @@ export function ServiceGrid({ services, className = "" }) {
               <ServiceIcon icon={service.icon} service={service} size={46} iconSize={23} />
             </span>
             <span className="service-tile__name">{service.name}</span>
+            <span className="service-tile__sub">
+              {service.subheading || meta.blurb || "Verified local professional"}
+            </span>
             <span className="service-tile__from">from {inr(service.fromPrice || meta.from || 199)}</span>
           </Link>
         );
@@ -305,6 +308,20 @@ export function PromoCarousel({ promos }) {
           const image = mediaUrl(promo.imagePath);
           const theme = promo.theme || "yellow";
           const isImage = Boolean(image);
+          const embedHtml = String(promo.embedHtml || "").trim();
+          if (embedHtml) {
+            return (
+              <div
+                key={promo.id}
+                className={cx("promo", "promo--embed", `promo--${theme}`)}
+              >
+                <div
+                  className="promo__embed"
+                  dangerouslySetInnerHTML={{ __html: embedHtml }}
+                />
+              </div>
+            );
+          }
           const content = (
             <>
               {isImage ? (

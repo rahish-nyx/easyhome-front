@@ -145,7 +145,7 @@ export default function AdminRevenue() {
     try {
       await api.patch(`/admin/commissions/${commission.id}/approve`);
       toast.success(
-        `Commission ${inr(commission.amount)} approved for ${commission.workerName || "worker"}.`,
+        `Fees ${inr(commission.amount)} approved for ${commission.workerName || "worker"}.`,
       );
       await refreshAll();
     } catch (error) {
@@ -166,7 +166,7 @@ export default function AdminRevenue() {
       await api.patch(`/admin/commissions/${rejectCommissionTarget.id}/reject`, {
         reason: rejectCommissionReason.trim(),
       });
-      toast.success("Commission submission rejected.");
+      toast.success("Fees submission rejected.");
       setRejectCommissionTarget(null);
       setRejectCommissionReason("");
       await refreshAll();
@@ -226,7 +226,7 @@ export default function AdminRevenue() {
         <StatCard
           label="Total revenue"
           value={inr(revenue.total)}
-          hint="Approved memberships + commissions"
+          hint="Approved memberships + fees"
           icon={TrendingUp}
           tone="yellow"
         />
@@ -238,16 +238,16 @@ export default function AdminRevenue() {
           tone="purple"
         />
         <StatCard
-          label="Commission"
+          label="Fees"
           value={inr(revenue.commissionTotal)}
-          hint="Approved worker commission"
+          hint="Approved worker fees"
           icon={Wallet}
           tone="green"
         />
         <StatCard
           label="This month"
           value={compactInr(months[months.length - 1]?.amount)}
-          hint="Membership + commission"
+          hint="Membership + fees"
           icon={IndianRupee}
           tone="blue"
         />
@@ -257,7 +257,7 @@ export default function AdminRevenue() {
         <Panel title="Revenue mix" subtitle="Last six months, approved only">
           <RevenueChart months={months} height={230} />
         </Panel>
-        <Panel title="Monthly breakdown" subtitle="Membership vs commission">
+        <Panel title="Monthly breakdown" subtitle="Membership vs fees">
           <div className="adm-revenue-list">
             {months.map((month) => (
               <div className="adm-revenue-row" key={month.key}>
@@ -293,7 +293,7 @@ export default function AdminRevenue() {
               <i className="is-sub" /> Memberships
             </span>
             <span>
-              <i className="is-com" /> Commission
+              <i className="is-com" /> Fees
             </span>
           </div>
         </Panel>
@@ -303,7 +303,7 @@ export default function AdminRevenue() {
         <SegTabs
           items={[
             { id: "memberships", label: "Membership approvals" },
-            { id: "commissions", label: "Commission queue" },
+            { id: "commissions", label: "Fees queue" },
           ]}
           value={tab}
           onChange={setTab}
@@ -424,7 +424,7 @@ export default function AdminRevenue() {
             onRetry={() => commissionsState.run().catch(() => {})}
           />
           {commissionsState.loading && !commissionsState.data ? (
-            <LoadingBlock label="Loading commission queue…" />
+            <LoadingBlock label="Loading fees queue…" />
           ) : (
             <Panel flush>
               {commissions.length ? (
@@ -468,7 +468,7 @@ export default function AdminRevenue() {
                       </div>
                       <div className="adm-approval__side">
                         <strong>{inr(commission.amount)}</strong>
-                        <span>commission</span>
+                        <span>fees</span>
                         {["paid", "pending"].includes(commission.status) ? (
                           <div className="adm-inline-actions">
                             <Button
@@ -499,10 +499,10 @@ export default function AdminRevenue() {
               ) : (
                 <EmptyBlock
                   icon={Wallet}
-                  title="No commissions in this state"
+                  title="No fees in this state"
                   body={
                     comStatus === "paid"
-                      ? "Razorpay commission clearances appear here automatically."
+                      ? "Razorpay fee clearances appear here automatically."
                       : "Nothing to show for this filter."
                   }
                 />
@@ -529,18 +529,18 @@ export default function AdminRevenue() {
       <ReasonModal
         open={Boolean(rejectCommissionTarget)}
         onClose={() => setRejectCommissionTarget(null)}
-        title="Reject commission payment"
+        title="Reject fee payment"
         subtitle={
           rejectCommissionTarget
             ? `${rejectCommissionTarget.workerName} · ${inr(rejectCommissionTarget.amount)}`
             : ""
         }
         label="Reason"
-        placeholder="e.g. Legacy commission reference could not be verified."
+        placeholder="e.g. Legacy fee reference could not be verified."
         value={rejectCommissionReason}
         onChange={setRejectCommissionReason}
         loading={busy === `com-reject:${rejectCommissionTarget?.id}`}
-        confirmLabel="Reject commission"
+        confirmLabel="Reject fees"
         onSubmit={rejectCommissionAction}
       />
 

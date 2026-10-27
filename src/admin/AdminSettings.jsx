@@ -36,13 +36,29 @@ import {
 } from "./adminKit";
 
 const EMPTY_SETTINGS = {
-  commissionPct: 10,
-  subscriptionPrice: 199,
+  customerMonthly: 199,
+  customerQuarterly: 537,
+  customerYearly: 1910,
+  workerMonthly: 250,
+  workerQuarterly: 675,
+  workerYearly: 2400,
+  feesPct: 10,
+  customerUrgentFeePct: 10,
+  workerUrgentFeePct: 10,
+  cancellationMinutes: 7,
+  proCancellationMinutes: 20,
+  workerCancellationMinutes: 7,
   supportPhone: "",
   maintenanceMode: false,
   customerBenefits: "",
   workerBenefits: "",
 };
+
+function derivedPlan(monthly, months) {
+  const value = Number(monthly) || 0;
+  const multiplier = months === 12 ? 0.8 : months === 3 ? 0.9 : 1;
+  return Math.round(value * months * multiplier);
+}
 
 const ACTION_LABELS = {
   "user.update": "User updated",
@@ -87,9 +103,30 @@ export default function AdminSettings() {
   useEffect(() => {
     if (!settingsState.data) return;
     const fresh = settingsState.data.settings || {};
+    const customerPlans = fresh.customerPlans || {};
+    const workerPlans = fresh.workerPlans || {};
+    const customerRules = fresh.customerRules || {};
+    const workerRulesData = fresh.workerRules || {};
     setForm({
-      commissionPct: fresh.commissionPct ?? 10,
-      subscriptionPrice: fresh.subscriptionPrice ?? 199,
+      customerMonthly:
+        customerPlans.monthly ?? fresh.subscriptionPrice ?? 199,
+      customerQuarterly:
+        customerPlans.quarterly ??
+        derivedPlan(customerPlans.monthly ?? fresh.subscriptionPrice ?? 199, 3),
+      customerYearly:
+        customerPlans.yearly ??
+        derivedPlan(customerPlans.monthly ?? fresh.subscriptionPrice ?? 199, 12),
+      workerMonthly: workerPlans.monthly ?? 250,
+      workerQuarterly:
+        workerPlans.quarterly ?? derivedPlan(workerPlans.monthly ?? 250, 3),
+      workerYearly:
+        workerPlans.yearly ?? derivedPlan(workerPlans.monthly ?? 250, 12),
+      feesPct: workerRulesData.feesPct ?? fresh.commissionPct ?? 10,
+      customerUrgentFeePct: customerRules.urgentFeePct ?? 10,
+      workerUrgentFeePct: workerRulesData.urgentFeePct ?? 10,
+      cancellationMinutes: customerRules.cancellationMinutes ?? 7,
+      proCancellationMinutes: customerRules.proCancellationMinutes ?? 20,
+      workerCancellationMinutes: workerRulesData.cancellationMinutes ?? 7,
       supportPhone: fresh.supportPhone || "",
       maintenanceMode: Boolean(fresh.maintenanceMode),
       customerBenefits: (fresh.customerBenefits || []).join("\n"),
@@ -106,6 +143,17 @@ export default function AdminSettings() {
   const set = (key) => (event) =>
     setForm((prev) => ({ ...prev, [key]: event.target.value }));
 
+  const setMonthly = (role) => (event) => {
+    const value = event.target.value;
+    const prefix = role === "worker" ? "worker" : "customer";
+    setForm((prev) => ({
+      ...prev,
+      [`${prefix}Monthly`]: value,
+      [`${prefix}Quarterly`]: derivedPlan(value, 3),
+      [`${prefix}Yearly`]: derivedPlan(value, 12),
+    }));
+  };
+
   const splitLines = (value) =>
     String(value || "")
       .split("\n")
@@ -113,15 +161,44 @@ export default function AdminSettings() {
       .filter(Boolean);
 
   const saveSettings = async () => {
-    if (Number(form.commissionPct) < 0 || Number(form.commissionPct) > 40) {
-      toast.error("Commission must be between 0 and 40%.");
+    if (Number(form.feesPct) < 0 || Number(form.feesPct) > 40) {
+      toast.error("Professional fees must be between 0 and 40%.");
+      return;
+    }
+    if (
+      Number(form.customerUrgentFeePct) < 0 ||
+      Number(form.customerUrgentFeePct) > 100 ||
+      Number(form.workerUrgentFeePct) < 0 ||
+      Number(form.workerUrgentFeePct) > 100
+    ) {
+      toast.error("Urgent fees must be between 0 and 100%.");
       return;
     }
     setSaving(true);
     try {
       const payload = {
-        commissionPct: Number(form.commissionPct) || 0,
-        subscriptionPrice: Number(form.subscriptionPrice) || 0,
+        commissionPct: Number(form.feesPct) || 0,
+        subscriptionPrice: Number(form.customerMonthly) || 0,
+        customerPlans: {
+          monthly: Number(form.customerMonthly) || 0,
+          quarterly: Number(form.customerQuarterly) || 0,
+          yearly: Number(form.customerYearly) || 0,
+        },
+        workerPlans: {
+          monthly: Number(form.workerMonthly) || 0,
+          quarterly: Number(form.workerQuarterly) || 0,
+          yearly: Number(form.workerYearly) || 0,
+        },
+        customerRules: {
+          urgentFeePct: Number(form.customerUrgentFeePct) || 0,
+          cancellationMinutes: Number(form.cancellationMinutes) || 7,
+          proCancellationMinutes: Number(form.proCancellationMinutes) || 20,
+        },
+        workerRules: {
+          feesPct: Number(form.feesPct) || 0,
+          urgentFeePct: Number(form.workerUrgentFeePct) || 0,
+          cancellationMinutes: Number(form.workerCancellationMinutes) || 7,
+        },
         supportPhone: form.supportPhone.trim(),
         maintenanceMode: Boolean(form.maintenanceMode),
         customerBenefits: splitLines(form.customerBenefits),
@@ -250,37 +327,178 @@ export default function AdminSettings() {
       ) : tab === "general" ? (
         <div className="adm-settings-grid">
           <div className="adm-settings-main">
-            <Panel title="Pricing & commission" subtitle="Applied to new bookings and payouts">
-              <div className="adm-form-grid">
+            <Panel
+              title="Customer pricing & rules"
+              subtitle="Membership plans and booking rules for customers"
+            >
+              <div className="adm-form-grid adm-form-grid--3">
                 <Field
-                  label="Commission (%)"
-                  htmlFor="set-commission"
-                  hint="Charged on completed non-Pro jobs."
+                  label="Monthly (₹)"
+                  htmlFor="set-customer-monthly"
+                  hint="Changing this recalculates quarterly and yearly."
                 >
                   <Input
-                    id="set-commission"
+                    id="set-customer-monthly"
+                    type="number"
+                    min={0}
+                    max={100000}
+                    value={form.customerMonthly}
+                    onChange={setMonthly("customer")}
+                  />
+                </Field>
+                <Field label="Quarterly (₹)" htmlFor="set-customer-quarterly">
+                  <Input
+                    id="set-customer-quarterly"
+                    type="number"
+                    min={0}
+                    max={100000}
+                    value={form.customerQuarterly}
+                    onChange={set("customerQuarterly")}
+                  />
+                </Field>
+                <Field label="Yearly (₹)" htmlFor="set-customer-yearly">
+                  <Input
+                    id="set-customer-yearly"
+                    type="number"
+                    min={0}
+                    max={100000}
+                    value={form.customerYearly}
+                    onChange={set("customerYearly")}
+                  />
+                </Field>
+                <Field
+                  label="Urgent fee (%)"
+                  htmlFor="set-customer-urgent"
+                  hint="Added to the agreed price for urgent jobs. Paid to the professional."
+                >
+                  <Input
+                    id="set-customer-urgent"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.5"
+                    value={form.customerUrgentFeePct}
+                    onChange={set("customerUrgentFeePct")}
+                  />
+                </Field>
+                <Field
+                  label="Free cancellation (minutes)"
+                  htmlFor="set-customer-cancel"
+                  hint="Standard customer window."
+                >
+                  <Input
+                    id="set-customer-cancel"
+                    type="number"
+                    min={1}
+                    max={1440}
+                    value={form.cancellationMinutes}
+                    onChange={set("cancellationMinutes")}
+                  />
+                </Field>
+                <Field
+                  label="Pro free cancellation (minutes)"
+                  htmlFor="set-pro-cancel"
+                  hint="Customer Pro window."
+                >
+                  <Input
+                    id="set-pro-cancel"
+                    type="number"
+                    min={1}
+                    max={1440}
+                    value={form.proCancellationMinutes}
+                    onChange={set("proCancellationMinutes")}
+                  />
+                </Field>
+              </div>
+
+              <div className="adm-settings-divider" />
+
+              <h4 className="adm-settings-subhead">Professional pricing & rules</h4>
+              <div className="adm-form-grid adm-form-grid--3">
+                <Field
+                  label="Monthly (₹)"
+                  htmlFor="set-worker-monthly"
+                  hint="Base professional plan. Quarterly and yearly are calculated."
+                >
+                  <Input
+                    id="set-worker-monthly"
+                    type="number"
+                    min={0}
+                    max={100000}
+                    value={form.workerMonthly}
+                    onChange={setMonthly("worker")}
+                  />
+                </Field>
+                <Field label="Quarterly (₹)" htmlFor="set-worker-quarterly">
+                  <Input
+                    id="set-worker-quarterly"
+                    type="number"
+                    min={0}
+                    max={100000}
+                    value={form.workerQuarterly}
+                    onChange={set("workerQuarterly")}
+                  />
+                </Field>
+                <Field label="Yearly (₹)" htmlFor="set-worker-yearly">
+                  <Input
+                    id="set-worker-yearly"
+                    type="number"
+                    min={0}
+                    max={100000}
+                    value={form.workerYearly}
+                    onChange={set("workerYearly")}
+                  />
+                </Field>
+                <Field
+                  label="Service fees (%)"
+                  htmlFor="set-fees"
+                  hint="Charged to non-Pro professionals on the agreed service price only."
+                >
+                  <Input
+                    id="set-fees"
                     type="number"
                     min={0}
                     max={40}
                     step="0.5"
-                    value={form.commissionPct}
-                    onChange={set("commissionPct")}
+                    value={form.feesPct}
+                    onChange={set("feesPct")}
                   />
                 </Field>
                 <Field
-                  label="Membership price (₹ / month)"
-                  htmlFor="set-price"
-                  hint="Used to calculate monthly, quarterly and yearly plans."
+                  label="Urgent fee (%)"
+                  htmlFor="set-worker-urgent"
+                  hint="Professional-side urgent fee rule."
                 >
                   <Input
-                    id="set-price"
+                    id="set-worker-urgent"
                     type="number"
                     min={0}
-                    max={100000}
-                    value={form.subscriptionPrice}
-                    onChange={set("subscriptionPrice")}
+                    max={100}
+                    step="0.5"
+                    value={form.workerUrgentFeePct}
+                    onChange={set("workerUrgentFeePct")}
                   />
                 </Field>
+                <Field
+                  label="Cancellation window (minutes)"
+                  htmlFor="set-worker-cancel"
+                  hint="Professional-side cancellation rule."
+                >
+                  <Input
+                    id="set-worker-cancel"
+                    type="number"
+                    min={1}
+                    max={1440}
+                    value={form.workerCancellationMinutes}
+                    onChange={set("workerCancellationMinutes")}
+                  />
+                </Field>
+              </div>
+
+              <div className="adm-settings-divider" />
+
+              <h4 className="adm-settings-subhead">Support & availability</h4>
+              <div className="adm-form-grid">
                 <Field
                   label="Support phone"
                   htmlFor="set-phone"
@@ -340,7 +558,7 @@ export default function AdminSettings() {
                     rows={6}
                     value={form.workerBenefits}
                     onChange={set("workerBenefits")}
-                    placeholder={"0% commission\nPriority job feed\nPro badge"}
+                    placeholder={"0% fees\nPriority job feed\nPro badge"}
                   />
                 </Field>
               </div>
@@ -359,7 +577,7 @@ export default function AdminSettings() {
                 <span className="adm-price-preview__eyebrow">EasyHome Pro</span>
                 <strong>
                   <IndianRupee size={20} />
-                  {Number(form.subscriptionPrice || 0).toLocaleString("en-IN")}
+                  {Number(form.customerMonthly || 0).toLocaleString("en-IN")}
                 </strong>
                 <span>per month, billed monthly</span>
                 <ul>
@@ -374,8 +592,8 @@ export default function AdminSettings() {
                 </ul>
               </div>
               <div className="adm-fineprint">
-                <Wallet size={13} /> Worker commission is{" "}
-                {Number(form.commissionPct || 0)}% unless they hold Pro.
+                <Wallet size={13} /> Professional fees are{" "}
+                {Number(form.feesPct || 0)}% unless they hold Pro.
               </div>
             </Panel>
 

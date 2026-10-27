@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowRight,
@@ -11,8 +11,10 @@ import {
   ChevronRight,
   CircleAlert,
   Clock3,
+  Copy,
   Crosshair,
   Crown,
+  Gift,
   Headphones,
   Home,
   IndianRupee,
@@ -26,13 +28,13 @@ import {
   Radio,
   ReceiptText,
   RefreshCw,
+  Share2,
   ShieldCheck,
   Sparkles,
   Star,
   Timer,
   TrendingUp,
   UserRound,
-  Users,
   Wallet,
   Zap,
 } from "lucide-react";
@@ -54,6 +56,7 @@ import {
   timeAgo,
 } from "../lib/format";
 import { PLANS, SERVICE_META, TRACKING_PHASES, trackingMeta } from "../lib/constants";
+import { rolePlans, workerFeePct } from "../lib/plans";
 import { usePageMeta } from "../lib/usePageMeta";
 import {
   Avatar,
@@ -81,6 +84,7 @@ const TABS = [
   { id: "home", label: "Home", icon: Home },
   { id: "jobs", label: "Jobs", icon: BriefcaseBusiness },
   { id: "earnings", label: "Earnings", icon: Wallet },
+  { id: "refer", label: "Refer", icon: Gift },
   { id: "membership", label: "Membership", icon: Crown },
   { id: "profile", label: "Profile", icon: UserRound },
 ];
@@ -128,7 +132,7 @@ export default function WorkerDashboard() {
   const [priceTarget, setPriceTarget] = useState(null);
   const [confirmTarget, setConfirmTarget] = useState(null);
   const [completeTarget, setCompleteTarget] = useState(null);
-  const [commissionTarget, setCommissionTarget] = useState(null);
+  const [feeTarget, setFeeTarget] = useState(null);
 
   const earningsState = useAsync(() => api.get("/worker/earnings"), []);
   const commissionsState = useAsync(() => api.get("/worker/commission"), []);
@@ -240,11 +244,11 @@ export default function WorkerDashboard() {
         ["pending", "rejected"].includes(item.status),
       );
       if (payable) {
-        setCommissionTarget(payable);
-        toast.info("Pay your commission due to unlock new jobs.");
+        setFeeTarget(payable);
+        toast.info("Pay your fees due to unlock new jobs.");
       } else {
         toast.error(
-          "Your commission is still pending. Open Earnings to complete the secure checkout.",
+          "Your fees are still pending. Open Earnings to complete the secure checkout.",
         );
       }
       return;
@@ -326,9 +330,9 @@ export default function WorkerDashboard() {
     }
   };
 
-  const handleCommissionPaid = async () => {
-    setCommissionTarget(null);
-    toast.success("Commission verified automatically. New jobs are unlocked.");
+  const handleFeesPaid = async () => {
+    setFeeTarget(null);
+    toast.success("Fees verified automatically. New jobs are unlocked.");
     await Promise.allSettled([refreshMoney(), refreshProfile()]);
   };
 
@@ -440,7 +444,7 @@ export default function WorkerDashboard() {
               <CircleAlert size={18} />
             </span>
             <div className="grow">
-              <strong>{inr(worker.dues)} commission due</strong>
+              <strong>{inr(worker.dues)} fees due</strong>
               <p>Clear dues or activate Pro to keep accepting new jobs.</p>
             </div>
             <button type="button" className="wk-link-btn" onClick={() => setTab("earnings")}>
@@ -499,9 +503,13 @@ export default function WorkerDashboard() {
             loading={earningsState.loading || commissionsState.loading}
             isPremium={isPremium}
             onRefresh={refreshMoney}
-            onCommission={setCommissionTarget}
+            onFees={setFeeTarget}
             onUpgrade={() => setTab("membership")}
           />
+        ) : null}
+
+        {tab === "refer" ? (
+          <WorkerReferTab worker={worker} profile={profile} />
         ) : null}
 
         {tab === "membership" ? (
@@ -568,10 +576,10 @@ export default function WorkerDashboard() {
         onClose={() => setCompleteTarget(null)}
         onConfirm={() => submitComplete(completeTarget)}
       />
-      <CommissionModal
-        commission={commissionTarget}
-        onClose={() => setCommissionTarget(null)}
-        onPaid={handleCommissionPaid}
+      <FeesModal
+        commission={feeTarget}
+        onClose={() => setFeeTarget(null)}
+        onPaid={handleFeesPaid}
       />
 
       <TrackingBuzzer
@@ -617,7 +625,7 @@ function EarningsStrip({ earnings, worker, isPremium, refreshing, onRefresh, onE
         <strong>{inr(earnings.month)}</strong>
       </div>
       <div className="wk-earnings-strip__metric">
-        <span>Commission due</span>
+        <span>Fees due</span>
         <strong className={Number(earnings.dues) > 0 ? "wk-text-red" : ""}>
           {inr(earnings.dues)}
         </strong>
@@ -739,6 +747,7 @@ function WorkerAdSlot({ promos }) {
   if (!promo) return null;
 
   const imageUrl = mediaUrl(promo.imagePath);
+  const embedHtml = String(promo.embedHtml || "").trim();
   const content = (
     <>
       {imageUrl ? <img className="wk-ad-slot__image" src={imageUrl} alt="" /> : null}
@@ -754,8 +763,14 @@ function WorkerAdSlot({ promos }) {
     safeLink.startsWith("/") && !safeLink.startsWith("//") && !safeLink.includes("\\");
 
   return (
-    <aside className={`wk-ad-slot is-${promo.theme || "blue"}`} aria-label="Promoted offer">
-      {isSafeInternalLink ? (
+    <aside className={`wk-ad-slot is-${promo.theme || "blue"}`} aria-label="Offer Zone">
+      <span className="wk-ad-slot__tag">Offer Zone</span>
+      {embedHtml ? (
+        <div
+          className="wk-ad-slot__embed"
+          dangerouslySetInnerHTML={{ __html: embedHtml }}
+        />
+      ) : isSafeInternalLink ? (
         <Link to={safeLink}>{content}</Link>
       ) : (
         <div>{content}</div>
@@ -768,12 +783,14 @@ function MembershipTab({ worker, isPremium, settings }) {
   const { refreshClaims, refreshProfile } = useAuth();
   const toast = useToast();
   const [plan, setPlan] = useState("monthly");
-  const monthly = Number(settings.subscriptionPrice) || 199;
+  const prices = rolePlans(settings, "worker");
   const plans = PLANS.map((item) => {
-    const multiplier = item.id === "quarterly" ? 3 : item.id === "yearly" ? 12 : 1;
-    const discount = item.id === "quarterly" ? 0.9 : item.id === "yearly" ? 0.8 : 1;
-    const amount = Math.round(monthly * multiplier * discount);
-    return { ...item, amount, perMonth: Math.round(amount / multiplier) };
+    const amount = prices[item.id] ?? prices.monthly;
+    return {
+      ...item,
+      amount,
+      perMonth: Math.round(amount / item.months),
+    };
   });
   const selected = plans.find((item) => item.id === plan) || plans[0];
 
@@ -788,7 +805,7 @@ function MembershipTab({ worker, isPremium, settings }) {
         <div>
           <p className="wk-eyebrow">EasyHome Pro</p>
           <h1>Membership</h1>
-          <p>Choose a plan for zero commission and priority access to jobs.</p>
+          <p>Choose a plan for zero fees and priority access to jobs.</p>
         </div>
         {isPremium ? <span className="wk-badge wk-badge--green">Membership active</span> : null}
       </div>
@@ -799,7 +816,7 @@ function MembershipTab({ worker, isPremium, settings }) {
           <p>
             {isPremium
               ? `Your current membership is active until ${formatDateTime(worker.premiumUntil)}.`
-              : "Pro includes 0% commission, priority job placement and a verified Pro badge."}
+              : "Pro includes 0% fees, priority job placement and a verified Pro badge."}
           </p>
           <ul>
             {(settings.workerBenefits || []).map((benefit) => (
@@ -894,7 +911,7 @@ function HomeTab({
           </div>
           <div>
             <strong>{isPremium ? "0%" : "—"}</strong>
-            <span>Commission</span>
+            <span>Fees</span>
           </div>
         </div>
       </div>
@@ -940,7 +957,7 @@ function HomeTab({
           </span>
           <span>
             <strong>Earnings</strong>
-            <small>Payouts, dues and commission</small>
+            <small>Payouts, dues and fees</small>
           </span>
           <ChevronRight size={16} />
         </button>
@@ -992,8 +1009,8 @@ function WorkerPromos({ worker, isPremium, onTab }) {
             <strong>{isPremium ? "Pro membership is active" : "Upgrade to EasyHome Pro"}</strong>
             <small>
               {isPremium
-                ? "0% commission, priority placement and urgent-job priority."
-                : "Keep 100% of your earnings with 0% commission on Pro."}
+                ? "0% fees, priority placement and urgent-job priority."
+                : "Keep 100% of your earnings with 0% fees on Pro."}
             </small>
           </span>
           <ChevronRight size={17} />
@@ -1023,14 +1040,17 @@ function WorkerPromos({ worker, isPremium, onTab }) {
         <button
           type="button"
           className="wk-promo wk-promo--green"
-          onClick={() => onTab("earnings")}
+          onClick={() => onTab("refer")}
         >
           <span className="wk-promo__icon">
-            <Users size={20} />
+            <Gift size={20} />
           </span>
           <span className="grow">
             <strong>Refer &amp; earn</strong>
-            <small>Invite skilled pros and earn referral bonuses when they complete jobs.</small>
+            <small>
+              Invite skilled pros. Rewards are approved after their first
+              completed job and admin verification.
+            </small>
           </span>
           <ChevronRight size={17} />
         </button>
@@ -1047,6 +1067,185 @@ function WorkerPromos({ worker, isPremium, onTab }) {
         </Link>
       </div>
     </section>
+  );
+}
+
+const WORKER_REFERRAL_STATUS = {
+  pending: {
+    label: "Awaiting first job",
+    tone: "amber",
+    hint: "Rewards unlock after their first completed job and admin verification.",
+  },
+  service_completed: {
+    label: "Under admin review",
+    tone: "blue",
+    hint: "Their first job is complete. Our team is verifying the referral.",
+  },
+  approved: {
+    label: "Approved",
+    tone: "green",
+    hint: "Approved by admin. The reward is paid separately and never auto-credited.",
+  },
+  rejected: {
+    label: "Not approved",
+    tone: "red",
+    hint: "This referral did not pass verification. Contact support if you need help.",
+  },
+};
+
+function WorkerReferTab({ worker, profile }) {
+  const toast = useToast();
+  const [state, setState] = useState({ loading: true, data: null, error: "" });
+  const [copied, setCopied] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const data = await api.get("/referrals/me");
+      setState({ loading: false, data, error: "" });
+    } catch (error) {
+      setState({ loading: false, data: null, error: error.message });
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+    const timer = window.setInterval(load, 20000);
+    return () => window.clearInterval(timer);
+  }, [load]);
+
+  const code = state.data?.code || "";
+  const shareUrl = useMemo(() => {
+    if (!code || typeof window === "undefined") return "";
+    return `${window.location.origin}/auth?mode=signup&role=worker&ref=${encodeURIComponent(code)}`;
+  }, [code]);
+  const stats = state.data?.stats || {};
+  const referrals = state.data?.referrals || [];
+
+  const copyLink = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+      toast.success("Professional invite link copied.");
+    } catch {
+      toast.error("Copy failed. Press and hold to copy manually.");
+    }
+  };
+
+  const shareLink = async () => {
+    if (!shareUrl) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Join EasyHome as a professional",
+          text: "Join EasyHome with my professional invite. We each unlock ₹51 after your first completed job and admin verification.",
+          url: shareUrl,
+        });
+        return;
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+      }
+    }
+    await copyLink();
+  };
+
+  return (
+    <>
+      <div className="wk-page-head">
+        <div>
+          <p className="wk-eyebrow">Refer &amp; Earn</p>
+          <h1>Grow the professional network</h1>
+          <p>
+            Invite another verified professional. You both unlock ₹51 after
+            their first completed job and admin approval.
+          </p>
+        </div>
+        <span className="wk-badge wk-badge--green">₹51 each</span>
+      </div>
+
+      <section className="wk-refer-card">
+        <div className="wk-refer-card__main">
+          <p className="wk-eyebrow">Your professional code</p>
+          <h2>{state.loading && !code ? "Loading your code…" : code || "Code unavailable"}</h2>
+          <p>
+            {worker?.name || profile?.name || "This professional"} invites another
+            professional to join EasyHome. Same-role referrals only.
+          </p>
+          <div className="wk-refer-card__actions">
+            <button type="button" className="wk-btn wk-btn--primary" onClick={shareLink}>
+              <Share2 size={16} /> Share invite
+            </button>
+            <button type="button" className="wk-btn" onClick={copyLink}>
+              <Copy size={16} /> {copied ? "Copied" : "Copy link"}
+            </button>
+            <button type="button" className="wk-btn wk-btn--outline" onClick={load}>
+              <RefreshCw size={15} /> Refresh
+            </button>
+          </div>
+          {state.error ? <p className="wk-text-red tiny">{state.error}</p> : null}
+        </div>
+        <div className="wk-refer-card__rules">
+          <strong>How it works</strong>
+          <ul>
+            <li>Share your link with a professional who is new to EasyHome.</li>
+            <li>They create a professional account with your code.</li>
+            <li>After their first completed job, the referral enters admin review.</li>
+            <li>Rewards are never auto-credited; approval is always manual.</li>
+          </ul>
+        </div>
+      </section>
+
+      <div className="wk-refer-stats">
+        {[
+          ["Invited", stats.total || 0],
+          ["Awaiting job", stats.pending || 0],
+          ["In review", stats.awaitingVerification || 0],
+          ["Approved rewards", inr(stats.approvedRewards || 0)],
+        ].map(([label, value]) => (
+          <div className="wk-refer-stat" key={label}>
+            <strong>{value}</strong>
+            <span>{label}</span>
+          </div>
+        ))}
+      </div>
+
+      <section className="wk-refer-list">
+        <div className="wk-refer-list__head">
+          <h2>Your referrals</h2>
+          <span>{referrals.length} total</span>
+        </div>
+        {referrals.length ? (
+          referrals.map((item) => {
+            const meta =
+              WORKER_REFERRAL_STATUS[item.status] ||
+              WORKER_REFERRAL_STATUS.pending;
+            return (
+              <article className="wk-refer-row" key={item.id}>
+                <div>
+                  <strong>{item.referredName}</strong>
+                  <small>
+                    Joined {formatDateTime(item.createdAt)} · {meta.hint}
+                  </small>
+                </div>
+                <span className={`wk-badge wk-badge--${meta.tone}`}>
+                  {meta.label}
+                </span>
+                <strong className="wk-refer-row__amount">
+                  {inr(item.rewardAmount || 51)}
+                </strong>
+              </article>
+            );
+          })
+        ) : (
+          <div className="wk-refer-empty">
+            <Gift size={22} />
+            <strong>No referrals yet</strong>
+            <p>Share your professional invite to start earning.</p>
+          </div>
+        )}
+      </section>
+    </>
   );
 }
 
@@ -1098,7 +1297,7 @@ function WorkerFooter() {
         <div className="wk-footer__col">
           <h3>Grow with EasyHome</h3>
           <Link to="/worker?tab=membership">Membership &amp; upgrade</Link>
-          <Link to="/worker?tab=earnings">Commission &amp; payouts</Link>
+          <Link to="/worker?tab=earnings">Fees &amp; payouts</Link>
           <Link to="/worker/support">Report an issue</Link>
         </div>
       </div>
@@ -1158,7 +1357,7 @@ function JobsTab({
             <CircleAlert size={18} />
           </span>
           <div className="grow">
-            <strong>{worker.online ? "Commission dues are blocking new jobs" : "You are offline"}</strong>
+            <strong>{worker.online ? "Fees dues are blocking new jobs" : "You are offline"}</strong>
             <p>
               {worker.online
                 ? isPremium
@@ -1658,7 +1857,7 @@ function EarningsTab({
   loading,
   isPremium,
   onRefresh,
-  onCommission,
+  onFees,
   onUpgrade,
 }) {
   const max = Math.max(1, ...(earnings.chart || []).map((month) => month.amount || 0));
@@ -1672,7 +1871,7 @@ function EarningsTab({
         <div>
           <p className="wk-eyebrow">Money</p>
           <h1>Earnings &amp; dues</h1>
-          <p>Every completed job, commission and payout in one place.</p>
+          <p>Every completed job, fees and payout in one place.</p>
         </div>
         <button type="button" className="wk-chip-btn" onClick={onRefresh} disabled={loading}>
           <RefreshCw size={14} className={loading ? "spin" : ""} /> Refresh
@@ -1688,7 +1887,7 @@ function EarningsTab({
         <div className="wk-money-card">
           <span>Today</span>
           <strong>{inr(earnings.today)}</strong>
-          <small>Net of commission</small>
+          <small>Net of fees</small>
         </div>
         <div className="wk-money-card">
           <span>This week</span>
@@ -1696,9 +1895,9 @@ function EarningsTab({
           <small>Mon–Sun</small>
         </div>
         <div className={`wk-money-card${Number(earnings.dues) > 0 ? " wk-money-card--warn" : ""}`}>
-          <span>Commission due</span>
+          <span>Fees due</span>
           <strong>{inr(earnings.dues)}</strong>
-          <small>{isPremium ? "Pro — zero commission" : "Clear to keep accepting jobs"}</small>
+          <small>{isPremium ? "Pro — zero fees" : "Clear to keep accepting jobs"}</small>
         </div>
       </div>
 
@@ -1742,7 +1941,7 @@ function EarningsTab({
             </div>
           ) : (
             <div className="wk-premium-card wk-premium-card--muted">
-              <strong>Zero commission with Pro</strong>
+              <strong>Zero fees with Pro</strong>
               <p>Keep every rupee, get priority job placement and a verified Pro badge.</p>
               <button
                 type="button"
@@ -1773,7 +1972,7 @@ function EarningsTab({
       <section className="wk-section">
         <div className="wk-section__head">
           <div>
-            <p className="wk-eyebrow">Commission</p>
+            <p className="wk-eyebrow">Fees</p>
             <h2>Payments &amp; dues</h2>
           </div>
           <span className="wk-badge wk-badge--muted">Razorpay · automatic</span>
@@ -1787,7 +1986,7 @@ function EarningsTab({
                   <ReceiptText size={18} />
                 </span>
                 <div className="grow">
-                  <strong>{commission.service || "Job commission"}</strong>
+                  <strong>{commission.service || "Job fees"}</strong>
                   <span>
                     {formatDateTime(commission.createdAt)} ·{" "}
                     <span className={`wk-capitalize wk-text-${commission.status}`}>
@@ -1801,7 +2000,7 @@ function EarningsTab({
                 <div className="wk-commission__money">
                   <strong>{inr(commission.amount)}</strong>
                   {commission.status === "pending" || commission.status === "rejected" ? (
-                    <button type="button" onClick={() => onCommission(commission)}>
+                    <button type="button" onClick={() => onFees(commission)}>
                       Pay now
                     </button>
                   ) : (
@@ -1814,7 +2013,7 @@ function EarningsTab({
         ) : (
           <div className="wk-empty wk-empty--inline">
             <CheckCircle2 size={24} />
-            <strong>No commission due</strong>
+            <strong>No fees due</strong>
             <p>Your account is clear. Keep accepting jobs.</p>
           </div>
         )}
@@ -1823,7 +2022,7 @@ function EarningsTab({
           <div>
             <p className="wk-eyebrow">How to pay</p>
             <p>
-              Pay securely through Razorpay. Commission clears and new jobs unlock
+              Pay securely through Razorpay. Fees clears and new jobs unlock
               automatically as soon as the payment is verified.
             </p>
           </div>
@@ -2237,7 +2436,7 @@ function ProfileTab({ worker, onLogout }) {
 
       <p className="wk-fineprint" style={{ textAlign: "center" }}>
         <Percent size={11} style={{ display: "inline", marginRight: 4 }} />
-        Commission is {settings.commissionPct || 10}% on completed non-premium jobs.
+        Fees is {workerFeePct(settings)}% on completed non-premium jobs.
         Pro members pay 0%.
       </p>
     </>
@@ -2253,7 +2452,7 @@ function PriceModal({ job, settings, isPremium, busy, onClose, onSubmit }) {
   const [error, setError] = useState("");
 
   const amount = Number(price) || 0;
-  const commission = isPremium ? 0 : Math.round((amount * (settings.commissionPct || 10)) / 100);
+  const commission = isPremium ? 0 : Math.round((amount * (workerFeePct(settings))) / 100);
 
   const submit = async () => {
     if (amount < 99) {
@@ -2309,7 +2508,7 @@ function PriceModal({ job, settings, isPremium, busy, onClose, onSubmit }) {
             <strong>{inr(amount)}</strong>
           </div>
           <div>
-            <span>Commission</span>
+            <span>Fees</span>
             <strong>{inr(commission)}</strong>
           </div>
           <div>
@@ -2401,7 +2600,7 @@ function CompleteModal({ job, busy, onClose, onConfirm }) {
           <strong>{inr(job?.pricing?.finalPrice || 0)}</strong>
         </div>
         <p className="small muted">
-          Collect payment directly from the customer by cash or UPI. EasyHome commission is
+          Collect payment directly from the customer by cash or UPI. EasyHome fees are
           recorded separately.
         </p>
       </div>
@@ -2409,12 +2608,12 @@ function CompleteModal({ job, busy, onClose, onConfirm }) {
   );
 }
 
-function CommissionModal({ commission, onClose, onPaid }) {
+function FeesModal({ commission, onClose, onPaid }) {
   return (
     <Modal
       open={Boolean(commission)}
       onClose={onClose}
-      title="Pay commission"
+      title="Pay fees"
       subtitle={
         commission
           ? `${commission.service} · ${inr(commission.amount)}`
@@ -2431,12 +2630,12 @@ function CommissionModal({ commission, onClose, onPaid }) {
         {commission ? (
           <RazorpayPayment
             amount={commission.amount || 0}
-            description={`EasyHome commission · ${commission.service || "Job"}`}
+            description={`EasyHome fees · ${commission.service || "Job"}`}
             orderEndpoint="/payment/commission/order"
             verifyEndpoint="/payment/commission/verify"
             orderBody={{ commissionId: commission.id }}
             onSuccess={onPaid}
-            buttonLabel="Pay & clear commission"
+            buttonLabel="Pay & clear fees"
           />
         ) : null}
         <p className="tiny muted">

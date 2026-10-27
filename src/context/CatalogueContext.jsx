@@ -10,12 +10,23 @@ import {
   qServices,
 } from "../lib/queries";
 import { FALLBACK_CITIES, FALLBACK_SERVICES } from "../lib/constants";
+import {
+  DEFAULT_CUSTOMER_RULES,
+  DEFAULT_WORKER_RULES,
+  normalisePlanGroup,
+} from "../lib/plans";
 
 const CatalogueContext = createContext(null);
+
+const CACHE_KEY = "easyhome:catalogue:v2";
 
 const SETTINGS_DEFAULTS = {
   commissionPct: 10,
   subscriptionPrice: 199,
+  customerPlans: { monthly: 199, quarterly: 537, yearly: 1910 },
+  workerPlans: { monthly: 250, quarterly: 675, yearly: 2400 },
+  customerRules: { ...DEFAULT_CUSTOMER_RULES },
+  workerRules: { ...DEFAULT_WORKER_RULES },
   customerBenefits: [
     "Active priority worker matching",
     "No 10% urgent-job extra charge",
@@ -24,7 +35,7 @@ const SETTINGS_DEFAULTS = {
     "Verified Pro badge",
   ],
   workerBenefits: [
-    "0% commission on every job",
+    "0% fees on every job",
     "Top placement in search",
     "Free urgent-job priority",
     "Verified Pro badge",
@@ -34,8 +45,53 @@ const SETTINGS_DEFAULTS = {
   announcement: { title: "", body: "", active: false },
 };
 
+function readCache() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(patch) {
+  if (typeof window === "undefined") return;
+  try {
+    const current = readCache() || {};
+    window.localStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({ ...current, ...patch, cachedAt: Date.now() }),
+    );
+  } catch {
+    /* Storage can be unavailable in private mode; live data still works. */
+  }
+}
+
 function normaliseSettings(data) {
   const merged = { ...SETTINGS_DEFAULTS, ...(data || {}) };
+  const legacyCommission = Number(merged.commissionPct);
+  merged.customerPlans = normalisePlanGroup(
+    merged.customerPlans,
+    Number(merged.subscriptionPrice) || SETTINGS_DEFAULTS.customerPlans.monthly,
+  );
+  merged.workerPlans = normalisePlanGroup(
+    merged.workerPlans,
+    SETTINGS_DEFAULTS.workerPlans.monthly,
+  );
+  merged.subscriptionPrice = merged.customerPlans.monthly;
+  merged.customerRules = {
+    ...DEFAULT_CUSTOMER_RULES,
+    ...(merged.customerRules || {}),
+  };
+  merged.workerRules = {
+    ...DEFAULT_WORKER_RULES,
+    feesPct: Number.isFinite(legacyCommission)
+      ? legacyCommission
+      : DEFAULT_WORKER_RULES.feesPct,
+    ...(merged.workerRules || {}),
+  };
+  merged.commissionPct = merged.workerRules.feesPct;
   const benefits = Array.isArray(merged.customerBenefits)
     ? merged.customerBenefits
     : [];
@@ -64,6 +120,16 @@ function normaliseSettings(data) {
   }
   if (!Array.isArray(merged.workerBenefits) || !merged.workerBenefits.length) {
     merged.workerBenefits = [...SETTINGS_DEFAULTS.workerBenefits];
+  } else {
+    merged.workerBenefits = [
+      ...new Set(
+        merged.workerBenefits.map((benefit) =>
+          /^0% commission on every job$/i.test(benefit)
+            ? "0% fees on every job"
+            : benefit,
+        ),
+      ),
+    ];
   }
   return merged;
 }
@@ -96,6 +162,7 @@ export function CatalogueProvider({ children }) {
   const promosState = useLiveQuery(promosQuery);
   const footerLinksState = useLiveQuery(footerLinksQuery);
   const settingsState = useLiveDoc(settingsRef);
+  const [catalogueCache] = useState(readCache);
 
   // If Firestore reads are still denied (rules not released yet) or the
   // listener fails offline, use the API's index-free bootstrap as a
@@ -150,8 +217,10 @@ export function CatalogueProvider({ children }) {
   const promos = useMemo(() => {
     const source = promosState.data.length
       ? promosState.data
-      : promosState.error
-        ? bootstrap?.promos || []
+      : promosState.error || promosState.loading
+        ? catalogueCache?.promos?.length
+          ? catalogueCache.promos
+          : bootstrap?.promos || []
         : [];
     return source.filter((promo) => {
       if (promo.active === false) return false;
@@ -161,12 +230,22 @@ export function CatalogueProvider({ children }) {
       if (ends && !Number.isNaN(ends.getTime()) && ends.getTime() < now) return false;
       return true;
     });
-  }, [promosState.data, promosState.error, bootstrap, now]);
+  }, [
+    promosState.data,
+    promosState.error,
+    promosState.loading,
+    bootstrap,
+    catalogueCache,
+    now,
+  ]);
   const footerLinks = useMemo(() => {
+    const cachedLinks = catalogueCache?.footerLinks?.length
+      ? catalogueCache.footerLinks
+      : null;
     const source = footerLinksState.error
-      ? bootstrap?.footerLinks ?? FOOTER_FALLBACK
+      ? cachedLinks || bootstrap?.footerLinks || FOOTER_FALLBACK
       : footerLinksState.loading
-        ? FOOTER_FALLBACK
+        ? cachedLinks || FOOTER_FALLBACK
         : footerLinksState.data;
     const hiddenHrefs = footerLinksState.error
       ? bootstrap?.hiddenFooterHrefs || []
@@ -186,6 +265,7 @@ export function CatalogueProvider({ children }) {
     footerLinksState.error,
     footerLinksState.loading,
     bootstrap,
+    catalogueCache,
   ]);
 
   // Keep the storefront usable on a cold/offline start or if the ruleset is
@@ -193,41 +273,92 @@ export function CatalogueProvider({ children }) {
   const services = useMemo(() => {
     const source = servicesState.data.length
       ? servicesState.data
-      : bootstrap?.services?.length
-        ? bootstrap.services
-        : FALLBACK_SERVICES;
+      : catalogueCache?.services?.length
+        ? catalogueCache.services
+        : bootstrap?.services?.length
+          ? bootstrap.services
+          : FALLBACK_SERVICES;
     return source.filter((service) => service.active !== false);
-  }, [servicesState.data, bootstrap]);
+  }, [servicesState.data, bootstrap, catalogueCache]);
   const cities = useMemo(() => {
     // Only admin-active locations may appear in customer dropdowns. The
     // hardcoded list is a cold-start fallback while the live listener is still
     // warming up; once Firestore answers, an empty result stays empty.
     const source = citiesState.data.length
       ? citiesState.data
-      : bootstrap?.cities?.length
-        ? bootstrap.cities
-        : citiesState.loading
-          ? FALLBACK_CITIES
-          : [];
+      : citiesState.error || citiesState.loading
+        ? catalogueCache?.cities?.length
+          ? catalogueCache.cities
+          : bootstrap?.cities?.length
+            ? bootstrap.cities
+            : FALLBACK_CITIES
+        : [];
     return source.filter((city) => city.active !== false);
-  }, [citiesState.data, citiesState.loading, bootstrap]);
+  }, [
+    citiesState.data,
+    citiesState.loading,
+    citiesState.error,
+    bootstrap,
+    catalogueCache,
+  ]);
 
   const zones = useMemo(() => {
     const source = zonesState.data.length
       ? zonesState.data
-      : zonesState.error
-        ? bootstrap?.zones || []
+      : zonesState.error || zonesState.loading
+        ? catalogueCache?.zones?.length
+          ? catalogueCache.zones
+          : bootstrap?.zones || []
         : [];
     return source.filter(Boolean);
-  }, [zonesState.data, zonesState.error, bootstrap]);
+  }, [
+    zonesState.data,
+    zonesState.error,
+    zonesState.loading,
+    bootstrap,
+    catalogueCache,
+  ]);
 
   const settings = useMemo(
     () =>
       normaliseSettings(
-        settingsState.data || (settingsState.error ? bootstrap?.settings : null),
+        settingsState.data ||
+          (settingsState.error || settingsState.loading
+            ? catalogueCache?.settings || bootstrap?.settings
+            : null),
       ),
-    [settingsState.data, settingsState.error, bootstrap],
+    [
+      settingsState.data,
+      settingsState.error,
+      settingsState.loading,
+      bootstrap,
+      catalogueCache,
+    ],
   );
+
+  // Warm the local cache after live data arrives. This keeps the shell, menu
+  // and catalogue instant on the next launch while Firestore reconnects.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const patch = { settings };
+      if (servicesState.data.length) patch.services = servicesState.data;
+      if (citiesState.data.length) patch.cities = citiesState.data;
+      if (zonesState.data.length) patch.zones = zonesState.data;
+      if (promosState.data.length) patch.promos = promosState.data;
+      if (footerLinksState.data.length) {
+        patch.footerLinks = footerLinksState.data;
+      }
+      writeCache(patch);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [
+    servicesState.data,
+    citiesState.data,
+    zonesState.data,
+    promosState.data,
+    footerLinksState.data,
+    settings,
+  ]);
 
   const value = useMemo(
     () => ({

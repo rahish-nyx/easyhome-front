@@ -231,6 +231,20 @@ function ServiceDetail({ serviceKey }) {
                 Available {city?.name ? `in ${city.name}` : "nearby"}
               </Badge>
             </div>
+            {service.subheading ? (
+              <p
+                style={{
+                  color: "rgba(255,255,255,.82)",
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: ".12em",
+                  margin: "0 0 4px",
+                  textTransform: "uppercase",
+                }}
+              >
+                {service.subheading}
+              </p>
+            ) : null}
             <h1 style={{ fontSize: "clamp(28px, 4vw, 40px)" }}>{service.name}</h1>
             <p style={{ color: "rgba(255,255,255,.66)", marginTop: 10, maxWidth: "58ch", fontSize: 14 }}>
               {service.description || meta.blurb}

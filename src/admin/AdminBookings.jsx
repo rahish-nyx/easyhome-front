@@ -180,7 +180,7 @@ export default function AdminBookings() {
         mode: payMode,
       });
       toast.success(
-        `Payment recorded. Commission ${inr(result.commission)} · worker keeps ${inr(
+        `Payment recorded. Fees ${inr(result.commission)} · worker keeps ${inr(
           result.workerReceives,
         )}.`,
       );
@@ -556,7 +556,7 @@ export default function AdminBookings() {
                 value={selected.pricing?.finalPrice ? inr(selected.pricing.finalPrice) : "Not set"}
               />
               <KeyValue
-                label="Commission"
+                label="Fees"
                 value={selected.pricing?.commission ? inr(selected.pricing.commission) : "—"}
               />
               <KeyValue
@@ -653,7 +653,7 @@ export default function AdminBookings() {
             </select>
           </label>
           <p className="tiny muted">
-            Recording payment calculates commission, creates a commission due for the worker and
+            Recording payment calculates fees, creates a fees due for the worker and
             notifies the worker. This cannot be undone.
           </p>
         </div>

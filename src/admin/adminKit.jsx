@@ -241,7 +241,7 @@ export function RevenueChart({ months = [], height = 200, showCommission = true 
         </span>
         {showCommission ? (
           <span>
-            <i className="is-com" /> Commission
+            <i className="is-com" /> Fees
           </span>
         ) : null}
       </div>
@@ -258,7 +258,7 @@ export function RevenueChart({ months = [], height = 200, showCommission = true 
                   <span
                     className="adm-chart__bar is-com"
                     style={{ height: `${Math.max(2, (commissions / max) * 100)}%` }}
-                    title={`Commission ${inr(commissions)}`}
+                    title={`Fees ${inr(commissions)}`}
                   />
                 ) : null}
                 {subscriptions ? (

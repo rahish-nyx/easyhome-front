@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -21,6 +21,7 @@ import { useLocation } from "../context/LocationContext";
 import { useToast } from "../context/ToastContext";
 import { SERVICE_META } from "../lib/constants";
 import {
+  captureReferral,
   clearReferralCode,
   pendingReferralCode,
   storeReferralCode,
@@ -108,6 +109,15 @@ export default function Auth() {
   });
   const serviceKey = form.serviceKey || services[0]?.key || "";
 
+  // Capture ?ref=CODE from invite links and prefill the referral field. This
+  // works for both customer and professional invites.
+  useEffect(() => {
+    const code = captureReferral(window.location.search);
+    if (code) {
+      setForm((prev) => (prev.referralCode ? prev : { ...prev, referralCode: code }));
+    }
+  }, []);
+
   const goNext = (targetRole = role) => {
     if (targetRole === "worker") {
       navigate("/worker", { replace: true });
@@ -172,18 +182,12 @@ export default function Auth() {
       return;
     }
     const referralCode = form.referralCode.trim().toUpperCase();
-    if (
-      role === "customer" &&
-      referralCode &&
-      !/^[A-Z0-9]{6,12}$/.test(referralCode)
-    ) {
-      setError("Referral codes are 6–12 letters or numbers. Check the code and try again.");
+    if (referralCode && !/^[A-Z0-9]{6,12}$/.test(referralCode)) {
+      setError("Referral codes are 6-12 letters or numbers. Check the code and try again.");
       return;
     }
-    if (role === "customer") {
-      if (referralCode) storeReferralCode(referralCode);
-      else clearReferralCode();
-    }
+    if (referralCode) storeReferralCode(referralCode);
+    else clearReferralCode();
 
     setBusy(true);
     try {
@@ -212,6 +216,7 @@ export default function Auth() {
         name: form.name.trim(),
         phone: form.phone || undefined,
         role,
+        referralCode,
         worker: workerFields,
       });
       setJustSignedUp(true);
@@ -572,31 +577,33 @@ export default function Auth() {
                   required
                 />
               </Field>
-              {role === "customer" ? (
-                <Field
-                  label="Referral code (optional)"
-                  htmlFor="signup-referral"
-                  hint="Enter a friend's code to link their referral. Only new customer accounts are eligible."
-                  className="span-2"
-                >
-                  <Input
-                    id="signup-referral"
-                    value={form.referralCode}
-                    maxLength={12}
-                    autoComplete="off"
-                    spellCheck={false}
-                    onChange={(event) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        referralCode: event.target.value
-                          .replace(/[^a-zA-Z0-9]/g, "")
-                          .toUpperCase(),
-                      }))
-                    }
-                    placeholder="A1B2C3D4"
-                  />
-                </Field>
-              ) : null}
+              <Field
+                label="Referral code (optional)"
+                htmlFor="signup-referral"
+                hint={
+                  role === "worker"
+                    ? "Enter a fellow professional's code. Same-role referrals only; rewards require admin approval."
+                    : "Enter a friend's code to link their referral. Only new customer accounts are eligible."
+                }
+                className="span-2"
+              >
+                <Input
+                  id="signup-referral"
+                  value={form.referralCode}
+                  maxLength={12}
+                  autoComplete="off"
+                  spellCheck={false}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      referralCode: event.target.value
+                        .replace(/[^a-zA-Z0-9]/g, "")
+                        .toUpperCase(),
+                    }))
+                  }
+                  placeholder="A1B2C3D4"
+                />
+              </Field>
               <Field label="Password" htmlFor="signup-password" hint="At least 8 characters." required className="span-2">
                 <div className="input-group">
                   <Input

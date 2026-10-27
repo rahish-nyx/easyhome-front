@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Compass,
+  IndianRupee,
   Layers,
   MapPin,
   Pencil,
@@ -34,6 +35,7 @@ const EMPTY_SERVICE = {
   name: "",
   key: "",
   icon: "sparkles",
+  subheading: "",
   description: "",
   fromPrice: 199,
   order: 0,
@@ -88,6 +90,7 @@ export default function AdminCatalog() {
   const [serviceModal, setServiceModal] = useState(null);
   const [cityModal, setCityModal] = useState(null);
   const [deleteCity, setDeleteCity] = useState(null);
+  const [priceDrafts, setPriceDrafts] = useState({});
   const [busy, setBusy] = useState("");
 
   const dataState = useAsync(async () => {
@@ -103,6 +106,30 @@ export default function AdminCatalog() {
 
   const services = dataState.data?.services || [];
   const cities = dataState.data?.cities || [];
+
+  useEffect(() => {
+    if (tab !== "pricing") return;
+    setPriceDrafts(
+      Object.fromEntries(
+        services.map((service) => [service.id, String(service.fromPrice ?? 0)]),
+      ),
+    );
+  }, [tab, services]);
+
+  const changedPrices = useMemo(
+    () =>
+      services
+        .filter(
+          (service) =>
+            priceDrafts[service.id] !== undefined &&
+            String(service.fromPrice ?? 0) !== String(priceDrafts[service.id]),
+        )
+        .map((service) => ({
+          id: service.id,
+          fromPrice: Math.max(0, Number(priceDrafts[service.id]) || 0),
+        })),
+    [services, priceDrafts],
+  );
 
   const filteredServices = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -163,6 +190,22 @@ export default function AdminCatalog() {
     try {
       await api.patch(`/admin/services/${service.id}`, { active: !service.active });
       toast.success(service.active ? "Service hidden from customers." : "Service is live.");
+      await refresh();
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const savePrices = async () => {
+    if (!changedPrices.length) return;
+    setBusy("prices");
+    try {
+      await api.patch("/admin/services/pricing", { updates: changedPrices });
+      toast.success(
+        `${changedPrices.length} service price${changedPrices.length === 1 ? "" : "s"} updated.`,
+      );
       await refresh();
     } catch (error) {
       toast.error(error.message);
@@ -250,17 +293,29 @@ export default function AdminCatalog() {
           >
             Refresh
           </Button>
-          <Button
-            size="sm"
-            icon={Plus}
-            onClick={() =>
-              tab === "services"
-                ? setServiceModal({ ...EMPTY_SERVICE })
-                : setCityModal({ ...EMPTY_CITY })
-            }
-          >
-            Add {tab === "services" ? "service" : "city"}
-          </Button>
+          {tab === "pricing" ? (
+            <Button
+              size="sm"
+              icon={IndianRupee}
+              loading={busy === "prices"}
+              disabled={!changedPrices.length}
+              onClick={savePrices}
+            >
+              Save {changedPrices.length ? `${changedPrices.length} ` : ""}prices
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              icon={Plus}
+              onClick={() =>
+                tab === "services"
+                  ? setServiceModal({ ...EMPTY_SERVICE })
+                  : setCityModal({ ...EMPTY_CITY })
+              }
+            >
+              Add {tab === "services" ? "service" : "city"}
+            </Button>
+          )}
         </>
       }
     >
@@ -299,6 +354,7 @@ export default function AdminCatalog() {
         <SegTabs
           items={[
             { id: "services", label: "Services", count: services.length },
+            { id: "pricing", label: "Prices", count: services.length },
             { id: "cities", label: "Cities", count: cities.length },
           ]}
           value={tab}
@@ -310,7 +366,9 @@ export default function AdminCatalog() {
         <SearchField
           value={query}
           onChange={setQuery}
-          placeholder={tab === "services" ? "Search services…" : "Search cities…"}
+          placeholder={
+            tab === "cities" ? "Search cities…" : "Search services…"
+          }
           onClear={() => setQuery("")}
         />
       </div>
@@ -319,6 +377,68 @@ export default function AdminCatalog() {
 
       {dataState.loading && !dataState.data ? (
         <LoadingBlock label="Loading catalogue…" />
+      ) : tab === "pricing" ? (
+        <Panel flush>
+          <div className="adm-price-banner">
+            <div>
+              <strong>Edit every service price</strong>
+              <span>
+                Update the starting price customers see. Change as many rows as you
+                need, then save once.
+              </span>
+            </div>
+            <span className={changedPrices.length ? "is-dirty" : ""}>
+              {changedPrices.length
+                ? `${changedPrices.length} unsaved change${changedPrices.length === 1 ? "" : "s"}`
+                : "All prices saved"}
+            </span>
+          </div>
+          {filteredServices.length ? (
+            <div className="adm-price-list">
+              {filteredServices.map((service) => (
+                <div className="adm-price-row" key={service.id}>
+                  <ServiceIcon service={service} size={36} iconSize={18} />
+                  <span className="adm-price-row__name">
+                    <strong>{service.name}</strong>
+                    <small>{service.subheading || service.key}</small>
+                  </span>
+                  <span className="adm-price-row__now">
+                    now {inr(service.fromPrice)}
+                  </span>
+                  <span className="adm-price-row__field">
+                    <span>₹</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100000}
+                      inputMode="numeric"
+                      aria-label={`Starting price for ${service.name}`}
+                      className={
+                        String(service.fromPrice ?? 0) !==
+                        String(priceDrafts[service.id])
+                          ? "is-dirty"
+                          : ""
+                      }
+                      value={priceDrafts[service.id] ?? ""}
+                      onChange={(event) =>
+                        setPriceDrafts((prev) => ({
+                          ...prev,
+                          [service.id]: event.target.value,
+                        }))
+                      }
+                    />
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyBlock
+              icon={IndianRupee}
+              title="No matching services"
+              body="Clear the search to see every price."
+            />
+          )}
+        </Panel>
       ) : tab === "services" ? (
         <Panel flush>
           {filteredServices.length ? (
@@ -339,6 +459,9 @@ export default function AdminCatalog() {
                       label={service.active ? "Live" : "Hidden"}
                     />
                   </div>
+                  {service.subheading ? (
+                    <span className="adm-catalog-card__sub">{service.subheading}</span>
+                  ) : null}
                   <p>{service.description || "No description yet."}</p>
                   <div className="adm-catalog-card__meta">
                     <span>
@@ -614,6 +737,20 @@ function ServiceModal({ draft, onClose, onSave, loading }) {
             max={999}
             value={form.order}
             onChange={set("order")}
+          />
+        </Field>
+        <Field
+          label="Card subheading"
+          htmlFor="cat-service-sub"
+          hint={`${String(form.subheading || "").length}/80 · short line shown under the service name`}
+          className="adm-span-2"
+        >
+          <Input
+            id="cat-service-sub"
+            value={form.subheading || ""}
+            maxLength={80}
+            onChange={set("subheading")}
+            placeholder="Deep cleaning & home refresh"
           />
         </Field>
         <Field

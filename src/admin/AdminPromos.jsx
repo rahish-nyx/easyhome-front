@@ -45,6 +45,7 @@ const PLACEMENTS = [
 const EMPTY_PROMO = {
   title: "",
   subtitle: "",
+  embedHtml: "",
   ctaText: "Book now",
   ctaLink: "/",
   placement: "customer_home",
@@ -482,6 +483,7 @@ function PromoModal({ draft, file, onFile, onClose, onSave, loading }) {
                 ...form,
                 title: form.title.trim(),
                 subtitle: form.subtitle.trim(),
+                embedHtml: String(form.embedHtml || "").trim(),
                 ctaText: form.ctaText.trim(),
                 ctaLink: form.ctaLink.trim(),
               }).catch(() => {});
@@ -528,6 +530,20 @@ function PromoModal({ draft, file, onFile, onClose, onSave, loading }) {
             maxLength={140}
             onChange={set("subtitle")}
             placeholder="Verified pros. Upfront prices. Same-day slots."
+          />
+        </Field>
+        <Field
+          label="Raw HTML / embed"
+          htmlFor="promo-embed"
+          hint="Optional. Paste trusted HTML or an iframe embed (video, map, offer widget). Rendered as-is in the promo surface."
+          className="adm-span-2"
+        >
+          <Textarea
+            id="promo-embed"
+            rows={5}
+            value={form.embedHtml || ""}
+            onChange={set("embedHtml")}
+            placeholder={'<iframe src="https://..." title="Offer"></iframe>'}
           />
         </Field>
         <Field label="Button label" htmlFor="promo-cta">
