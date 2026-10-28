@@ -567,9 +567,22 @@ export function LocationProvider({ children }) {
           : Boolean(result?.allowed),
       };
     } catch (locationError) {
+      // If zones exist and a saved/manual city matches an active zone,
+      // keep using it instead of blocking everything.
+      const savedCity = readJson(CITY_KEY);
+      const currentCity = savedCity || city;
       const message =
         locationError.message ||
-        "Could not get your current location. Choose your city manually.";
+        "Could not detect location automatically. Select your state and city manually.";
+      if (currentCity) {
+        setError(message);
+        return {
+          ...currentCity,
+          zoneAllowed: true,
+          zoneConfigured: zones?.length ? true : false,
+          detected: false,
+        };
+      }
       setError(message);
       return null;
     } finally {
