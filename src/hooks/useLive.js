@@ -33,6 +33,7 @@ export function useLiveQuery(queryRef) {
     fromCache: Boolean(cached),
   }));
   const inFlight = useRef(false);
+  const stoppedOn404 = useRef(false);
 
   useEffect(() => {
     if (!queryRef?.path) {
@@ -50,7 +51,7 @@ export function useLiveQuery(queryRef) {
     }));
 
     const load = async () => {
-      if (!active || inFlight.current) return;
+      if (!active || inFlight.current || stoppedOn404.current) return;
       if (typeof document !== "undefined" && document.visibilityState === "hidden") {
         return;
       }
@@ -64,6 +65,9 @@ export function useLiveQuery(queryRef) {
         setState({ data: next, loading: false, error: null, fromCache: false });
       } catch (error) {
         if (!active) return;
+        if (error?.status === 404 || error?.code === "NOT_FOUND") {
+          stoppedOn404.current = true;
+        }
         setState((prev) => ({ ...prev, loading: false, error }));
       } finally {
         inFlight.current = false;
@@ -80,13 +84,15 @@ export function useLiveQuery(queryRef) {
 
     const onVisibility = () => {
       window.clearInterval(timer);
-      if (document.visibilityState === "visible") load();
-      timer = window.setInterval(
-        load,
-        document.visibilityState === "hidden"
-          ? HIDDEN_INTERVAL_MS
-          : VISIBLE_INTERVAL_MS,
-      );
+      if (document.visibilityState === "visible" && !stoppedOn404.current) load();
+      if (!stoppedOn404.current) {
+        timer = window.setInterval(
+          load,
+          document.visibilityState === "hidden"
+            ? HIDDEN_INTERVAL_MS
+            : VISIBLE_INTERVAL_MS,
+        );
+      }
     };
     document.addEventListener("visibilitychange", onVisibility);
 
@@ -110,6 +116,7 @@ export function useLiveDoc(docRef) {
     fromCache: Boolean(cached),
   }));
   const inFlight = useRef(false);
+  const stoppedOn404 = useRef(false);
 
   useEffect(() => {
     if (!docRef?.path) {
@@ -127,7 +134,7 @@ export function useLiveDoc(docRef) {
     }));
 
     const load = async () => {
-      if (!active || inFlight.current) return;
+      if (!active || inFlight.current || stoppedOn404.current) return;
       if (typeof document !== "undefined" && document.visibilityState === "hidden") {
         return;
       }
@@ -140,6 +147,9 @@ export function useLiveDoc(docRef) {
         setState({ data: data || null, loading: false, error: null, fromCache: false });
       } catch (error) {
         if (!active) return;
+        if (error?.status === 404 || error?.code === "NOT_FOUND") {
+          stoppedOn404.current = true;
+        }
         setState((prev) => ({ ...prev, loading: false, error }));
       } finally {
         inFlight.current = false;
@@ -156,13 +166,15 @@ export function useLiveDoc(docRef) {
 
     const onVisibility = () => {
       window.clearInterval(timer);
-      if (document.visibilityState === "visible") load();
-      timer = window.setInterval(
-        load,
-        document.visibilityState === "hidden"
-          ? HIDDEN_INTERVAL_MS
-          : VISIBLE_INTERVAL_MS,
-      );
+      if (document.visibilityState === "visible" && !stoppedOn404.current) load();
+      if (!stoppedOn404.current) {
+        timer = window.setInterval(
+          load,
+          document.visibilityState === "hidden"
+            ? HIDDEN_INTERVAL_MS
+            : VISIBLE_INTERVAL_MS,
+        );
+      }
     };
     document.addEventListener("visibilitychange", onVisibility);
 
