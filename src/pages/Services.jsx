@@ -40,6 +40,7 @@ export default function Services() {
   const { key } = useParams();
   const [params] = useSearchParams();
   const query = (params.get("q") || "").toLowerCase().trim();
+  const groupParam = params.get("group") || "";
   const { services } = useCatalogue();
   const { city } = useLocation();
 
@@ -58,11 +59,11 @@ export default function Services() {
   }
 
   return (
-    <ServicesList filtered={filtered} query={query} city={city} services={services} />
+    <ServicesList filtered={filtered} query={query} groupParam={groupParam} city={city} services={services} />
   );
 }
 
-function ServicesList({ filtered, query, city, services }) {
+function ServicesList({ filtered, query, groupParam, city, services }) {
   usePageMeta(
     query ? `Services matching “${query}”` : "All home services",
     "Browse every EasyHome service category — cleaning, plumbing, electrical, appliance repair, beauty and more.",
@@ -99,9 +100,15 @@ function ServicesList({ filtered, query, city, services }) {
         </p>
       ) : null}
 
+      {groupParam ? (
+        <p className="small muted" style={{ marginBottom: 16 }}>
+          Category “{groupParam}” — {filtered.filter((item) => serviceGroup(item.key) === groupParam).length} services
+        </p>
+      ) : null}
+
       {filtered.length ? (
         <>
-          {!query && (
+          {!query && !groupParam ? (
             <div className="service-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
               {Object.entries(groupedServices(filtered)).map(([groupName, groupItems]) => (
                 <Link
@@ -115,13 +122,30 @@ function ServicesList({ filtered, query, city, services }) {
                 </Link>
               ))}
             </div>
-          )}
-          {query ? <ServiceGrid services={filtered} /> : (
-            <div style={{ marginTop: 24 }}>
-              <h2 style={{ fontSize: 20, marginBottom: 12 }}>Browse by category</h2>
-              <ServiceGrid services={filtered} />
+          ) : null}
+          {groupParam && !query ? (
+            <div className="service-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
+              {(filtered || []).filter((item) => serviceGroup(item.key) === groupParam).map((item) => {
+                const meta = SERVICE_META[item.key] || {};
+                return (
+                  <Link
+                    key={item.key || item.id}
+                    to={`/book?service=${encodeURIComponent(item.key)}`}
+                    className="service-tile"
+                    style={{ display: "flex", flexDirection: "column", padding: 18, borderRadius: 16, background: "#fff", border: "1px solid var(--line)", textDecoration: "none", color: "inherit" }}
+                  >
+                    <span className="service-tile__icon" style={{ marginBottom: 8 }}>
+                      <ServiceIcon icon={item.icon || meta.icon || "wrench"} service={item} size={36} iconSize={18} />
+                    </span>
+                    <strong style={{ fontSize: 15 }}>{item.name}</strong>
+                    <span style={{ fontSize: 12, color: "#777", marginTop: 4 }}>
+                      From {inr(item.fromPrice || meta.from || 199)}
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
-          )}
+          ) : null}
         </>
       ) : (
         <div className="card">
