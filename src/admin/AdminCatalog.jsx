@@ -454,16 +454,16 @@ export default function AdminCatalog() {
             {Object.entries(folderGroups).map(([folderName, items]) => {
               const active = items.every((i) => i.active !== false);
               return (
-                <article key={folderName} className="adm-catalog-card" style={{ padding: 16, borderRadius: 12, background: "#fff", border: "1px solid var(--line)", display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <h3 style={{ fontSize: 16 }}>{folderName}</h3>
+                <article key={folderName} className="adm-catalog-card" style={{ padding: 18, borderRadius: 14, background: "#0b0c10", border: "1px solid #1a1b20", display: "flex", flexDirection: "column", gap: 14, boxShadow: "0 4px 20px rgba(240,192,0,0.08)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #1a1b20", paddingBottom: 10 }}>
+                    <h3 style={{ fontSize: 16, color: "#f0c000", letterSpacing: 0.4 }}>{folderName}</h3>
                     <StatusPill status={active ? "active" : "expired"} label={active ? "Live" : "Hidden"} />
                   </div>
-                  <span style={{ fontSize: 12, color: "#777" }}>{items.length} services</span>
-                  <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-                    <Button size="sm" variant="outline" icon={Pencil} onClick={() => { setEditingFolderName(folderName); setFolderEdit(folderName); }}>Edit</Button>
-                    <Button size="sm" variant={active ? "outline" : "secondary"} onClick={async () => { setBusyFolder(folderName); try { await api.patch("/admin/services", { updates: items.map((i) => ({ id: i.id, active: !active })) }); await refresh(); toast.success(`Folder ${!active ? "shown" : "hidden"}`); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); } }}>{active ? "Hide" : "Show"}</Button>
-                    <Button size="sm" variant="danger" icon={Trash2} onClick={() => { if (confirm(`Delete folder "${folderName}"? It will remove ${items.length} services.`)) { setBusyFolder(folderName); api.post("/admin/services/delete-group", { group: folderName }).then(refresh).catch((e) => toast.error(e.message)).finally(() => setBusyFolder("")); } }} disabled={!!busyFolder}>Del</Button>
+                  <span style={{ fontSize: 13, color: "#b0b0c0", marginTop: -6 }}>{items.length} services · {folderName}</span>
+                  <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                    <Button size="sm" variant="outline" icon={Pencil} style={{ borderColor: "#f0c000", color: "#f0c000" }} onClick={() => { setEditingFolderName(folderName); setFolderEdit(folderName); }}>Edit</Button>
+                    <Button size="sm" variant={active ? "outline" : "secondary"} style={{ borderColor: active ? "#1a1b20" : "#f0c000", color: active ? "#b0b0c0" : "#f0c000" }} onClick={async () => { setBusyFolder(folderName); try { await api.patch(`/admin/folders/${encodeURIComponent(folderName)}/toggle`); await refresh(); toast.success(`Folder ${!active ? "shown" : "hidden"}`); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); } }}>{active ? "Hide" : "Show"}</Button>
+                    <Button size="sm" variant="danger" icon={Trash2} onClick={() => { if (confirm(`Delete folder "${folderName}"? It will remove ${items.length} services.`)) { setBusyFolder(folderName); api.delete(`/admin/folders/${encodeURIComponent(folderName)}`).then(refresh).catch((e) => toast.error(e.message)).finally(() => setBusyFolder("")); } }} disabled={!!busyFolder}>Del</Button>
                   </div>
                 </article>
               );
@@ -475,7 +475,7 @@ export default function AdminCatalog() {
                 <Input value={editingFolderName} onChange={(e) => setEditingFolderName(e.target.value)} />
               </Field>
               <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-                <Button onClick={async () => { setBusyFolder(folderEdit); try { await api.patch("/admin/services/folders", { oldName: folderEdit, newName: editingFolderName }); await refresh(); toast.success("Folder updated"); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); setFolderEdit(null); setEditingFolderName(""); } }} disabled={!!busyFolder}>Save</Button>
+                <Button onClick={async () => { setBusyFolder(folderEdit); try { await api.put(`/admin/folders/${encodeURIComponent(folderEdit)}`, { name: editingFolderName }); await refresh(); toast.success("Folder updated"); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); setFolderEdit(null); setEditingFolderName(""); } }} disabled={!!busyFolder}>Save</Button>
                 <Button variant="outline" onClick={() => { setFolderEdit(null); setEditingFolderName(""); }}>Cancel</Button>
               </div>
             </Modal>
