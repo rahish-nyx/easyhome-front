@@ -50,8 +50,8 @@ export function useLiveQuery(queryRef) {
       error: null,
     }));
 
-    const load = async () => { if (!active || stoppedOn404.current || inFlight.current) return;
-      if (!active || inFlight.current || stoppedOn404.current) return;
+    const load = async () => {
+      if (!active || stoppedOn404.current || inFlight.current) return;
       if (typeof document !== "undefined" && document.visibilityState === "hidden") {
         return;
       }
@@ -61,8 +61,8 @@ export function useLiveQuery(queryRef) {
         if (!active) return;
         const data = selectValue(payload, queryRef.select);
         const next = Array.isArray(data) ? data : [];
-        setState({ data: next, loading: false, error: null, fromCache: false });
         queryCache.set(queryRef.key, { data: next, at: Date.now() });
+        setState({ data: next, loading: false, error: null, fromCache: false });
       } catch (error) {
         if (!active) return;
         if (error?.status === 404 || error?.code === "NOT_FOUND") {
