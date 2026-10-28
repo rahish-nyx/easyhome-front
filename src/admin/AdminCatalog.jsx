@@ -91,14 +91,15 @@ export default function AdminCatalog() {
   const [serviceModal, setServiceModal] = useState(null);
   const [cityModal, setCityModal] = useState(null);
   const [deleteCity, setDeleteCity] = useState(null);
-  const [folderEdit, setFolderEdit] = useState(null);
-  const [editingFolderName, setEditingFolderName] = useState("");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [folderName, setFolderName] = useState("");
+  const [folderDesc, setFolderDesc] = useState("");
+  const [editingFolder, setEditingFolder] = useState(null);
+  const [editFolderName, setEditFolderName] = useState("");
+  const [editFolderDesc, setEditFolderDesc] = useState("");
+  const [folderServices, setFolderServices] = useState([]);
+  const [folderDrawer, setFolderDrawer] = useState(null);
   const [busyFolder, setBusyFolder] = useState("");
-  const [folderCreate, setFolderCreate] = useState(null);
-  const [folderView, setFolderView] = useState(null);
-  const [folderNewName, setFolderNewName] = useState("");
-  const [folderNewIcon, setFolderNewIcon] = useState("layers");
-  const [folderNewDesc, setFolderNewDesc] = useState("");
   const [serviceAddSelect, setServiceAddSelect] = useState("");
   const [priceDrafts, setPriceDrafts] = useState({});
   const [busy, setBusy] = useState("");
@@ -457,92 +458,79 @@ export default function AdminCatalog() {
         <Panel flush>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <h2 style={{ fontSize: 20, color: "#f0c000", letterSpacing: 0.5 }}>Service Folders</h2>
-            <Button size="sm" icon={Plus} style={{ background: "#f0c000", color: "#0b0c10", border: "none" }} onClick={() => { setFolderCreate(true); setFolderNewName(""); setFolderNewIcon("layers"); setFolderNewDesc(""); }}>+ Add Folder</Button>
+            <Button size="sm" icon={Plus} style={{ background: "#f0c000", color: "#0b0c10", border: "none" }} onClick={() => { setIsAddModalOpen(true); setFolderName(""); setFolderDesc(""); }}>+ Add Folder</Button>
           </div>
+
           <div className="adm-catalog-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
-            {Object.entries(folderGroups).map(([folderName, items]) => {
-              const active = items.every((i) => i.active !== false);
+            {Object.entries(groupedServices(services)).map(([folderNameKey, items]) => {
+              const isLive = items.every(i => i.active !== false);
               return (
-                <article key={folderName} className="adm-catalog-card" style={{ padding: 18, borderRadius: 14, background: "#0b0c10", border: "1px solid #1a1b20", display: "flex", flexDirection: "column", gap: 14, boxShadow: "0 4px 20px rgba(240,192,0,0.08)", cursor: "pointer" }} onClick={() => setFolderView(folderName)}>
+                <article key={folderNameKey} className="adm-catalog-card" style={{ padding: 18, borderRadius: 14, background: "#0b0c10", border: "1px solid #1a1b20", display: "flex", flexDirection: "column", gap: 14, boxShadow: "0 4px 20px rgba(240,192,0,0.08)", cursor: "pointer" }} onClick={() => { setFolderDrawer(folderNameKey); setFolderServices(items); }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #1a1b20", paddingBottom: 10 }}>
-                    <h3 style={{ fontSize: 16, color: "#f0c000", letterSpacing: 0.4 }}>{folderName}</h3>
-                    <StatusPill status={active ? "active" : "expired"} label={active ? "Live" : "Hidden"} />
+                    <h3 style={{ fontSize: 16, color: "#f0c000", letterSpacing: 0.4 }}>{folderNameKey}</h3>
+                    <span style={{ fontSize: 11, padding: "2px 6px", borderRadius: 6, background: isLive ? "#2a6b2a" : "#6b2a2a", color: "#fff", border: isLive ? "1px solid #2a6b2a" : "1px solid #6b2a2a" }}>{isLive ? "LIVE" : "HIDDEN"}</span>
                   </div>
                   <span style={{ fontSize: 13, color: "#b0b0c0", marginTop: -6 }}>{items.length} services · click to manage</span>
-                  <div style={{ display: "flex", gap: 8, marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
-                    <Button size="sm" variant="outline" icon={Pencil} style={{ borderColor: "#f0c000", color: "#f0c000" }} onClick={() => { setEditingFolderName(folderName); setFolderEdit(folderName); }}>Edit</Button>
-                    <Button size="sm" variant={active ? "outline" : "secondary"} style={{ borderColor: active ? "#1a1b20" : "#f0c000", color: active ? "#b0b0c0" : "#f0c000" }} onClick={async () => { setBusyFolder(folderName); try { await api.patch(`/admin/folders/${encodeURIComponent(folderName)}/toggle`); await refresh(); toast.success(`Folder ${!active ? "shown" : "hidden"}`); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); } }}>{active ? "Hide" : "Show"}</Button>
-                    <Button size="sm" variant="danger" icon={Trash2} onClick={() => { if (confirm(`Delete folder "${folderName}"? This removes ${items.length} services.`)) { setBusyFolder(folderName); api.delete(`/admin/folders/${encodeURIComponent(folderName)}`).then(refresh).catch((e) => toast.error(e.message)).finally(() => setBusyFolder("")); } }} disabled={!!busyFolder}>Del</Button>
+                  <div style={{ display: "flex", gap: 8, marginTop: 6 }} onClick={e => e.stopPropagation()}>
+                    <Button size="sm" variant="outline" icon={Pencil} style={{ borderColor: "#f0c000", color: "#f0c000" }} onClick={() => { setEditingFolder({ id: folderNameKey, name: folderNameKey, description: "" }); setEditFolderName(folderNameKey); setEditFolderDesc(""); }}>Edit</Button>
+                    <Button size="sm" variant={isLive ? "outline" : "secondary"} style={{ borderColor: isLive ? "#1a1b20" : "#f0c000", color: isLive ? "#b0b0c0" : "#f0c000" }} onClick={async () => { setBusyFolder(folderNameKey); try { await api.patch(`/api/admin/folders/${encodeURIComponent(folderNameKey)}/toggle`); await refresh(); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); } }}>{isLive ? "Hide" : "Unhide"}</Button>
+                    <Button size="sm" variant="danger" icon={Trash2} onClick={() => { if (window.confirm("Are you sure you want to delete this folder?")) { setBusyFolder(folderNameKey); api.delete(`/api/admin/folders/${encodeURIComponent(folderNameKey)}`).then(refresh).catch(e => toast.error(e.message)).finally(() => setBusyFolder("")); } }} disabled={!!busyFolder}>Delete</Button>
                   </div>
                 </article>
               );
             })}
           </div>
 
-          {folderCreate ? (
-            <Modal title="Create Folder" onClose={() => setFolderCreate(null)}>
-              <Field label="Folder name">
-                <Input value={folderNewName} onChange={(e) => setFolderNewName(e.target.value)} placeholder="Cleaning, Plumbing..." />
-              </Field>
-              <Field label="Icon / category">
-                <Input value={folderNewIcon} onChange={(e) => setFolderNewIcon(e.target.value)} placeholder="layers" />
-              </Field>
-              <Field label="Description">
-                <Textarea value={folderNewDesc} onChange={(e) => setFolderNewDesc(e.target.value)} rows={3} />
-              </Field>
+          {isAddModalOpen ? (
+            <Modal title="Add Folder" onClose={() => setIsAddModalOpen(false)}>
+              <Field label="Folder name"><Input value={folderName} onChange={e => setFolderName(e.target.value)} placeholder="Cleaning, Plumbing..." /></Field>
+              <Field label="Description"><Textarea value={folderDesc} onChange={e => setFolderDesc(e.target.value)} rows={2} /></Field>
               <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-                <Button onClick={async () => { if (!folderNewName.trim()) return toast.error("Enter folder name"); try { await api.post("/admin/services", { name: folderNewName, key: folderNewName.toLowerCase().replace(/\s+/g,"-"), icon: folderNewIcon, subheading: folderNewName, description: folderNewDesc, fromPrice: 199, active: true, order: 999 }); await refresh(); setFolderCreate(null); toast.success("Folder created"); } catch (e) { toast.error(e.message); } }} disabled={!!busyFolder}>Create</Button>
-                <Button variant="outline" onClick={() => setFolderCreate(null)}>Cancel</Button>
+                <Button onClick={async () => { if (!folderName.trim()) return toast.error("Name required"); try { await api.post("/api/admin/folders", { name: folderName, description: folderDesc }); await refresh(); setIsAddModalOpen(false); toast.success("Folder added"); } catch (e) { toast.error(e.message); } }} disabled={!!busyFolder}>Create</Button>
+                <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
               </div>
             </Modal>
           ) : null}
 
-          {folderEdit ? (
-            <Modal title="Edit folder" onClose={() => { setFolderEdit(null); setEditingFolderName(""); }}>
-              <Field label="Folder name">
-                <Input value={editingFolderName} onChange={(e) => setEditingFolderName(e.target.value)} />
-              </Field>
+          {editingFolder ? (
+            <Modal title="Edit Folder" onClose={() => setEditingFolder(null)}>
+              <Field label="Folder name"><Input value={editFolderName} onChange={e => setEditFolderName(e.target.value)} /></Field>
+              <Field label="Description"><Textarea value={editFolderDesc} onChange={e => setEditFolderDesc(e.target.value)} rows={2} /></Field>
               <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-                <Button onClick={async () => { setBusyFolder(folderEdit); try { await api.put(`/admin/folders/${encodeURIComponent(folderEdit)}`, { name: editingFolderName }); await refresh(); toast.success("Folder updated"); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); setFolderEdit(null); setEditingFolderName(""); } }} disabled={!!busyFolder}>Save</Button>
-                <Button variant="outline" onClick={() => { setFolderEdit(null); setEditingFolderName(""); }}>Cancel</Button>
+                <Button onClick={async () => { setBusyFolder(editingFolder.id); try { await api.put(`/api/admin/folders/${encodeURIComponent(editingFolder.id)}`, { name: editFolderName, description: editFolderDesc }); await refresh(); setEditingFolder(null); toast.success("Updated"); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); } }} disabled={!!busyFolder}>Save</Button>
+                <Button variant="outline" onClick={() => setEditingFolder(null)}>Cancel</Button>
               </div>
             </Modal>
           ) : null}
 
-          {folderView ? (
-            <Modal title={`Folder: ${folderView}`} onClose={() => { setFolderView(null); setServiceAddSelect(""); }} style={{ maxWidth: 640 }}>
-              <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
-                <span style={{ flex: 1, fontSize: 13, color: "#b0b0c0" }}>{(folderGroups[folderView] || []).length} services assigned</span>
-                <Select value={serviceAddSelect} onChange={(e) => setServiceAddSelect(e.target.value)} style={{ background: "#0b0c10", color: "#f0c000", borderColor: "#f0c000" }}>
-                  <option value="">+ Assign service…</option>
-                  {(services || []).filter(s => s.active !== false && !(folderGroups[folderView] || []).some(i => i.id === s.id)).map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
+          {folderDrawer ? (
+            <Modal title={`Manage: ${folderDrawer}`} onClose={() => { setFolderDrawer(null); setServiceAddSelect(""); }} style={{ maxWidth: 640 }}>
+              <div style={{ marginBottom: 10, display: "flex", gap: 6, alignItems: "center" }}>
+                <Select value={serviceAddSelect} onChange={e => setServiceAddSelect(e.target.value)} style={{ background: "#0b0c10", color: "#f0c000", borderColor: "#f0c000" }}>
+                  <option value="">+ Assign service...</option>
+                  {(services || []).filter(s => s.active !== false && !(folderServices || []).some(i => i.id === s.id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </Select>
-                <Button size="sm" icon={Plus} style={{ background: "#f0c000", color: "#0b0c10" }} onClick={async () => { if (!serviceAddSelect) return toast.error("Select a service"); try { await api.patch(`/admin/services/${serviceAddSelect}`, { folder: folderView, updatedAt: new Date().toISOString() }); await refresh(); setServiceAddSelect(""); toast.success("Assigned to folder"); } catch (e) { toast.error(e.message); } }}>Add</Button>
+                <Button size="sm" icon={Plus} style={{ background: "#f0c000", color: "#0b0c10" }} onClick={async () => { if (!serviceAddSelect) return toast.error("Select service"); try { await api.patch(`/api/admin/services/${serviceAddSelect}`, { folder: folderDrawer }); await refresh(); setServiceAddSelect(""); toast.success("Assigned"); } catch (e) { toast.error(e.message); } }}>Add</Button>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {(folderGroups[folderView] || []).map(s => (
+                {(folderServices || []).map(s => (
                   <div key={s.id} style={{ background: "#0b0c10", border: "1px solid #1a1b20", borderRadius: 10, padding: 10, display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between" }}>
                     <div>
                       <strong style={{ color: "#f0c000", fontSize: 14 }}>{s.name}</strong>
-                      <span style={{ display: "block", fontSize: 11, color: "#888" }}>{s.key || ""}</span>
+                      <span style={{ display: "block", fontSize: 11, color: "#888" }}>{s.key || s.id}</span>
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
                       <Button size="sm" variant="outline" icon={Pencil} onClick={() => { setServiceModal({ ...s }); }} style={{ borderColor: "#f0c000", color: "#f0c000" }}>Edit</Button>
-                      <Button size="sm" variant="outline" onClick={async () => { try { await api.patch(`/admin/services/${s.id}`, { folder: null }); await refresh(); toast.success("Unassigned"); } catch (e) { toast.error(e.message); } }} style={{ borderColor: "#777", color: "#b0b0c0" }}>Remove</Button>
-                      <Button size="sm" variant="danger" icon={Trash2} onClick={() => { if (confirm(`Delete service "${s.name}"?`)) { api.delete(`/admin/services/${s.id}`).then(refresh).catch(e => toast.error(e.message)); } }} style={{ borderColor: "#ff4d4d", color: "#ff4d4d" }}>Del</Button>
+                      <Button size="sm" variant="outline" onClick={async () => { try { await api.patch(`/api/admin/services/${s.id}`, { folder: null }); await refresh(); toast.success("Unassigned"); } catch (e) { toast.error(e.message); } }} style={{ borderColor: "#777", color: "#b0b0c0" }}>Remove</Button>
+                      <Button size="sm" variant="danger" icon={Trash2} onClick={() => { if (window.confirm(`Delete service "${s.name}"?`)) { api.delete(`/api/admin/services/${s.id}`).then(refresh).catch(e => toast.error(e.message)); } }}>Del</Button>
                     </div>
                   </div>
                 ))}
-                {(folderGroups[folderView] || []).length === 0 && (
-                  <EmptyBlock icon={Layers} title="No services" body="Use + Assign service to add items." />
-                )}
+                {(folderServices || []).length === 0 && <EmptyBlock icon={Layers} title="No services" body="Use + Assign service to add." />}
               </div>
             </Modal>
           ) : null}
-        </Panel>
-      ) : tab === "services" ? (
+        </Panel>      ) : tab === "services" ? (
         <Panel flush>
           {filteredServices.length ? (
             <div className="adm-catalog-grid">
