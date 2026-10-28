@@ -473,8 +473,8 @@ export default function AdminCatalog() {
                   <span style={{ fontSize: 13, color: "#b0b0c0", marginTop: -6 }}>{items.length} services · click to manage</span>
                   <div style={{ display: "flex", gap: 8, marginTop: 6 }} onClick={e => e.stopPropagation()}>
                     <Button size="sm" variant="outline" icon={Pencil} style={{ borderColor: "#f0c000", color: "#f0c000" }} onClick={() => { setEditingFolder({ id: folderNameKey, name: folderNameKey, description: "" }); setEditFolderName(folderNameKey); setEditFolderDesc(""); }}>Edit</Button>
-                    <Button size="sm" variant={isLive ? "outline" : "secondary"} style={{ borderColor: isLive ? "#1a1b20" : "#f0c000", color: isLive ? "#b0b0c0" : "#f0c000" }} onClick={async () => { setBusyFolder(folderNameKey); try { await api.patch(`/api/admin/folders/${encodeURIComponent(folderNameKey)}/toggle`); await refresh(); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); } }}>{isLive ? "Hide" : "Unhide"}</Button>
-                    <Button size="sm" variant="danger" icon={Trash2} onClick={() => { if (window.confirm("Are you sure you want to delete this folder?")) { setBusyFolder(folderNameKey); api.delete(`/api/admin/folders/${encodeURIComponent(folderNameKey)}`).then(refresh).catch(e => toast.error(e.message)).finally(() => setBusyFolder("")); } }} disabled={!!busyFolder}>Delete</Button>
+                    <Button size="sm" variant={isLive ? "outline" : "secondary"} style={{ borderColor: isLive ? "#1a1b20" : "#f0c000", color: isLive ? "#b0b0c0" : "#f0c000" }} onClick={async () => { setBusyFolder(folderNameKey); try { await api.patch(`/admin/folders/${encodeURIComponent(folderNameKey)}/toggle`); await refresh(); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); } }}>{isLive ? "Hide" : "Unhide"}</Button>
+                    <Button size="sm" variant="danger" icon={Trash2} onClick={() => { if (window.confirm("Are you sure you want to delete this folder?")) { setBusyFolder(folderNameKey); api.delete(`/admin/folders/${encodeURIComponent(folderNameKey)}`).then(refresh).catch(e => toast.error(e.message)).finally(() => setBusyFolder("")); } }} disabled={!!busyFolder}>Delete</Button>
                   </div>
                 </article>
               );
@@ -486,7 +486,7 @@ export default function AdminCatalog() {
               <Field label="Folder name"><Input value={folderName} onChange={e => setFolderName(e.target.value)} placeholder="Cleaning, Plumbing..." /></Field>
               <Field label="Description"><Textarea value={folderDesc} onChange={e => setFolderDesc(e.target.value)} rows={2} /></Field>
               <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-                <Button onClick={async () => { if (!folderName.trim()) return toast.error("Name required"); try { await api.post("/api/admin/folders", { name: folderName, description: folderDesc }); await refresh(); setIsAddModalOpen(false); toast.success("Folder added"); } catch (e) { toast.error(e.message); } }} disabled={!!busyFolder}>Create</Button>
+                <Button onClick={async () => { if (!folderName.trim()) return toast.error("Name required"); try { await api.post("/admin/folders", { name: folderName, description: folderDesc }); await refresh(); setIsAddModalOpen(false); toast.success("Folder added"); } catch (e) { toast.error(e.message); } }} disabled={!!busyFolder}>Create</Button>
                 <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
               </div>
             </Modal>
@@ -497,7 +497,7 @@ export default function AdminCatalog() {
               <Field label="Folder name"><Input value={editFolderName} onChange={e => setEditFolderName(e.target.value)} /></Field>
               <Field label="Description"><Textarea value={editFolderDesc} onChange={e => setEditFolderDesc(e.target.value)} rows={2} /></Field>
               <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-                <Button onClick={async () => { setBusyFolder(editingFolder.id); try { await api.put(`/api/admin/folders/${encodeURIComponent(editingFolder.id)}`, { name: editFolderName, description: editFolderDesc }); await refresh(); setEditingFolder(null); toast.success("Updated"); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); } }} disabled={!!busyFolder}>Save</Button>
+                <Button onClick={async () => { setBusyFolder(editingFolder.id); try { await api.put(`/admin/folders/${encodeURIComponent(editingFolder.id)}`, { name: editFolderName, description: editFolderDesc }); await refresh(); setEditingFolder(null); toast.success("Updated"); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); } }} disabled={!!busyFolder}>Save</Button>
                 <Button variant="outline" onClick={() => setEditingFolder(null)}>Cancel</Button>
               </div>
             </Modal>
@@ -510,7 +510,7 @@ export default function AdminCatalog() {
                   <option value="">+ Assign service...</option>
                   {(services || []).filter(s => s.active !== false && !(folderServices || []).some(i => i.id === s.id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </Select>
-                <Button size="sm" icon={Plus} style={{ background: "#f0c000", color: "#0b0c10" }} onClick={async () => { if (!serviceAddSelect) return toast.error("Select service"); try { await api.patch(`/api/admin/services/${serviceAddSelect}`, { folder: folderDrawer }); await refresh(); setServiceAddSelect(""); toast.success("Assigned"); } catch (e) { toast.error(e.message); } }}>Add</Button>
+                <Button size="sm" icon={Plus} style={{ background: "#f0c000", color: "#0b0c10" }} onClick={async () => { if (!serviceAddSelect) return toast.error("Select service"); try { await api.patch(`/admin/services/${serviceAddSelect}`, { folder: folderDrawer }); await refresh(); setServiceAddSelect(""); toast.success("Assigned"); } catch (e) { toast.error(e.message); } }}>Add</Button>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {(folderServices || []).map(s => (
@@ -521,8 +521,8 @@ export default function AdminCatalog() {
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
                       <Button size="sm" variant="outline" icon={Pencil} onClick={() => { setServiceModal({ ...s }); }} style={{ borderColor: "#f0c000", color: "#f0c000" }}>Edit</Button>
-                      <Button size="sm" variant="outline" onClick={async () => { try { await api.patch(`/api/admin/services/${s.id}`, { folder: null }); await refresh(); toast.success("Unassigned"); } catch (e) { toast.error(e.message); } }} style={{ borderColor: "#777", color: "#b0b0c0" }}>Remove</Button>
-                      <Button size="sm" variant="danger" icon={Trash2} onClick={() => { if (window.confirm(`Delete service "${s.name}"?`)) { api.delete(`/api/admin/services/${s.id}`).then(refresh).catch(e => toast.error(e.message)); } }}>Del</Button>
+                      <Button size="sm" variant="outline" onClick={async () => { try { await api.patch(`/admin/services/${s.id}`, { folder: null }); await refresh(); toast.success("Unassigned"); } catch (e) { toast.error(e.message); } }} style={{ borderColor: "#777", color: "#b0b0c0" }}>Remove</Button>
+                      <Button size="sm" variant="danger" icon={Trash2} onClick={() => { if (window.confirm(`Delete service "${s.name}"?`)) { api.delete(`/admin/services/${s.id}`).then(refresh).catch(e => toast.error(e.message)); } }}>Del</Button>
                     </div>
                   </div>
                 ))}
