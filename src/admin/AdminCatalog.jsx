@@ -476,7 +476,7 @@ export default function AdminCatalog() {
             {folderData.map((folder) => {
               const isLive = folder.isLive !== false;
               return (
-                <article key={folder.id} className="adm-catalog-card" style={{ padding: 18, borderRadius: 14, background: "#0b0c10", border: "1px solid #1a1b20", display: "flex", flexDirection: "column", gap: 14, boxShadow: "0 4px 20px rgba(240,192,0,0.08)", cursor: "pointer" }} onClick={() => { setFolderDrawer(folder.id); setFolderServices(items); }}>
+                <article key={folder.id} className="adm-catalog-card" style={{ padding: 18, borderRadius: 14, background: "#0b0c10", border: "1px solid #1a1b20", display: "flex", flexDirection: "column", gap: 14, boxShadow: "0 4px 20px rgba(240,192,0,0.08)", cursor: "pointer" }} onClick={() => { setFolderDrawer(folder.name); const folderItems = services.filter(s => s.folderId === folder.id || s.folder === folder.name); setFolderServices(folderItems); }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #1a1b20", paddingBottom: 10 }}>
                     <h3 style={{ fontSize: 16, color: "#f0c000", letterSpacing: 0.4 }}>{folder.name}</h3>
                     <span style={{ fontSize: 11, padding: "2px 6px", borderRadius: 6, background: isLive ? "#2a6b2a" : "#6b2a2a", color: "#fff", border: isLive ? "1px solid #2a6b2a" : "1px solid #6b2a2a" }}>{isLive ? "LIVE" : "HIDDEN"}</span>
@@ -485,7 +485,7 @@ export default function AdminCatalog() {
                   <div style={{ display: "flex", gap: 8, marginTop: 6 }} onClick={e => e.stopPropagation()}>
                     <Button size="sm" variant="outline" icon={Pencil} style={{ borderColor: "#f0c000", color: "#f0c000" }} onClick={() => { setEditingFolder({ id: folder.id, name: folder.name, description: folder.description || "" }); setEditFolderName(folder.name); setEditFolderDesc(folder.description || ""); }}>Edit</Button>
                     <Button size="sm" variant={isLive ? "outline" : "secondary"} style={{ borderColor: isLive ? "#1a1b20" : "#f0c000", color: isLive ? "#b0b0c0" : "#f0c000" }} onClick={async () => { setBusyFolder(folder.id); try { await api.patch(`/admin/folders/${encodeURIComponent(folder.id)}/toggle`); await refreshFolders(); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); } }}>{isLive ? "Hide" : "Unhide"}</Button>
-                    <Button size="sm" variant="danger" icon={Trash2} onClick={() => { if (window.confirm("Are you sure you want to delete this folder?")) { setBusyFolder(folder.id); api.delete(`/admin/folders/${encodeURIComponent(folder.id)}`).then(refresh).catch(e => toast.error(e.message)).finally(() => { setBusyFolder(""); refreshFolders(); }); } }} disabled={!!busyFolder}>Delete</Button>
+                    <Button size="sm" variant="danger" icon={Trash2} onClick={() => { if (window.confirm("Are you sure you want to delete this folder?")) { setBusyFolder(folder.id); api.delete(`/admin/folders/${encodeURIComponent(folder.id)}`).then(refreshFolders).catch(e => toast.error(e.message)).finally(() => { setBusyFolder(""); refreshFolders(); }); } }} disabled={!!busyFolder}>Delete</Button>
                   </div>
                 </article>
               );
