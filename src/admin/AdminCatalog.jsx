@@ -473,7 +473,7 @@ export default function AdminCatalog() {
           </div>
 
           <div className="adm-catalog-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
-            {folderData.map((folder) => {
+            {(folderData.length ? folderData : Object.entries(groupedServices(services)).map(([name]) => ({ id: name, name, isLive: true, servicesCount: (groupedServices(services)[name] || []).length }))).map((folder) => {
               const isLive = folder.isLive !== false;
               return (
                 <article key={folder.id} className="adm-catalog-card" style={{ padding: 18, borderRadius: 14, background: "#0b0c10", border: "1px solid #1a1b20", display: "flex", flexDirection: "column", gap: 14, boxShadow: "0 4px 20px rgba(240,192,0,0.08)", cursor: "pointer" }} onClick={() => { setFolderDrawer(folder.name); const folderItems = services.filter(s => s.folderId === folder.id || s.folder === folder.name); setFolderServices(folderItems); }}>
