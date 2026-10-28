@@ -6,13 +6,12 @@ import {
   Routes,
   useLocation,
 } from "react-router-dom";
-import { firebaseReady } from "./firebase";
 import { AuthProvider } from "./context/AuthContext";
 import { CatalogueProvider } from "./context/CatalogueContext";
 import { LocationProvider } from "./context/LocationContext";
 import { ToastProvider } from "./context/ToastContext";
 import { CustomerLayout } from "./components/layout";
-import { ProtectedRoute, SetupScreen } from "./components/common";
+import { ProtectedRoute } from "./components/common";
 import { ErrorBoundary, PageLoader } from "./components/ui";
 import Home from "./pages/Home";
 import Services from "./pages/Services";
@@ -77,14 +76,6 @@ function ProtectCustomer({ children }) {
 }
 
 export default function App() {
-  if (!firebaseReady) {
-    return (
-      <ToastProvider>
-        <SetupScreen />
-      </ToastProvider>
-    );
-  }
-
   return (
     <ErrorBoundary>
       <BrowserRouter>

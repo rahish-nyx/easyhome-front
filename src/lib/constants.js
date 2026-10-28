@@ -1,4 +1,5 @@
 import { WORK_CATEGORIES } from "./catalog";
+import { DEFAULT_CUSTOMER_RULES, DEFAULT_WORKER_RULES } from "./plans";
 
 const CATALOG_TINTS = [
   ["#ffe680", "#7a5c00"],
@@ -50,6 +51,46 @@ export const FALLBACK_SERVICES = WORK_CATEGORIES.map((item, index) => ({
   order: index + 1,
   active: true,
 }));
+
+// Default footer structure. The admin console can override or deactivate these
+// records; this copy is used for the first paint and whenever the API is
+// unreachable, so the storefront never renders an empty footer.
+export const DEFAULT_FOOTER_LINKS = [
+  { id: "footer-about", label: "About us", href: "/legal/about", group: "company", order: 1, active: true },
+  { id: "footer-faq", label: "FAQ", href: "/faq", group: "support", order: 1, active: true },
+  { id: "footer-terms", label: "Terms and Conditions", href: "/legal/terms", group: "legal", order: 1, active: true },
+  { id: "footer-privacy", label: "Privacy policy", href: "/legal/privacy", group: "legal", order: 2, active: true },
+  { id: "footer-refunds", label: "Refund & cancellation policy", href: "/legal/refunds", group: "legal", order: 3, active: true },
+  { id: "footer-disclaimer", label: "Disclaimer", href: "/legal/disclaimer", group: "legal", order: 4, active: true },
+  { id: "footer-support", label: "Help & support", href: "/chat", group: "support", order: 2, active: true },
+  { id: "footer-refer", label: "Refer & Earn", href: "/refer", group: "support", order: 3, active: true },
+  { id: "footer-become-pro", label: "Become a pro", href: "/auth?role=worker", group: "professionals", order: 1, active: true },
+  { id: "footer-worker", label: "Worker dashboard", href: "/worker", group: "professionals", order: 2, active: true },
+  { id: "footer-membership", label: "EasyHome Pro", href: "/subscription", group: "professionals", order: 3, active: true },
+];
+
+// Business defaults used when the settings document is missing or offline.
+export const DEFAULT_SETTINGS = {
+  commissionPct: 10,
+  subscriptionPrice: 199,
+  customerPlans: { monthly: 199, quarterly: 537, yearly: 1910 },
+  workerPlans: { monthly: 250, quarterly: 675, yearly: 2400 },
+  customerRules: { ...DEFAULT_CUSTOMER_RULES },
+  workerRules: { ...DEFAULT_WORKER_RULES },
+  customerBenefits: [
+    "Active priority worker matching",
+    "No 10% urgent-job extra charge",
+    "24A-7 priority support",
+    "Free cancellation for 20 minutes (7 for non-Pro)",
+    "Verified Pro badge",
+  ],
+  workerBenefits: [
+    "0% fees on every job",
+    "Priority job feed",
+    "Verified Pro badge",
+    "Weekly payout support",
+  ],
+};
 
 export const STATUS_META = {
   pending: {

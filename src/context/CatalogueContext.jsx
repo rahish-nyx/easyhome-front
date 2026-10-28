@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { api } from "../lib/api";
-import { FALLBACK_SERVICES } from "../lib/constants";
+import { FALLBACK_SERVICES, DEFAULT_FOOTER_LINKS, DEFAULT_SETTINGS } from "../lib/constants";
 import {
   DEFAULT_CUSTOMER_RULES,
   DEFAULT_WORKER_RULES,
@@ -21,32 +21,21 @@ const CatalogueContext = createContext(null);
 // let the API's in-memory/CDN cache absorb repeat requests. This avoids one
 // Firestore listener per collection on every page view, which is the main
 // source of read quota usage on the Spark plan.
-const CACHE_KEY = "easyhome:catalogue:v2";
+const CACHE_KEY = "easyhome:catalogue:v3";
 const CACHE_TTL_MS = 15 * 60 * 1000;
 
-const SETTINGS_DEFAULTS = {
-  commissionPct: 10,
-  subscriptionPrice: 199,
-  customerPlans: { monthly: 199, quarterly: 537, yearly: 1910 },
-  workerPlans: { monthly: 250, quarterly: 675, yearly: 2400 },
-  customerRules: { ...DEFAULT_CUSTOMER_RULES },
-  workerRules: { ...DEFAULT_WORKER_RULES },
-  customerBenefits: [
-    "Active priority worker matching",
-    "No 10% urgent-job extra charge",
-    "24×7 priority support",
-    "Free cancellation for 20 minutes (7 for non-Pro)",
-    "Verified Pro badge",
-  ],
-  workerBenefits: [
-    "0% fees on every job",
-    "Top placement in search",
-    "Free urgent-job priority",
-    "Verified Pro badge",
-  ],
-  supportPhone: "",
-  maintenanceMode: false,
-  announcement: { title: "", body: "", active: false },
+// First paint comes from the bundled 181-category catalogue and footer copy,
+// so the storefront works instantly (and offline) before the API replies.
+const STATIC_CATALOGUE = {
+  services: FALLBACK_SERVICES,
+  cities: [],
+  zones: [],
+  promos: [],
+  footerLinks: DEFAULT_FOOTER_LINKS,
+  hiddenFooterHrefs: [],
+  settings: null,
+  version: 2,
+  fetchedAt: null,
 };
 
 function readCache() {
@@ -109,15 +98,15 @@ function normalizePayload(payload) {
 }
 
 function normaliseSettings(data) {
-  const merged = { ...SETTINGS_DEFAULTS, ...(data || {}) };
+  const merged = { ...DEFAULT_SETTINGS, ...(data || {}) };
   const legacyCommission = Number(merged.commissionPct);
   merged.customerPlans = normalisePlanGroup(
     merged.customerPlans,
-    Number(merged.subscriptionPrice) || SETTINGS_DEFAULTS.customerPlans.monthly,
+    Number(merged.subscriptionPrice) || DEFAULT_SETTINGS.customerPlans.monthly,
   );
   merged.workerPlans = normalisePlanGroup(
     merged.workerPlans,
-    SETTINGS_DEFAULTS.workerPlans.monthly,
+    DEFAULT_SETTINGS.workerPlans.monthly,
   );
   merged.subscriptionPrice = merged.customerPlans.monthly;
   merged.customerRules = {
@@ -156,10 +145,10 @@ function normaliseSettings(data) {
     }
     merged.customerBenefits = [...new Set(normalized)];
   } else {
-    merged.customerBenefits = [...SETTINGS_DEFAULTS.customerBenefits];
+    merged.customerBenefits = [...DEFAULT_SETTINGS.customerBenefits];
   }
   if (!Array.isArray(merged.workerBenefits) || !merged.workerBenefits.length) {
-    merged.workerBenefits = [...SETTINGS_DEFAULTS.workerBenefits];
+    merged.workerBenefits = [...DEFAULT_SETTINGS.workerBenefits];
   } else {
     merged.workerBenefits = [
       ...new Set(
@@ -198,11 +187,11 @@ export function CatalogueProvider({ children }) {
     const cached = readCache();
     return { cached, fresh: isCacheFresh(cached) };
   });
-  const [catalogue, setCatalogue] = useState(initial.cached);
-  const [loading, setLoading] = useState(!initial.cached);
+  const [catalogue, setCatalogue] = useState(initial.cached || STATIC_CATALOGUE);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const inFlightRef = useRef(false);
-  const hasDataRef = useRef(Boolean(initial.cached));
+  const hasDataRef = useRef(true);
 
   useEffect(() => {
     hasDataRef.current = Boolean(catalogue);
@@ -217,6 +206,8 @@ export function CatalogueProvider({ children }) {
     try {
       const payload = await api.get("/public/bootstrap");
       const next = normalizePayload(payload);
+      if (!next.services.length) next.services = FALLBACK_SERVICES;
+      if (!next.footerLinks.length) next.footerLinks = DEFAULT_FOOTER_LINKS;
       setCatalogue(next);
       hasDataRef.current = true;
       writeCache(next);
@@ -285,7 +276,10 @@ export function CatalogueProvider({ children }) {
 
   const footerLinks = useMemo(
     () =>
-      (catalogue?.footerLinks || [])
+      (catalogue?.footerLinks?.length
+        ? catalogue.footerLinks
+        : DEFAULT_FOOTER_LINKS
+      )
         .filter((link) => link.active !== false)
         .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0)),
     [catalogue],

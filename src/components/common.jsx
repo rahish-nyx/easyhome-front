@@ -38,6 +38,7 @@ import { useToast } from "../context/ToastContext";
 import { useInstallPrompt } from "../hooks/useDevice";
 import { qNotifications } from "../lib/queries";
 import { useLiveQuery } from "../hooks/useLive";
+import { useNotificationSound } from "../hooks/useNotificationSound";
 import { Avatar, Badge, Button, IconButton, Modal, PageLoader, Spinner } from "./ui";
 import logo from "../assets/logo.png";
 
@@ -438,6 +439,11 @@ export function NotificationBell() {
   const wrapRef = useRef(null);
   const query = useMemo(() => (fbUser ? qNotifications(fbUser.uid) : null), [fbUser]);
   const { data: items, loading } = useLiveQuery(query);
+  useNotificationSound(items, {
+    loading,
+    userId: fbUser?.uid || "",
+    enabled: Boolean(fbUser),
+  });
   const unread = items.filter((item) => !item.read).length;
 
   useEffect(() => {

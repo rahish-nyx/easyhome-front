@@ -11,6 +11,38 @@ function resolveApiBase(value) {
 
 export const API_BASE = resolveApiBase(import.meta.env.VITE_API_URL);
 
+const TOKEN_KEY = "easyhome:token";
+
+function readStoredToken() {
+  if (typeof window === "undefined") return "";
+  try {
+    return window.localStorage.getItem(TOKEN_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+let accessToken = readStoredToken();
+
+export function getToken() {
+  return accessToken;
+}
+
+export function setToken(token) {
+  accessToken = String(token || "");
+  if (typeof window === "undefined") return;
+  try {
+    if (accessToken) window.localStorage.setItem(TOKEN_KEY, accessToken);
+    else window.localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* Storage can be unavailable in private mode. */
+  }
+}
+
+export function clearToken() {
+  setToken("");
+}
+
 export class ApiError extends Error {
   constructor(message, { status = 0, code = "ERROR", details } = {}) {
     super(message);
@@ -21,28 +53,35 @@ export class ApiError extends Error {
   }
 }
 
-let authGetter = null;
-
-/** Injected once by AuthProvider to avoid a circular import. */
-export function bindAuth(getter) {
-  authGetter = getter;
+function authHeaders() {
+  return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 }
 
-async function authHeaders() {
-  const user = authGetter?.();
-  if (!user) return {};
+async function refreshAccessToken() {
+  if (!accessToken) return false;
   try {
-    const token = await user.getIdToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await fetch(`${API_BASE}/auth/refresh`, {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: "{}",
+    });
+    if (!response.ok) return false;
+    const data = await response.json().catch(() => null);
+    if (!data?.token) return false;
+    setToken(data.token);
+    return true;
   } catch {
-    return {};
+    return false;
   }
 }
 
-async function request(path, { method = "GET", body, form, timeout = 20000 } = {}) {
+async function request(
+  path,
+  { method = "GET", body, form, timeout = 20000, retry = true } = {},
+) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
-  const headers = { ...(await authHeaders()) };
+  const headers = authHeaders();
 
   let payload;
   if (form) {
@@ -65,6 +104,14 @@ async function request(path, { method = "GET", body, form, timeout = 20000 } = {
     const isJson = (response.headers.get("content-type") || "").includes("application/json");
     const data = isJson ? await response.json() : null;
 
+    if (response.status === 401 && retry && path !== "/auth/refresh") {
+      if (await refreshAccessToken()) {
+        clearTimeout(timer);
+        return request(path, { method, body, form, timeout, retry: false });
+      }
+      setToken("");
+    }
+
     if (!response.ok) {
       throw new ApiError(data?.error || `Request failed (${response.status})`, {
         status: response.status,
@@ -81,10 +128,11 @@ async function request(path, { method = "GET", body, form, timeout = 20000 } = {
       });
     }
     if (error instanceof ApiError) throw error;
+    const offline = typeof navigator !== "undefined" && navigator.onLine === false;
     throw new ApiError(
-      navigator.onLine
-        ? "We could not reach EasyHome. Please try again."
-        : "You are offline. Your saved data is still available.",
+      offline
+        ? "You are offline. Your saved data is still available."
+        : "We could not reach EasyHome. Please try again.",
       { code: "NETWORK" },
     );
   } finally {
@@ -103,7 +151,7 @@ export const api = {
 
   /** Fetch a protected binary (e.g. KYC) and return an object URL. */
   async blob(path) {
-    const headers = await authHeaders();
+    const headers = authHeaders();
     const response = await fetch(`${API_BASE}${path}`, { headers });
     if (!response.ok) {
       const data = await response.json().catch(() => null);

@@ -17,13 +17,12 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { doc } from "firebase/firestore";
-import { db } from "../firebase";
+import { useLiveDoc } from "../hooks/useLive";
+import { publicWorkerRef } from "../lib/queries";
 import { useAuth } from "../context/AuthContext";
 import { useCatalogue } from "../context/CatalogueContext";
 import { useLocation } from "../context/LocationContext";
 import { useToast } from "../context/ToastContext";
-import { useLiveDoc } from "../hooks/useLive";
 import { api } from "../lib/api";
 import { inr } from "../lib/format";
 import { SERVICE_META } from "../lib/constants";
@@ -101,7 +100,7 @@ export default function Booking() {
   const estimatedTotal = budgetAmount + urgentFee;
 
   const workerRef = useMemo(
-    () => (preferredWorkerId && db ? doc(db, "workersPublic", preferredWorkerId) : null),
+    () => (preferredWorkerId ? publicWorkerRef(preferredWorkerId) : null),
     [preferredWorkerId],
   );
   const workerState = useLiveDoc(workerRef);

@@ -19,12 +19,11 @@ import {
   Timer,
   UserRound,
 } from "lucide-react";
-import { doc } from "firebase/firestore";
 import { divIcon } from "leaflet";
 import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
-import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { useLiveDoc } from "../hooks/useLive";
+import { bookingRef as bookingLiveRef } from "../lib/queries";
 import { api } from "../lib/api";
 import { distanceKm, distanceLabel, mapsUrl } from "../lib/geo";
 import { formatDateTime } from "../lib/format";
@@ -114,7 +113,7 @@ export default function Tracking() {
 
   const { id } = useParams();
   const { fbUser } = useAuth();
-  const bookingRef = useMemo(() => (db && id ? doc(db, "bookings", id) : null), [id]);
+  const bookingRef = useMemo(() => bookingLiveRef(id), [id]);
   const live = useLiveDoc(bookingRef);
   const [snapshot, setSnapshot] = useState(null);
   const [error, setError] = useState("");

@@ -29,6 +29,9 @@ import "../styles/admin.css";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { useAsync } from "../hooks/useAsync";
+import { useLiveQuery } from "../hooks/useLive";
+import { useNotificationSound } from "../hooks/useNotificationSound";
+import { qNotifications } from "../lib/queries";
 import { api } from "../lib/api";
 import { ADMIN_NAV } from "../lib/constants";
 import { formatDate } from "../lib/format";
@@ -64,6 +67,16 @@ export default function AdminApp() {
     immediate: isAdmin,
   });
   const stats = overviewState.data?.stats;
+  const notificationsQuery = useMemo(
+    () => (fbUser && isAdmin ? qNotifications(fbUser.uid) : null),
+    [fbUser, isAdmin],
+  );
+  const notifications = useLiveQuery(notificationsQuery);
+  useNotificationSound(notifications.data, {
+    loading: notifications.loading,
+    userId: fbUser?.uid || "",
+    enabled: Boolean(isAdmin),
+  });
 
   useEffect(() => {
     document.body.classList.add("adm-mode");

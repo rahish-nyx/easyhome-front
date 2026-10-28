@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -30,22 +30,26 @@ import { usePageMeta } from "../lib/usePageMeta";
 import { Button, Field, Input, PageLoader, Select } from "../components/ui";
 import logo from "../assets/logo.png";
 
-const FIREBASE_ERRORS = {
-  "auth/invalid-email": "That email address does not look right.",
-  "auth/user-not-found": "No account with that email. Try creating one.",
-  "auth/wrong-password": "Incorrect password. Try again or reset it.",
-  "auth/invalid-credential": "Incorrect email or password.",
-  "auth/email-already-in-use": "That email is already registered. Sign in instead.",
-  "auth/weak-password": "Use a password with at least 6 characters.",
-  "auth/too-many-requests": "Too many attempts. Wait a minute and try again.",
-  "auth/popup-closed-by-user": "Google sign-in was closed before finishing.",
-  "auth/popup-blocked": "Your browser blocked the Google popup. Allow popups and retry.",
-  "auth/network-request-failed": "Network error. Check your connection and try again.",
-  "auth/operation-not-allowed": "This sign-in method is not enabled in Firebase yet.",
+const AUTH_ERRORS = {
+  AUTH_INVALID: "Incorrect email or password.",
+  EMAIL_IN_USE: "That email is already registered. Sign in instead.",
+  ACCOUNT_DISABLED: "This account has been disabled. Contact EasyHome support.",
+  EMAIL_NOT_VERIFIED: "Verify your email address before continuing.",
+  WORKER_DETAILS_REQUIRED: "Choose your trade and service area to apply.",
+  WORKER_NOT_APPROVED: "Your worker application is still under review.",
+  GOOGLE_NOT_CONFIGURED: "Google sign-in is not configured for this deployment yet.",
+  GOOGLE_EMAIL_NOT_VERIFIED: "Verify your Google email address before continuing.",
+  GOOGLE_TOKEN_INVALID: "Google sign-in could not be verified. Try again.",
+  VERIFICATION_INVALID: "This verification link is invalid or has already been used.",
+  VERIFICATION_EXPIRED: "This verification link has expired. Request a new one.",
+  RESET_INVALID: "This reset link is invalid or has already been used.",
+  RESET_EXPIRED: "This reset link has expired. Request a new one.",
+  TIMEOUT: "The request took too long. Check your connection and try again.",
+  NETWORK: "Network error. Check your connection and try again.",
 };
 
 function friendly(error) {
-  return FIREBASE_ERRORS[error?.code] || error?.message || "Something went wrong. Try again.";
+  return AUTH_ERRORS[error?.code] || error?.message || "Something went wrong. Try again.";
 }
 
 export default function Auth() {
@@ -57,8 +61,12 @@ export default function Auth() {
   const rawRole = params.get("role");
   const roleParam = rawRole === "worker" ? "worker" : rawRole === "customer" ? "customer" : "";
   const role = roleParam || "customer";
-  const requestedMode = params.get("mode");
-  const mode = ["signup", "reset"].includes(requestedMode) ? requestedMode : "signin";
+  const verifyToken = params.get("verify") || "";
+  const resetToken = params.get("reset") || "";
+  const requestedMode = resetToken ? "new-password" : params.get("mode");
+  const mode = ["signup", "reset", "new-password"].includes(requestedMode)
+    ? requestedMode
+    : "signin";
   const setMode = (nextMode) => {
     const nextParams = new URLSearchParams(params);
     if (nextMode === "signin") nextParams.delete("mode");
@@ -79,8 +87,10 @@ export default function Auth() {
     signUp,
     googleSignIn,
     resetPassword,
+    resetPasswordWithToken,
     resendVerification,
-    refreshClaims,
+    verifyEmail,
+    refreshProfile,
     logout,
     emailVerified,
   } = useAuth();
@@ -96,6 +106,8 @@ export default function Auth() {
   const [verifying, setVerifying] = useState(false);
   const [terms, setTerms] = useState(false);
   const [error, setError] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const handledLink = useRef("");
 
   const [form, setForm] = useState({
     name: "",
@@ -117,6 +129,31 @@ export default function Auth() {
       setForm((prev) => (prev.referralCode ? prev : { ...prev, referralCode: code }));
     }
   }, []);
+
+  // Email links land on /auth?verify=TOKEN or /auth?reset=TOKEN.
+  useEffect(() => {
+    if (!verifyToken || handledLink.current === verifyToken) return undefined;
+    handledLink.current = verifyToken;
+    let active = true;
+    setVerifying(true);
+    verifyEmail(verifyToken)
+      .then(() => {
+        if (!active) return;
+        toast.success("Email verified. You are all set.");
+        const nextParams = new URLSearchParams(window.location.search);
+        nextParams.delete("verify");
+        setParams(nextParams, { replace: true });
+      })
+      .catch((verifyError) => {
+        if (active) toast.error(friendly(verifyError));
+      })
+      .finally(() => {
+        if (active) setVerifying(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [verifyToken, verifyEmail, setParams, toast]);
 
   const goNext = (targetRole = role) => {
     if (targetRole === "worker") {
@@ -150,6 +187,11 @@ export default function Auth() {
         return;
       }
       toast.success("Welcome back.");
+      if (!result?.user?.emailVerified) {
+        setJustSignedUp(true);
+        toast.info("Verify your email to unlock bookings.");
+        return;
+      }
       goNext(actualRole);
     } catch (signInError) {
       setError(friendly(signInError));
@@ -241,7 +283,30 @@ export default function Auth() {
     }
     setGoogleBusy(true);
     try {
-      const result = await googleSignIn();
+      const workerFields =
+        role === "worker"
+          ? {
+              service:
+                services.find((item) => item.key === serviceKey)?.name ||
+                SERVICE_META[serviceKey]?.name ||
+                serviceKey,
+              serviceKey,
+              area:
+                [city?.areaName, city?.name].filter(Boolean).join(", ") ||
+                form.area.trim(),
+              areaName: city?.areaName || form.area.trim(),
+              state: city?.state || "",
+              pricePerWork: Number(form.pricePerWork) || undefined,
+              city: city?.name || form.area.trim(),
+              lat: city?.lat || null,
+              lng: city?.lng || null,
+            }
+          : {};
+      const result = await googleSignIn({
+        role,
+        referralCode: form.referralCode.trim().toUpperCase(),
+        worker: workerFields,
+      });
       const actualRole = result?.role || role;
       if (actualRole !== role) {
         await logout().catch(() => {});
@@ -254,6 +319,10 @@ export default function Auth() {
         return;
       }
       toast.success("Signed in with Google.");
+      if (!result?.user?.emailVerified) {
+        setJustSignedUp(true);
+        return;
+      }
       goNext(actualRole);
     } catch (googleError) {
       setError(friendly(googleError));
@@ -281,16 +350,42 @@ export default function Auth() {
     }
   };
 
+  const handleSetPassword = async (event) => {
+    event.preventDefault();
+    setError("");
+    if (form.password.length < 8) {
+      setError("Use a password with at least 8 characters.");
+      return;
+    }
+    if (form.password !== confirmPassword) {
+      setError("The two passwords do not match.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await resetPasswordWithToken(resetToken, form.password);
+      const nextParams = new URLSearchParams(window.location.search);
+      nextParams.delete("reset");
+      setParams(nextParams, { replace: true });
+      toast.success("Password updated. You are signed in.");
+      setJustSignedUp(!result?.user?.emailVerified);
+      if (result?.user?.emailVerified) goNext(result.role || role);
+    } catch (resetError) {
+      setError(friendly(resetError));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const checkVerified = async () => {
     if (!fbUser) return;
     setVerifying(true);
     try {
-      await fbUser.reload();
-      await refreshClaims();
-      if (fbUser.emailVerified) {
+      const nextProfile = await refreshProfile();
+      if (nextProfile?.emailVerified) {
         toast.success("Email verified. You are all set.");
         setJustSignedUp(false);
-        const actualRole = profile?.role === "worker" ? "worker" : role;
+        const actualRole = nextProfile.role === "worker" ? "worker" : role;
         goNext(actualRole);
       } else {
         toast.info("Not verified yet. Open the link in your email first.");
@@ -304,7 +399,7 @@ export default function Auth() {
 
   if (loading) return <PageLoader label="Preparing sign in…" />;
 
-  if (fbUser && !justSignedUp) {
+  if (fbUser && !justSignedUp && !resetToken) {
     return (
       <AuthShell role={profile?.role === "worker" ? "worker" : role}>
         <div className="auth-card">
@@ -407,8 +502,7 @@ export default function Auth() {
               </Button>
             </div>
             <div className="auth-note">
-              Check spam or promotions. The sender is Firebase Authentication on behalf of
-              EasyHome.
+              Check spam or promotions. Verification emails are sent by EasyHome.
             </div>
           </div>
         </div>
@@ -429,18 +523,22 @@ export default function Auth() {
       <div className="auth-card">
         <div className="auth-card__head">
           <h2>
-            {mode === "reset"
-              ? "Reset your password"
-              : mode === "signup"
-                ? role === "worker"
-                  ? "Join as a professional"
-                  : "Create your account"
-                : role === "worker"
-                  ? "Professional sign in"
-                  : "Welcome back"}
+            {mode === "new-password"
+              ? "Choose a new password"
+              : mode === "reset"
+                ? "Reset your password"
+                : mode === "signup"
+                  ? role === "worker"
+                    ? "Join as a professional"
+                    : "Create your account"
+                  : role === "worker"
+                    ? "Professional sign in"
+                    : "Welcome back"}
           </h2>
           <p>
-            {mode === "reset"
+            {mode === "new-password"
+              ? "Set a strong password to secure your EasyHome account."
+              : mode === "reset"
               ? "We will email you a secure reset link."
               : mode === "signup"
                 ? role === "worker"
@@ -452,7 +550,7 @@ export default function Auth() {
           </p>
         </div>
 
-        {mode !== "reset" ? (
+        {mode === "signin" || mode === "signup" ? (
           <div className="auth-tabs">
             <button
               type="button"
@@ -711,6 +809,46 @@ export default function Auth() {
               </p>
             ) : null}
           </form>
+        ) : mode === "new-password" ? (
+          <form onSubmit={handleSetPassword} className="stack">
+            <Field label="New password" htmlFor="new-password" hint="At least 8 characters." required>
+              <div className="input-group">
+                <Input
+                  id="new-password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  value={form.password}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, password: event.target.value }))
+                  }
+                  placeholder="Create a password"
+                  required
+                />
+                <button
+                  type="button"
+                  className="input-group__btn"
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
+            </Field>
+            <Field label="Confirm password" htmlFor="confirm-password" required>
+              <Input
+                id="confirm-password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                placeholder="Repeat your password"
+                required
+              />
+            </Field>
+            <Button type="submit" size="lg" className="btn--block" loading={busy}>
+              Update password and sign in
+            </Button>
+          </form>
         ) : (
           <form onSubmit={handleReset} className="stack">
             <Field label="Account email" htmlFor="reset-email">
@@ -739,7 +877,7 @@ export default function Auth() {
           </form>
         )}
 
-        {mode !== "reset" ? (
+        {mode === "signin" || mode === "signup" ? (
           <>
             <div className="auth-divider">or continue with</div>
             <Button
@@ -783,7 +921,7 @@ export default function Auth() {
 
         <p className="auth-note" style={{ textAlign: "center" }}>
           <Sparkles size={12} style={{ display: "inline", marginRight: 4 }} />
-          Firebase secures your sign-in. EasyHome never sees your password.
+          EasyHome secures your sign-in with encrypted passwords and email verification.
         </p>
       </div>
     </AuthShell>

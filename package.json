@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "firebase": "^13.1.0",
     "geolib": "^4.0.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.8.0",

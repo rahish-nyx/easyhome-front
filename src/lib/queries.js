@@ -1,121 +1,62 @@
-import {
-  collection,
-  doc,
-  limit,
-  orderBy,
-  query,
-  where,
-} from "firebase/firestore";
-import { db } from "../firebase";
+/**
+ * Lightweight REST descriptors used by `useLiveQuery`/`useLiveDoc`.
+ *
+ * The app no longer keeps an open Firestore listener per collection. Each
+ * descriptor is a plain object: `{ key, path, select }` where `path` is an API
+ * route and `select` optionally names the array/property to read from the
+ * JSON response.
+ */
+export const liveQuery = (path, select = "") =>
+  path ? { key: `${select || "data"}:${path}`, path, select } : null;
 
-const ready = () => Boolean(db);
+export const liveDoc = (path, select = "") =>
+  path ? { key: `doc:${select || ""}:${path}`, path, select } : null;
 
-export const qServices = () =>
-  ready() ? query(collection(db, "services"), orderBy("order", "asc")) : null;
+export const qServices = () => liveQuery("/public/bootstrap", "services");
+export const qCities = () => liveQuery("/public/bootstrap", "cities");
+export const qServiceZones = () => liveQuery("/public/bootstrap", "zones");
+export const qPromos = () => liveQuery("/public/bootstrap", "promos");
+export const qFooterLinks = () => liveQuery("/public/bootstrap", "footerLinks");
+export const appSettingsRef = () => liveDoc("/public/bootstrap", "settings");
 
-export const qCities = () =>
-  ready() ? query(collection(db, "cities"), orderBy("name", "asc")) : null;
-
-export const qServiceZones = () =>
-  ready() ? query(collection(db, "service_zones")) : null;
-
-export const qPromos = () =>
-  ready() ? query(collection(db, "promos"), orderBy("order", "asc")) : null;
-
-export const qFooterLinks = () =>
-  ready() ? query(collection(db, "footer_links")) : null;
-
-export const appSettingsRef = () =>
-  ready() ? doc(db, "settings", "app") : null;
-
-export const qUrgent = (count = 12) =>
-  ready()
-    ? query(
-        collection(db, "urgentPublic"),
-        orderBy("createdAt", "desc"),
-        limit(count),
-      )
-    : null;
+export const qUrgent = () => liveQuery("/urgent", "jobs");
 
 export const qWorkers = (serviceKey = "", count = 12) => {
-  if (!ready()) return null;
-  const base = collection(db, "workersPublic");
-  if (serviceKey) {
-    return query(
-      base,
-      where("serviceKey", "==", serviceKey),
-      orderBy("rating", "desc"),
-      limit(count),
-    );
-  }
-  return query(base, orderBy("rating", "desc"), limit(count));
+  const params = new URLSearchParams();
+  if (serviceKey) params.set("serviceKey", serviceKey);
+  params.set("limit", String(count));
+  return liveQuery(`/workers?${params.toString()}`, "workers");
 };
 
 export const qBookingsForCustomer = (uid) =>
-  ready()
-    ? query(
-        collection(db, "bookings"),
-        where("customerId", "==", uid),
-        orderBy("createdAt", "desc"),
-        limit(60),
-      )
-    : null;
+  uid ? liveQuery("/bookings", "bookings") : null;
 
 export const qBookingsForWorker = (uid) =>
-  ready()
-    ? query(
-        collection(db, "bookings"),
-        where("workerId", "==", uid),
-        orderBy("createdAt", "desc"),
-        limit(80),
-      )
-    : null;
+  uid ? liveQuery("/worker/bookings", "bookings") : null;
 
-export const qJobFeed = (serviceKey, workerId, count = 30) =>
-  ready() && serviceKey && workerId
-    ? query(
-        collection(db, "jobFeed"),
-        where("serviceKey", "==", serviceKey),
-        where("status", "==", "open"),
-        where("workerId", "==", workerId),
-        orderBy("createdAt", "desc"),
-        limit(count),
-      )
-    : null;
+export const qJobFeed = (serviceKey, workerId) => {
+  if (!workerId) return null;
+  const params = new URLSearchParams();
+  if (serviceKey) params.set("serviceKey", serviceKey);
+  return liveQuery(`/worker/job-feed?${params.toString()}`, "jobs");
+};
 
 export const qNotifications = (uid) =>
-  ready()
-    ? query(
-        collection(db, "notifications"),
-        where("userId", "==", uid),
-        orderBy("createdAt", "desc"),
-        limit(30),
-      )
-    : null;
+  uid ? liveQuery("/notifications", "notifications") : null;
 
-export const qReviews = (workerId, count = 10) =>
-  ready()
-    ? query(
-        collection(db, "reviews"),
-        where("workerId", "==", workerId),
-        orderBy("createdAt", "desc"),
-        limit(count),
-      )
-    : null;
+export const qReviews = (workerId) =>
+  workerId ? liveQuery(`/workers/${encodeURIComponent(workerId)}`, "reviews") : null;
 
 export const qChatMessages = (uid) =>
-  ready() && uid
-    ? query(
-        collection(db, "chatThreads", uid, "messages"),
-        orderBy("createdAt", "asc"),
-        limit(150),
-      )
-    : null;
+  uid ? liveQuery("/chat/messages", "messages") : null;
 
 export const chatThreadRef = (uid) =>
-  ready() && uid ? doc(db, "chatThreads", uid) : null;
+  uid ? liveDoc(`/chat/thread`, "thread") : null;
 
-export const qAdminChats = () =>
-  ready()
-    ? query(collection(db, "chatThreads"), orderBy("lastAt", "desc"), limit(60))
-    : null;
+export const qAdminChats = () => liveQuery("/admin/chats", "chats");
+
+export const bookingRef = (id) =>
+  id ? liveDoc(`/bookings/${encodeURIComponent(id)}`, "booking") : null;
+
+export const publicWorkerRef = (id) =>
+  id ? liveDoc(`/workers/${encodeURIComponent(id)}`, "worker") : null;

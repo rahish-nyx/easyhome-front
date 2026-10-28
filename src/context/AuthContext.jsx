@@ -4,348 +4,218 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
-import {
-  GoogleAuthProvider,
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  sendEmailVerification,
-  sendPasswordResetEmail,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  signOut,
-  updateProfile,
-} from "firebase/auth";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
-import { auth, db, firebaseReady } from "../firebase";
-import { api, bindAuth } from "../lib/api";
+import { api, clearToken, getToken, setToken } from "../lib/api";
 import { isActiveUntil } from "../lib/format";
 import { clearReferralCode, pendingReferralCode } from "../lib/referral";
+import { clearLiveCache } from "../hooks/useLive";
+import { requestGoogleAccessToken } from "../lib/google";
 
 const AuthContext = createContext(null);
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function userFromSession(payload) {
+  const claims = payload?.claims || {};
+  const profile = payload?.profile || null;
+  const uid = claims.uid || profile?.id || "";
+  if (!uid) return null;
+  return {
+    uid,
+    email: claims.email || profile?.email || "",
+    emailVerified:
+      claims.emailVerified === true || profile?.emailVerified === true,
+    displayName: claims.name || profile?.name || "",
+    photoURL: claims.picture || profile?.photoPath || "",
+    role: claims.role || profile?.role || "customer",
+    admin: claims.admin === true || payload?.isAdmin === true,
+    async getIdToken() {
+      return getToken();
+    },
+  };
+}
 
 export function AuthProvider({ children }) {
   const [fbUser, setFbUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [worker, setWorker] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(firebaseReady);
-  const [needsProfile, setNeedsProfile] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const unsubs = useRef([]);
-  const listenersUid = useRef(null);
-  const signupInProgress = useRef(false);
-  const mounted = useRef(true);
-
-  useEffect(() => {
-    bindAuth(() => auth?.currentUser);
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
+  const applySession = useCallback((payload) => {
+    if (payload?.token) setToken(payload.token);
+    const nextProfile = payload?.profile || null;
+    const nextWorker = payload?.worker || null;
+    const admin = payload?.isAdmin === true || payload?.claims?.admin === true;
+    const nextUser = userFromSession(payload);
+    setProfile(nextProfile);
+    setWorker(nextWorker);
+    setIsAdmin(admin);
+    setFbUser(nextUser);
+    return {
+      user: nextUser,
+      profile: nextProfile,
+      worker: nextWorker,
+      role: nextProfile?.role === "worker" || nextWorker ? "worker" : "customer",
     };
   }, []);
 
-  const clearListeners = useCallback(() => {
-    unsubs.current.forEach((unsubscribe) => {
-      try {
-        unsubscribe();
-      } catch {
-        /* already closed */
-      }
-    });
-    unsubs.current = [];
-    listenersUid.current = null;
+  const resetSession = useCallback(() => {
+    clearToken();
+    clearLiveCache();
+    setFbUser(null);
+    setProfile(null);
+    setWorker(null);
+    setIsAdmin(false);
   }, []);
 
-  const refreshClaims = useCallback(async () => {
-    const user = auth?.currentUser;
-    if (!user) {
-      setIsAdmin(false);
-      return false;
-    }
-    try {
-      await user.getIdToken(true);
-      const result = await user.getIdTokenResult();
-      const admin = result.claims.admin === true;
-      setIsAdmin(admin);
-      return admin;
-    } catch {
-      return false;
-    }
-  }, []);
-
-  const attach = useCallback(
-    (user) => {
-      clearListeners();
-      listenersUid.current = user.uid;
-      if (!db) return;
-
-      unsubs.current.push(
-        onSnapshot(
-          doc(db, "users", user.uid),
-          (snapshot) => {
-            if (!mounted.current) return;
-            setProfile(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
-            setNeedsProfile(!snapshot.exists());
-          },
-          (snapshotError) => {
-            if (mounted.current) setError(snapshotError.message);
-          },
-        ),
-      );
-
-      unsubs.current.push(
-        onSnapshot(
-          doc(db, "workers", user.uid),
-          (snapshot) => {
-            if (!mounted.current) return;
-            setWorker(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
-          },
-          () => {},
-        ),
-      );
-    },
-    [clearListeners],
-  );
+  const loadMe = useCallback(async () => {
+    const payload = await api.get("/auth/me");
+    return applySession(payload);
+  }, [applySession]);
 
   useEffect(() => {
-    if (!firebaseReady || !auth || !db) {
+    let active = true;
+    const token = getToken();
+    if (!token) {
       setLoading(false);
       return undefined;
     }
 
-    const bootstrapTimer = window.setTimeout(() => {
-      if (!mounted.current) return;
-      setLoading(false);
-      setError(
-        (current) =>
-          current ||
-          "Firebase Authentication could not initialize. Check the project configuration.",
-      );
-    }, 8000);
-
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      async (user) => {
-        window.clearTimeout(bootstrapTimer);
-        if (!mounted.current) return;
-
-        if (!user) {
-          clearListeners();
-          setFbUser(null);
-          setProfile(null);
-          setWorker(null);
-          setIsAdmin(false);
-          setNeedsProfile(false);
-          setLoading(false);
-          return;
-        }
-
-        setFbUser(user);
-
-        if (listenersUid.current === user.uid) {
-          refreshClaims().catch(() => {});
-          return;
-        }
-
-        setLoading(true);
-        setError(null);
-        attach(user);
-
-        try {
-          let snapshot = await getDoc(doc(db, "users", user.uid));
-
-          if (!snapshot.exists()) {
-            // A sign-up may be creating the profile right now. Wait for it
-            // instead of racing it with a default customer profile.
-            for (let i = 0; i < 24 && signupInProgress.current; i += 1) {
-              await sleep(250);
-            }
-            for (let i = 0; i < 8 && !snapshot.exists(); i += 1) {
-              await sleep(200);
-              snapshot = await getDoc(doc(db, "users", user.uid));
-            }
-
-            if (!snapshot.exists() && !signupInProgress.current) {
-              const workerSnap = await getDoc(doc(db, "workers", user.uid));
-              if (workerSnap.exists()) {
-                const worker = workerSnap.data();
-                await api.post("/auth/session", {
-                  name: user.displayName || worker.name || "",
-                  role: "worker",
-                  service: worker.service,
-                  serviceKey: worker.serviceKey,
-                  area: worker.area,
-                  areaName: worker.areaName,
-                  city: worker.city,
-                  state: worker.state,
-                  pricePerWork: worker.pricePerWork,
-                  lat: worker.lat,
-                  lng: worker.lng,
-                });
-              } else {
-                await api.post("/auth/session", {
-                  name: user.displayName || "",
-                  role: "customer",
-                  referralCode: pendingReferralCode(),
-                });
-                clearReferralCode();
-              }
-            }
-          }
-
-          await refreshClaims();
-        } catch (authError) {
-          if (mounted.current) {
-            setError(authError.message || "Could not load your account.");
-          }
-        } finally {
-          if (mounted.current) setLoading(false);
-        }
-      },
-      (authError) => {
-        window.clearTimeout(bootstrapTimer);
-        if (!mounted.current) return;
+    const timer = window.setTimeout(() => {
+      if (active) {
         setError(
-          authError?.message ||
-            "Firebase Authentication could not initialize. Check the project configuration.",
+          (current) =>
+            current || "Your account is taking longer than usual to load.",
         );
         setLoading(false);
-      },
-    );
+      }
+    }, 10000);
+
+    loadMe()
+      .catch((authError) => {
+        if (!active) return;
+        if (authError?.status === 401 || authError?.status === 403) {
+          resetSession();
+        } else {
+          setError(authError.message || "Could not load your account.");
+        }
+      })
+      .finally(() => {
+        window.clearTimeout(timer);
+        if (active) setLoading(false);
+      });
 
     return () => {
-      window.clearTimeout(bootstrapTimer);
-      unsubscribe();
-      clearListeners();
+      active = false;
+      window.clearTimeout(timer);
     };
-  }, [attach, clearListeners, refreshClaims]);
+  }, [loadMe, resetSession]);
 
   const signUp = useCallback(
-    async ({ email, password, name, phone, role = "customer", worker: workerFields = {} }) => {
-      if (!auth) throw new Error("Firebase is not configured.");
-      signupInProgress.current = true;
+    async ({
+      email,
+      password,
+      name,
+      phone,
+      role = "customer",
+      referralCode,
+      worker: workerFields = {},
+    }) => {
       setError(null);
-      try {
-        const credential = await createUserWithEmailAndPassword(auth, email, password);
-        if (name) await updateProfile(credential.user, { displayName: name });
-
-        await api.post("/auth/session", {
-          name,
-          phone,
-          role,
-          referralCode: pendingReferralCode(),
-          ...workerFields,
-        });
-        clearReferralCode();
-
-        setFbUser(credential.user);
-        attach(credential.user);
-        await sendEmailVerification(credential.user).catch(() => {});
-        await refreshClaims();
-        return credential.user;
-      } finally {
-        signupInProgress.current = false;
-      }
+      const payload = await api.post("/auth/register", {
+        email,
+        password,
+        name,
+        phone,
+        role,
+        city: workerFields.city || "",
+        referralCode: referralCode || pendingReferralCode() || "",
+        ...workerFields,
+      });
+      clearReferralCode();
+      const session = applySession(payload);
+      return {
+        ...session,
+        verificationUrl: payload.verificationUrl,
+        verificationSent: payload.verificationSent,
+      };
     },
-    [attach, refreshClaims],
+    [applySession],
   );
 
-  const loadAccount = useCallback(async (user) => {
-    await refreshClaims();
-    try {
-      const account = await api.get("/auth/me");
-      if (mounted.current) {
-        setProfile(account.profile || null);
-        setWorker(account.worker || null);
-      }
-      const role =
-        account.profile?.role === "worker" || account.worker
-          ? "worker"
-          : "customer";
-      return { user, profile: account.profile || null, worker: account.worker || null, role };
-    } catch {
-      return { user, profile: null, worker: null, role: "customer" };
-    }
-  }, [refreshClaims]);
+  const signIn = useCallback(
+    async (email, password) => {
+      setError(null);
+      const payload = await api.post("/auth/login", { email, password });
+      return applySession(payload);
+    },
+    [applySession],
+  );
 
-  const signIn = useCallback(async (email, password) => {
-    if (!auth) throw new Error("Firebase is not configured.");
-    const credential = await signInWithEmailAndPassword(auth, email, password);
-    return loadAccount(credential.user);
-  }, [loadAccount]);
-
-  const googleSignIn = useCallback(async () => {
-    if (!auth || !db) throw new Error("Firebase is not configured.");
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: "select_account" });
-    const credential = await signInWithPopup(auth, provider);
-    const uid = credential.user.uid;
-
-    const [snapshot, workerSnap] = await Promise.all([
-      getDoc(doc(db, "users", uid)),
-      getDoc(doc(db, "workers", uid)),
-    ]);
-    if (!snapshot.exists()) {
-      if (workerSnap.exists()) {
-        const worker = workerSnap.data();
-        await api.post("/auth/session", {
-          name: credential.user.displayName || worker.name || "",
-          role: "worker",
-          service: worker.service,
-          serviceKey: worker.serviceKey,
-          area: worker.area,
-          areaName: worker.areaName,
-          city: worker.city,
-          state: worker.state,
-          pricePerWork: worker.pricePerWork,
-          lat: worker.lat,
-          lng: worker.lng,
-        });
-      } else {
-        await api.post("/auth/session", {
-          name: credential.user.displayName || "",
-          role: "customer",
-          referralCode: pendingReferralCode(),
-        });
-        clearReferralCode();
-      }
-    }
-    return loadAccount(credential.user);
-  }, [loadAccount]);
+  const googleSignIn = useCallback(
+    async ({ role, referralCode, worker: workerFields = {} } = {}) => {
+      setError(null);
+      const accessToken = await requestGoogleAccessToken();
+      const payload = await api.post("/auth/google", {
+        accessToken,
+        role: role === "worker" ? "worker" : "customer",
+        referralCode: referralCode || pendingReferralCode() || "",
+        ...workerFields,
+      });
+      if (payload.created) clearReferralCode();
+      return applySession(payload);
+    },
+    [applySession],
+  );
 
   const logout = useCallback(async () => {
-    if (!auth) return;
-    await signOut(auth);
-    clearListeners();
-    setProfile(null);
-    setWorker(null);
-    setFbUser(null);
-    setIsAdmin(false);
-  }, [clearListeners]);
+    try {
+      await api.post("/auth/logout");
+    } catch {
+      /* The token is stateless; clearing it locally is enough. */
+    }
+    resetSession();
+  }, [resetSession]);
 
   const resendVerification = useCallback(async () => {
-    if (!auth?.currentUser) throw new Error("Sign in first.");
-    await sendEmailVerification(auth.currentUser);
+    return api.post("/auth/resend-verification");
   }, []);
 
   const resetPassword = useCallback(async (email) => {
-    if (!auth) throw new Error("Firebase is not configured.");
-    await sendPasswordResetEmail(auth, email);
+    return api.post("/auth/forgot-password", { email });
   }, []);
 
+  const resetPasswordWithToken = useCallback(
+    async (token, password) => {
+      const payload = await api.post("/auth/reset-password", { token, password });
+      return applySession(payload);
+    },
+    [applySession],
+  );
+
+  const verifyEmail = useCallback(
+    async (token) => {
+      const payload = await api.post("/auth/verify-email", { token });
+      return applySession(payload);
+    },
+    [applySession],
+  );
+
+  const refreshClaims = useCallback(async () => {
+    if (!getToken()) {
+      setIsAdmin(false);
+      return false;
+    }
+    const session = await loadMe();
+    return Boolean(session.user?.admin);
+  }, [loadMe]);
+
   const refreshProfile = useCallback(async () => {
-    if (!auth?.currentUser || !db) return null;
-    const snapshot = await getDoc(doc(db, "users", auth.currentUser.uid));
-    const next = snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
-    setProfile(next);
-    return next;
-  }, []);
+    if (!getToken()) return null;
+    const session = await loadMe();
+    return session.profile;
+  }, [loadMe]);
 
   const role = profile?.role || (worker ? "worker" : "customer");
   const isWorker = role === "worker";
@@ -368,13 +238,15 @@ export function AuthProvider({ children }) {
       emailVerified: fbUser?.emailVerified === true,
       loading,
       error,
-      needsProfile,
+      needsProfile: false,
       signUp,
       signIn,
       googleSignIn,
       logout,
       resendVerification,
       resetPassword,
+      resetPasswordWithToken,
+      verifyEmail,
       refreshClaims,
       refreshProfile,
     }),
@@ -390,13 +262,14 @@ export function AuthProvider({ children }) {
       premiumUntil,
       loading,
       error,
-      needsProfile,
       signUp,
       signIn,
       googleSignIn,
       logout,
       resendVerification,
       resetPassword,
+      resetPasswordWithToken,
+      verifyEmail,
       refreshClaims,
       refreshProfile,
     ],
