@@ -791,7 +791,7 @@ export function CustomerLayout() {
     <>
       <OfflineBanner />
       <SiteHeader />
-      <main id="main">
+      <main id="main" className="pb-24 md:pb-0" style={{ paddingBottom: 'calc(var(--bottom-nav-h, 70px) + env(safe-area-inset-bottom))' }}>
         <Outlet />
       </main>
       {standalone ? null : <SiteFooter />}
