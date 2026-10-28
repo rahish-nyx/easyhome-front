@@ -18,6 +18,7 @@ import { inr } from "../lib/format";
 import { Button, Field, Input, Modal, Select, Textarea } from "../components/ui";
 import { ServiceIcon } from "../components/common";
 import { SERVICE_ICON_OPTIONS } from "../lib/iconMap";
+import { groupedServices } from "../lib/serviceGroups";
 import {
   AdminPage,
   EmptyBlock,
@@ -90,6 +91,9 @@ export default function AdminCatalog() {
   const [serviceModal, setServiceModal] = useState(null);
   const [cityModal, setCityModal] = useState(null);
   const [deleteCity, setDeleteCity] = useState(null);
+  const [folderEdit, setFolderEdit] = useState(null);
+  const [editingFolderName, setEditingFolderName] = useState("");
+  const [busyFolder, setBusyFolder] = useState("");
   const [priceDrafts, setPriceDrafts] = useState({});
   const [busy, setBusy] = useState("");
 
@@ -106,6 +110,8 @@ export default function AdminCatalog() {
 
   const services = dataState.data?.services || [];
   const cities = dataState.data?.cities || [];
+  const folderGroups = useMemo(() => groupedServices(services), [services]);
+  const folderCount = Object.keys(folderGroups).length;
 
   useEffect(() => {
     if (tab !== "pricing") return;
@@ -302,6 +308,7 @@ export default function AdminCatalog() {
               onClick={savePrices}
             >
               Save {changedPrices.length ? `${changedPrices.length} ` : ""}prices
+            
             </Button>
           ) : (
             <Button
@@ -356,6 +363,7 @@ export default function AdminCatalog() {
             { id: "services", label: "Services", count: services.length },
             { id: "pricing", label: "Prices", count: services.length },
             { id: "cities", label: "Cities", count: cities.length },
+            { id: "folders", label: "Folders", count: folderCount },
           ]}
           value={tab}
           onChange={(next) => {
@@ -438,6 +446,40 @@ export default function AdminCatalog() {
               body="Clear the search to see every price."
             />
           )}
+        </Panel>
+      ) : tab === "folders" ? (
+        <Panel flush>
+          <h2 style={{ fontSize: 20, marginBottom: 12 }}>Service Folders</h2>
+          <div className="adm-catalog-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
+            {Object.entries(folderGroups).map(([folderName, items]) => {
+              const active = items.every((i) => i.active !== false);
+              return (
+                <article key={folderName} className="adm-catalog-card" style={{ padding: 16, borderRadius: 12, background: "#fff", border: "1px solid var(--line)", display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <h3 style={{ fontSize: 16 }}>{folderName}</h3>
+                    <StatusPill status={active ? "active" : "expired"} label={active ? "Live" : "Hidden"} />
+                  </div>
+                  <span style={{ fontSize: 12, color: "#777" }}>{items.length} services</span>
+                  <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                    <Button size="sm" variant="outline" icon={Pencil} onClick={() => { setEditingFolderName(folderName); setFolderEdit(folderName); }}>Edit</Button>
+                    <Button size="sm" variant={active ? "outline" : "secondary"} onClick={async () => { setBusyFolder(folderName); try { await api.patch("/admin/services", { updates: items.map((i) => ({ id: i.id, active: !active })) }); await refresh(); toast.success(`Folder ${!active ? "shown" : "hidden"}`); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); } }}>{active ? "Hide" : "Show"}</Button>
+                    <Button size="sm" variant="danger" icon={Trash2} onClick={() => { if (confirm(`Delete folder "${folderName}"? It will remove ${items.length} services.`)) { setBusyFolder(folderName); api.post("/admin/services/delete-group", { group: folderName }).then(refresh).catch((e) => toast.error(e.message)).finally(() => setBusyFolder("")); } }} disabled={!!busyFolder}>Del</Button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          {folderEdit ? (
+            <Modal title="Edit folder" onClose={() => { setFolderEdit(null); setEditingFolderName(""); }}>
+              <Field label="Folder name">
+                <Input value={editingFolderName} onChange={(e) => setEditingFolderName(e.target.value)} />
+              </Field>
+              <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+                <Button onClick={async () => { setBusyFolder(folderEdit); try { await api.patch("/admin/services/folders", { oldName: folderEdit, newName: editingFolderName }); await refresh(); toast.success("Folder updated"); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); setFolderEdit(null); setEditingFolderName(""); } }} disabled={!!busyFolder}>Save</Button>
+                <Button variant="outline" onClick={() => { setFolderEdit(null); setEditingFolderName(""); }}>Cancel</Button>
+              </div>
+            </Modal>
+          ) : null}
         </Panel>
       ) : tab === "services" ? (
         <Panel flush>
