@@ -5,6 +5,8 @@
 
 .worker-app {
   --wk-bg: #f4f8fc;
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  min-height: 100vh;
   --wk-bg-2: #ffffff;
   --wk-panel: #ffffff;
   --wk-panel-2: #f8fbff;
@@ -131,11 +133,12 @@
 .worker-top__inner {
   max-width: 1240px;
   margin: 0 auto;
-  padding: 12px 20px;
+  padding: 10px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 8px 16px;
+  flex-wrap: wrap;
   min-height: 72px;
 }
 

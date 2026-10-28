@@ -27,6 +27,7 @@ import {
   workerInServiceArea,
 } from "../lib/geo";
 import { SERVICE_META } from "../lib/constants";
+import { groupedServices, serviceGroup } from "../lib/serviceGroups";
 import { Badge, EmptyState, SectionHeader } from "../components/ui";
 import {
   SearchBar,
@@ -99,7 +100,29 @@ function ServicesList({ filtered, query, city, services }) {
       ) : null}
 
       {filtered.length ? (
-        <ServiceGrid services={filtered} />
+        <>
+          {!query && (
+            <div className="service-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
+              {Object.entries(groupedServices(filtered)).map(([groupName, groupItems]) => (
+                <Link
+                  key={groupName}
+                  to={`/services?group=${encodeURIComponent(groupName)}`}
+                  className="service-tile"
+                  style={{ display: "flex", flexDirection: "column", padding: 18, borderRadius: 16, background: "#fff", border: "1px solid var(--line)", textDecoration: "none", color: "inherit" }}
+                >
+                  <strong style={{ fontSize: 16, marginBottom: 6 }}>{groupName}</strong>
+                  <span style={{ fontSize: 12, color: "#777" }}>{groupItems.length} services</span>
+                </Link>
+              ))}
+            </div>
+          )}
+          {query ? <ServiceGrid services={filtered} /> : (
+            <div style={{ marginTop: 24 }}>
+              <h2 style={{ fontSize: 20, marginBottom: 12 }}>Browse by category</h2>
+              <ServiceGrid services={filtered} />
+            </div>
+          )}
+        </>
       ) : (
         <div className="card">
           <EmptyState

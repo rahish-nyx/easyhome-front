@@ -367,8 +367,8 @@ export default function Home() {
         <section className="section">
           <SectionHeader
             eyebrow="Need it now?"
-            title="Urgent jobs near you"
-            subtitle="Live requests from homes around you — book an urgent visit and a pro is dispatched first."
+            title="Instant service near you"
+            subtitle="Skip the wait, book pro for immediate dispatch."
             action={
               <Link to="/book?urgency=urgent" className="btn btn--dark btn--sm">
                 <Bolt size={15} /> Need help now

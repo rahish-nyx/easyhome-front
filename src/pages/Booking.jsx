@@ -385,6 +385,7 @@ export default function Booking() {
                 <Select
                   id="service"
                   value={serviceKey}
+                  disabled={!!initialKey}
                   onChange={(event) => setServiceKey(event.target.value)}
                 >
                   {services.map((item) => (
