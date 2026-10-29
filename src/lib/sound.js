@@ -85,13 +85,17 @@ if (typeof window !== "undefined") {
 }
 
 export function playNotificationSound() {
+  const context = getContext();
+  if (!context) return;
+
+  // A suspended context cannot play until the first gesture unlocks it. Do not
+  // consume the throttle window while audio is still blocked.
+  if (context.state !== "running" && !unlocked) return;
+
   const now = Date.now();
   // The bell can be mounted in more than one place; play once per event.
   if (now - lastPlayedAt < 1200) return;
   lastPlayedAt = now;
-
-  const context = getContext();
-  if (!context) return;
 
   const ring = () => {
     const start = context.currentTime + 0.01;
