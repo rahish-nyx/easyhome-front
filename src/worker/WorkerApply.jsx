@@ -30,6 +30,8 @@ export default function WorkerApply({ existing, onCancel }) {
     name: base.name || "",
     phone: base.phone || "",
     serviceKey: "",
+    secondaryServiceKey: "",
+    optionalServiceKey: "",
     state: base.state || city?.state || "",
     city: base.city || city?.name || "",
     areaName: base.areaName || city?.areaName || "",
@@ -40,6 +42,12 @@ export default function WorkerApply({ existing, onCancel }) {
   const [error, setError] = useState("");
   const [coords, setCoords] = useState(null);
   const [locating, setLocating] = useState(false);
+  const [zonePickerOpen, setZonePickerOpen] = useState(false);
+  const [zones, setZones] = useState([]);
+  const [zoneLoading, setZoneLoading] = useState(false);
+  const selectedCityForZone = cities.find(
+    (item) => item.name === form.city && (!form.state || item.state?.toLowerCase() === String(form.state).toLowerCase()),
+  );
 
   useEffect(() => {
     if (!form.serviceKey && services.length) {
@@ -143,6 +151,11 @@ export default function WorkerApply({ existing, onCancel }) {
         phone: form.phone,
         service: service?.name || SERVICE_META[form.serviceKey]?.name || form.serviceKey,
         serviceKey: form.serviceKey,
+        trades: [
+          form.serviceKey,
+          ...(form.secondaryServiceKey ? [form.secondaryServiceKey] : []),
+          ...(form.optionalServiceKey ? [form.optionalServiceKey] : []),
+        ].filter(Boolean),
         area: `${form.areaName.trim()}, ${form.city.trim()}`,
         areaName: form.areaName.trim(),
         city: form.city.trim(),
@@ -222,8 +235,29 @@ export default function WorkerApply({ existing, onCancel }) {
               required
             />
           </Field>
-          <Field label="Your trade" htmlFor="apply-service" required>
+          <Field label="Your trade (required)" htmlFor="apply-service" required>
             <Select id="apply-service" value={form.serviceKey} onChange={set("serviceKey")}>
+              <option value="">Select trade…</option>
+              {services.map((service) => (
+                <option key={service.key} value={service.key}>
+                  {service.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Second trade (optional)" htmlFor="apply-service-2">
+            <Select id="apply-service-2" value={form.secondaryServiceKey} onChange={set("secondaryServiceKey")}>
+              <option value="">— None —</option>
+              {services.map((service) => (
+                <option key={service.key} value={service.key}>
+                  {service.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Third trade (optional)" htmlFor="apply-service-3">
+            <Select id="apply-service-3" value={form.optionalServiceKey} onChange={set("optionalServiceKey")}>
+              <option value="">— None —</option>
               {services.map((service) => (
                 <option key={service.key} value={service.key}>
                   {service.name}
