@@ -218,3 +218,14 @@ export function servicesInFolder(folder, services) {
     );
   });
 }
+
+export function isFolderOnHome(folder) {
+  // Folders created before home-page settings existed remain visible.
+  return folder?.showOnHome !== false;
+}
+
+export function homeFolderOrder(folder) {
+  const homeOrder = Number(folder?.homeOrder);
+  if (Number.isFinite(homeOrder) && homeOrder > 0) return homeOrder;
+  return Number(folder?.order) || 0;
+}

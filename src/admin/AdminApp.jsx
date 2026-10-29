@@ -4,6 +4,7 @@ import {
   ChevronRight,
   ExternalLink,
   Gift,
+  Home,
   LayoutDashboard,
   Layers,
   Link2,
@@ -53,6 +54,7 @@ const ICONS = {
   "map-pin": MapPin,
   link: Link2,
   gift: Gift,
+  home: Home,
 };
 
 export default function AdminApp() {

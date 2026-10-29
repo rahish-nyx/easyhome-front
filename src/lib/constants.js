@@ -195,6 +195,7 @@ export const ADMIN_NAV = [
   { to: "/admin/bookings", label: "Bookings", icon: "calendar-check" },
   { to: "/admin/tracking", label: "Live tracking", icon: "navigation" },
   { to: "/admin/catalog", label: "Catalogue", icon: "layers" },
+  { to: "/admin/home-folders", label: "Home folders", icon: "home" },
   { to: "/admin/zones", label: "Service zones", icon: "map-pin" },
   { to: "/admin/revenue", label: "Revenue", icon: "wallet" },
   { to: "/admin/promos", label: "Promos", icon: "megaphone" },

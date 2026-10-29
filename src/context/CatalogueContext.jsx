@@ -20,8 +20,11 @@ const CatalogueContext = createContext(null);
 // The catalogue is almost static. Keep it in localStorage for 15 minutes and
 // let the API's in-memory/CDN cache absorb repeat requests so the dashboard
 // does not hit MongoDB for every page view.
-const CACHE_KEY = "easyhome:catalogue:v6";
-const LEGACY_CACHE_KEYS = ["easyhome:catalogue:v5"];
+const CACHE_KEY = "easyhome:catalogue:v7";
+const LEGACY_CACHE_KEYS = [
+  "easyhome:catalogue:v6",
+  "easyhome:catalogue:v5",
+];
 const CACHE_TTL_MS = 15 * 60 * 1000;
 
 export function invalidateCatalogueCache() {
@@ -210,16 +213,33 @@ export function CatalogueProvider({ children }) {
     hasDataRef.current = Boolean(catalogue);
   }, [catalogue]);
 
-  const loadCatalogue = useCallback(async () => {
+  const loadCatalogue = useCallback(async ({ bust = false } = {}) => {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     if (!hasDataRef.current) setLoading(true);
     setError("");
 
     try {
-      const payload = await api.get("/public/bootstrap");
+      // An admin save needs to bypass both the browser HTTP cache and the
+      // edge cache so the new home folders are visible in this session.
+      const path = bust
+        ? `/public/bootstrap?refresh=${Date.now()}`
+        : "/public/bootstrap";
+      const payload = await api.get(path);
       const next = normalizePayload(payload);
       if (!next.services.length) next.services = FALLBACK_SERVICES;
+      // A browser/edge cache can briefly return a payload older than the one
+      // written after an admin save. Never let that overwrite newer data.
+      const cached = readCache();
+      const nextAt = Date.parse(next.fetchedAt);
+      const cachedAt = Date.parse(cached?.fetchedAt);
+      if (
+        Number.isFinite(nextAt) &&
+        Number.isFinite(cachedAt) &&
+        cachedAt > nextAt
+      ) {
+        return;
+      }
       // An empty footerLinks array is a real admin choice (all links removed),
       // so never replace it with bundled defaults.
       setCatalogue(next);

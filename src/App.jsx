@@ -40,6 +40,7 @@ const AdminBookings = lazy(() => import("./admin/AdminBookings"));
 const AdminTracking = lazy(() => import("./admin/AdminTracking"));
 const AdminZones = lazy(() => import("./admin/AdminZones"));
 const AdminCatalog = lazy(() => import("./admin/AdminCatalog"));
+const AdminHomeFolders = lazy(() => import("./admin/AdminHomeFolders"));
 const AdminRevenue = lazy(() => import("./admin/AdminRevenue"));
 const AdminPromos = lazy(() => import("./admin/AdminPromos"));
 const AdminFooterLinks = lazy(() => import("./admin/AdminFooterLinks"));
@@ -126,6 +127,7 @@ export default function App() {
                     <Route path="tracking" element={<AdminTracking />} />
                     <Route path="zones" element={<AdminZones />} />
                     <Route path="catalog" element={<AdminCatalog />} />
+                    <Route path="home-folders" element={<AdminHomeFolders />} />
                     <Route path="revenue" element={<AdminRevenue />} />
                     <Route path="promos" element={<AdminPromos />} />
                     <Route path="footer" element={<AdminFooterLinks />} />

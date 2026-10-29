@@ -31,7 +31,12 @@ import {
   jobInServiceArea,
 } from "../lib/geo";
 import { SERVICE_META } from "../lib/constants";
-import { groupedServices, servicesInFolder } from "../lib/serviceGroups";
+import {
+  groupedServices,
+  homeFolderOrder,
+  isFolderOnHome,
+  servicesInFolder,
+} from "../lib/serviceGroups";
 import { SectionHeader } from "../components/ui";
 import {
   PromoCarousel,
@@ -254,18 +259,25 @@ export default function Home() {
   const folderGroups = useMemo(() => groupedServices(services), [services]);
   const homeFolders = useMemo(() => {
     if (folders.length) {
-      return folders.map((folder) => {
-        const name = folder.name || folder.id;
-        const list = servicesInFolder(folder, services);
-        return {
-          id: folder.id || name,
-          name,
-          description: folder.description || "",
-          icon: folder.icon || "",
-          count: Number(folder.servicesCount) || list.length,
-          services: list.length ? list : folderGroups[name] || [],
-        };
-      });
+      return folders
+        .filter(isFolderOnHome)
+        .sort(
+          (a, b) =>
+            homeFolderOrder(a) - homeFolderOrder(b) ||
+            String(a.name || a.id).localeCompare(String(b.name || b.id)),
+        )
+        .map((folder) => {
+          const name = folder.name || folder.id;
+          const list = servicesInFolder(folder, services);
+          return {
+            id: folder.id || name,
+            name,
+            description: folder.description || "",
+            icon: folder.icon || "",
+            count: Number(folder.servicesCount) || list.length,
+            services: list.length ? list : folderGroups[name] || [],
+          };
+        });
     }
     return Object.entries(folderGroups).map(([name, list]) => ({
       id: name,
