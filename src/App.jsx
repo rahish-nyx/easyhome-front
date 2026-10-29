@@ -9,6 +9,7 @@ import {
 import { AuthProvider } from "./context/AuthContext";
 import { CatalogueProvider } from "./context/CatalogueContext";
 import { LocationProvider } from "./context/LocationContext";
+import { PromoProvider } from "./context/PromoContext";
 import { ToastProvider } from "./context/ToastContext";
 import { CustomerLayout } from "./components/layout";
 import { ProtectedRoute } from "./components/common";
@@ -83,10 +84,11 @@ export default function App() {
         <ToastProvider>
           <AuthProvider>
             <CatalogueProvider>
-              <LocationProvider>
-                <ScrollToTop />
-                <ReferralCapture />
-                <Routes>
+              <PromoProvider>
+                <LocationProvider>
+                  <ScrollToTop />
+                  <ReferralCapture />
+                  <Routes>
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/login" element={<Navigate to="/auth" replace />} />
                   <Route path="/offline" element={<Offline />} />
@@ -205,7 +207,8 @@ export default function App() {
                     <Route path="*" element={<NotFound />} />
                   </Route>
                 </Routes>
-              </LocationProvider>
+                </LocationProvider>
+              </PromoProvider>
             </CatalogueProvider>
           </AuthProvider>
         </ToastProvider>

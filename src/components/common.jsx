@@ -29,6 +29,7 @@ import {
 import { API_BASE } from "../lib/api";
 import { api } from "../lib/api";
 import { mediaUrl } from "../lib/media";
+import { promoLink } from "../lib/promos";
 import { cx, inr, isActiveUntil, timeAgo } from "../lib/format";
 import { STATUS_META, SERVICE_META } from "../lib/constants";
 import { iconFor } from "../lib/iconMap";
@@ -347,7 +348,7 @@ export function PromoCarousel({ promos }) {
               </div>
             </>
           );
-          const href = promo.ctaLink || "/services";
+          const href = promoLink(promo);
           const className = cx("promo", `promo--${isImage ? "dark" : theme}`);
           return href.startsWith("/") ? (
             <Link key={promo.id} to={href} className={className}>
@@ -499,8 +500,8 @@ export function NotificationBell() {
       </button>
 
       {open ? (
-        <div className="menu" style={{ width: 330, padding: 0, overflow: "hidden" }} role="menu">
-          <div className="menu__head" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="menu notif-menu" role="menu">
+          <div className="menu__head notif-menu__head">
             <div>
               <p className="menu__name">Notifications</p>
               <p className="menu__email">{unread ? `${unread} unread` : "You are all caught up"}</p>
@@ -508,8 +509,7 @@ export function NotificationBell() {
             {unread ? (
               <button
                 type="button"
-                className="btn btn--link"
-                style={{ fontSize: 11.5 }}
+                className="btn btn--link notif-menu__mark"
                 onClick={markRead}
                 disabled={marking}
               >
@@ -517,9 +517,9 @@ export function NotificationBell() {
               </button>
             ) : null}
           </div>
-          <div style={{ maxHeight: 360, overflowY: "auto", padding: 6 }}>
+          <div className="notif-menu__body">
             {loading && !items.length ? (
-              <div style={{ display: "grid", placeItems: "center", padding: 22 }}>
+              <div className="notif-menu__loading">
                 <Spinner size={18} />
               </div>
             ) : items.length ? (

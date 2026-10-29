@@ -18,9 +18,15 @@ import {
 } from "lucide-react";
 import { useCatalogue } from "../context/CatalogueContext";
 import { useLocation } from "../context/LocationContext";
+import { usePromo } from "../context/PromoContext";
 import { useCachedWorkers } from "../hooks/useCachedWorkers";
 import { usePageMeta } from "../lib/usePageMeta";
 import { inr } from "../lib/format";
+import {
+  promoAppliesToService,
+  promoDiscountShort,
+  withPromoCode,
+} from "../lib/promos";
 import {
   distanceKm,
   distanceLabel,
@@ -185,11 +191,12 @@ function ServicesList({
           {groupParam && !query ? (
             <ServiceTileGrid
               items={(filtered || []).filter((item) => serviceGroup(item.key) === groupParam)}
+              folders={folders}
             />
           ) : null}
           {folderParam && !query ? (
             folderItems.length ? (
-              <ServiceTileGrid items={folderItems} />
+              <ServiceTileGrid items={folderItems} folders={folders} />
             ) : (
               <div className="card">
                 <EmptyState
@@ -248,7 +255,8 @@ function ServicesList({
   );
 }
 
-function ServiceTileGrid({ items }) {
+function ServiceTileGrid({ items, folders = [] }) {
+  const { activePromo } = usePromo();
   if (!items.length) return null;
 
   return (
@@ -262,10 +270,15 @@ function ServiceTileGrid({ items }) {
     >
       {items.map((item) => {
         const meta = SERVICE_META[item.key] || {};
+        const bookingPath = `/book?service=${encodeURIComponent(item.key)}`;
+        const href =
+          activePromo && promoAppliesToService(activePromo, item, folders)
+            ? withPromoCode(bookingPath, activePromo.couponCode, "code")
+            : bookingPath;
         return (
           <Link
             key={item.key || item.id}
-            to={`/book?service=${encodeURIComponent(item.key)}`}
+            to={href}
             className="service-tile"
             style={{
               display: "flex",
@@ -298,7 +311,8 @@ function ServiceTileGrid({ items }) {
 }
 
 function ServiceDetail({ serviceKey }) {
-  const { services } = useCatalogue();
+  const { services, folders } = useCatalogue();
+  const { activePromo } = usePromo();
   const { city, point, zoneCheck } = useLocation();
   const location = useMemo(
     () =>
@@ -345,6 +359,14 @@ function ServiceDetail({ serviceKey }) {
     "Workmanship covered by support",
     "Pay by cash or UPI after completion",
   ];
+  const servicePromo =
+    activePromo && promoAppliesToService(activePromo, service, folders)
+      ? activePromo
+      : null;
+  const bookingPath = `/book?service=${service.key}`;
+  const bookingHref = servicePromo
+    ? withPromoCode(bookingPath, servicePromo.couponCode, "code")
+    : bookingPath;
 
   return (
     <div className="page">
@@ -383,6 +405,11 @@ function ServiceDetail({ serviceKey }) {
               <Badge tone="green" dot>
                 Available {city?.name ? `in ${city.name}` : "nearby"}
               </Badge>
+              {servicePromo ? (
+                <Badge tone="yellow">
+                  {servicePromo.couponCode} · {promoDiscountShort(servicePromo)}
+                </Badge>
+              ) : null}
             </div>
             {service.subheading ? (
               <p
@@ -404,7 +431,7 @@ function ServiceDetail({ serviceKey }) {
             </p>
             <div className="row row--wrap" style={{ gap: 16, marginTop: 16 }}>
               <Link
-                to={`/book?service=${service.key}`}
+                to={bookingHref}
                 className="btn btn--primary btn--lg"
               >
                 Book {service.name} <ArrowRight size={16} />
@@ -493,7 +520,7 @@ function ServiceDetail({ serviceKey }) {
               title="No listed pros in this trade yet"
               body="You can still book — we will match your request with a verified professional in your area."
               action={
-                <Link to={`/book?service=${service.key}`} className="btn btn--primary">
+                <Link to={bookingHref} className="btn btn--primary">
                   <CalendarCheck size={16} /> Request this service
                 </Link>
               }

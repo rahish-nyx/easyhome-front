@@ -13,9 +13,10 @@ import {
   Trash2,
 } from "lucide-react";
 import { useToast } from "../context/ToastContext";
+import { usePromo } from "../context/PromoContext";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../lib/api";
-import { formatDate, toDate } from "../lib/format";
+import { formatDate, inr, toDate } from "../lib/format";
 import { mediaUrl } from "../lib/media";
 import { Button, Field, Input, Modal, Select, Textarea } from "../components/ui";
 import { ImageUpload } from "../components/common";
@@ -54,7 +55,22 @@ const EMPTY_PROMO = {
   order: 0,
   startsAt: "",
   endsAt: "",
+  couponCode: "",
+  discountType: "",
+  discountValue: 0,
+  targetFolderId: "",
+  targetServiceId: "",
 };
+
+function promoScope(promo, folderById, serviceById) {
+  if (promo.targetServiceId) {
+    return serviceById.get(String(promo.targetServiceId))?.name || "Selected service";
+  }
+  if (promo.targetFolderId) {
+    return folderById.get(String(promo.targetFolderId))?.name || "Selected folder";
+  }
+  return "All services";
+}
 
 function toLocalInput(value) {
   const date = toDate(value);
@@ -73,6 +89,7 @@ function fromLocalInput(value) {
 
 export default function AdminPromos() {
   const toast = useToast();
+  const { refreshPromos } = usePromo();
   const [draft, setDraft] = useState(null);
   const [file, setFile] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -80,6 +97,26 @@ export default function AdminPromos() {
 
   const promosState = useAsync(() => api.get("/admin/promos"), []);
   const promos = promosState.data?.promos || [];
+  const optionsState = useAsync(async () => {
+    const [folderData, serviceData] = await Promise.all([
+      api.get("/admin/folders"),
+      api.get("/admin/services"),
+    ]);
+    return {
+      folders: folderData.folders || [],
+      services: serviceData.services || [],
+    };
+  }, []);
+  const folders = optionsState.data?.folders || [];
+  const services = optionsState.data?.services || [];
+  const folderById = useMemo(
+    () => new Map(folders.map((folder) => [String(folder.id), folder])),
+    [folders],
+  );
+  const serviceById = useMemo(
+    () => new Map(services.map((service) => [String(service.id), service])),
+    [services],
+  );
 
   const sorted = useMemo(
     () => [...promos].sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0)),
@@ -106,6 +143,7 @@ export default function AdminPromos() {
           : `Promo is live on the ${promo.placement === "worker_dashboard" ? "worker dashboard" : "customer home page"}.`,
       );
       await refresh();
+      refreshPromos();
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -124,6 +162,7 @@ export default function AdminPromos() {
         api.patch(`/admin/promos/${swap.id}`, { order: Number(promo.order) || 0 }),
       ]);
       await refresh();
+      refreshPromos();
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -134,8 +173,33 @@ export default function AdminPromos() {
   const save = async (form) => {
     setBusy("save");
     try {
+      const couponCode = String(form.couponCode || "").trim().toUpperCase();
+      const discountType = couponCode ? String(form.discountType || "") : "";
+      const discountValue = couponCode ? Number(form.discountValue) || 0 : 0;
+      if (couponCode) {
+        if (form.placement === "worker_dashboard") {
+          throw new Error("Coupon discounts can only be attached to customer promotions.");
+        }
+        if (!discountType) {
+          throw new Error("Choose a percentage or flat discount for this coupon.");
+        }
+        if (discountValue <= 0) {
+          throw new Error("Enter a discount value greater than zero.");
+        }
+        if (discountType === "percentage" && discountValue > 100) {
+          throw new Error("A percentage discount cannot exceed 100%.");
+        }
+      }
+      const payload = {
+        ...form,
+        couponCode,
+        discountType,
+        discountValue,
+        targetFolderId: couponCode ? String(form.targetFolderId || "") : "",
+        targetServiceId: couponCode ? String(form.targetServiceId || "") : "",
+      };
       const data = new FormData();
-      Object.entries(form).forEach(([key, value]) => {
+      Object.entries(payload).forEach(([key, value]) => {
         if (key === "startsAt" || key === "endsAt") {
           data.append(key, fromLocalInput(value));
         } else {
@@ -155,6 +219,7 @@ export default function AdminPromos() {
       setDraft(null);
       setFile(null);
       await refresh();
+      refreshPromos();
     } catch (error) {
       toast.error(error.message);
       throw error;
@@ -171,6 +236,7 @@ export default function AdminPromos() {
       toast.success("Promo deleted.");
       setDeleteTarget(null);
       await refresh();
+      refreshPromos();
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -256,7 +322,10 @@ export default function AdminPromos() {
                   )}
                   <div>
                     <strong>{promo.title}</strong>
-                    <span>{promo.subtitle || "Tap to book a service today."}</span>
+                    <span>
+                      {promo.subtitle || "Tap to book a service today."}
+                      {promo.couponCode ? ` · Code ${promo.couponCode}` : ""}
+                    </span>
                     <em>{promo.ctaText || "Book now"}</em>
                   </div>
                 </div>
@@ -320,6 +389,7 @@ export default function AdminPromos() {
                     <p>
                       {promo.subtitle || "No subtitle"} · CTA “{promo.ctaText}” →{" "}
                       {promo.ctaLink}
+                      {promo.couponCode ? ` · Coupon ${promo.couponCode}` : ""}
                     </p>
                     <small className="adm-note-inline">
                       {promo.placement === "worker_dashboard"
@@ -330,6 +400,13 @@ export default function AdminPromos() {
                             promo.endsAt ? formatDate(promo.endsAt) : "No end"
                           }`
                         : "Always on"}
+                      {promo.couponCode
+                        ? ` · ${
+                            promo.discountType === "percentage"
+                              ? `${Number(promo.discountValue) || 0}% off`
+                              : `${inr(Number(promo.discountValue) || 0)} off`
+                          } · ${promoScope(promo, folderById, serviceById)}`
+                        : ""}
                     </small>
                   </div>
                   <div className="adm-promo-row__actions">
@@ -357,8 +434,14 @@ export default function AdminPromos() {
                       onClick={() => {
                         setFile(null);
                         setDraft({
+                          ...EMPTY_PROMO,
                           ...promo,
                           placement: promo.placement || "customer_home",
+                          couponCode: promo.couponCode || "",
+                          discountType: promo.discountType || "",
+                          discountValue: Number(promo.discountValue) || 0,
+                          targetFolderId: promo.targetFolderId || "",
+                          targetServiceId: promo.targetServiceId || "",
                           startsAt: toLocalInput(promo.startsAt),
                           endsAt: toLocalInput(promo.endsAt),
                         });
@@ -412,6 +495,8 @@ export default function AdminPromos() {
       <PromoModal
         draft={draft}
         file={file}
+        folders={folders}
+        services={services}
         onFile={setFile}
         loading={busy === "save"}
         onClose={() => {
@@ -451,15 +536,58 @@ export default function AdminPromos() {
   );
 }
 
-function PromoModal({ draft, file, onFile, onClose, onSave, loading }) {
-  const [form, setForm] = useState(draft || EMPTY_PROMO);
+function PromoModal({ draft, file, folders, services, onFile, onClose, onSave, loading }) {
+  const [form, setForm] = useState({ ...EMPTY_PROMO, ...(draft || {}) });
 
   useEffect(() => {
-    setForm(draft || EMPTY_PROMO);
+    setForm({ ...EMPTY_PROMO, ...(draft || {}) });
   }, [draft]);
 
   const set = (key) => (event) =>
     setForm((prev) => ({ ...prev, [key]: event.target.value }));
+
+  const setPlacement = (event) => {
+    const placement = event.target.value;
+    setForm((prev) => ({
+      ...prev,
+      placement,
+      ...(placement === "worker_dashboard"
+        ? {
+            couponCode: "",
+            discountType: "",
+            discountValue: 0,
+            targetFolderId: "",
+            targetServiceId: "",
+          }
+        : {}),
+    }));
+  };
+
+  const setFolder = (event) => {
+    const targetFolderId = event.target.value;
+    setForm((prev) => ({
+      ...prev,
+      targetFolderId,
+      targetServiceId: "",
+    }));
+  };
+
+  const setTargetService = (event) => {
+    const targetServiceId = event.target.value;
+    setForm((prev) => ({
+      ...prev,
+      targetServiceId,
+      targetFolderId: targetServiceId ? "" : prev.targetFolderId,
+    }));
+  };
+
+  const serviceOptions = useMemo(() => {
+    if (!form.targetFolderId) return services;
+    return services.filter((service) => {
+      const folder = String(service.folderId || service.folder || "");
+      return folder === String(form.targetFolderId);
+    });
+  }, [form.targetFolderId, services]);
 
   if (!draft) return null;
 
@@ -486,6 +614,10 @@ function PromoModal({ draft, file, onFile, onClose, onSave, loading }) {
                 embedHtml: String(form.embedHtml || "").trim(),
                 ctaText: form.ctaText.trim(),
                 ctaLink: form.ctaLink.trim(),
+                couponCode: String(form.couponCode || "").trim().toUpperCase(),
+                discountValue: Number(form.discountValue) || 0,
+                targetFolderId: String(form.targetFolderId || ""),
+                targetServiceId: String(form.targetServiceId || ""),
               }).catch(() => {});
             }}
           >
@@ -562,6 +694,101 @@ function PromoModal({ draft, file, onFile, onClose, onSave, loading }) {
             onChange={set("ctaLink")}
           />
         </Field>
+        {form.placement !== "worker_dashboard" ? (
+          <>
+            <Field
+              label="Coupon code"
+              htmlFor="promo-coupon"
+              hint="Optional. The banner link adds this code automatically."
+            >
+              <Input
+                id="promo-coupon"
+                value={form.couponCode || ""}
+                maxLength={24}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    couponCode: event.target.value
+                      .toUpperCase()
+                      .replace(/[^A-Z0-9_-]/g, ""),
+                  }))
+                }
+                placeholder="MONSOON20"
+              />
+            </Field>
+            <Field
+              label="Discount type"
+              htmlFor="promo-discount-type"
+              hint="Applied to the customer's base budget."
+            >
+              <Select
+                id="promo-discount-type"
+                value={form.discountType || ""}
+                onChange={set("discountType")}
+              >
+                <option value="">No coupon discount</option>
+                <option value="percentage">Percentage off</option>
+                <option value="flat">Flat amount off</option>
+              </Select>
+            </Field>
+            <Field
+              label="Discount value"
+              htmlFor="promo-discount-value"
+              hint={
+                form.discountType === "percentage"
+                  ? "1–100. Rounded to the nearest rupee."
+                  : "Flat amount in ₹. Never exceeds the base price."
+              }
+            >
+              <Input
+                id="promo-discount-value"
+                type="number"
+                min={0}
+                max={form.discountType === "percentage" ? 100 : 100000}
+                value={form.discountValue || ""}
+                onChange={set("discountValue")}
+                placeholder={form.discountType === "percentage" ? "20" : "100"}
+              />
+            </Field>
+            <Field
+              label="Applies to folder"
+              htmlFor="promo-target-folder"
+              hint="Leave as all services, or narrow the coupon to one folder."
+            >
+              <Select
+                id="promo-target-folder"
+                value={form.targetFolderId || ""}
+                onChange={setFolder}
+              >
+                <option value="">All service folders</option>
+                {folders.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field
+              label="Applies to service"
+              htmlFor="promo-target-service"
+              hint="Optional. Overrides the folder selection with one exact service."
+              className="adm-span-2"
+            >
+              <Select
+                id="promo-target-service"
+                value={form.targetServiceId || ""}
+                onChange={setTargetService}
+              >
+                <option value="">Any service in scope</option>
+                {serviceOptions.map((service) => (
+                  <option key={service.id || service.key} value={service.id || service.key}>
+                    {service.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </>
+        ) : null}
         <Field label="Theme" htmlFor="promo-theme">
           <Select id="promo-theme" value={form.theme} onChange={set("theme")}>
             {THEMES.map((theme) => (
@@ -575,7 +802,7 @@ function PromoModal({ draft, file, onFile, onClose, onSave, loading }) {
           <Select
             id="promo-placement"
             value={form.placement || "customer_home"}
-            onChange={set("placement")}
+            onChange={setPlacement}
           >
             {PLACEMENTS.map((placement) => (
               <option key={placement.id} value={placement.id}>

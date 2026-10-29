@@ -64,8 +64,18 @@ export default function AdminBookings() {
   const [payMode, setPayMode] = useState("cash");
   const [busy, setBusy] = useState("");
   const payUrgentFee = Math.max(0, Number(payTarget?.urgentFee) || 0);
-  const payAmount =
+  const paySubtotal =
     Number(payTarget?.pricing?.finalPrice || payTarget?.budget || 0) + payUrgentFee;
+  const payPromoDiscount = Math.min(
+    paySubtotal,
+    Math.max(
+      0,
+      Number(payTarget?.promoDiscount) ||
+        Number(payTarget?.pricing?.promoDiscount) ||
+        0,
+    ),
+  );
+  const payAmount = Math.max(0, paySubtotal - payPromoDiscount);
 
   const [cityId, setCityId] = useState("");
   const [radius, setRadius] = useState(15);
@@ -634,6 +644,12 @@ export default function AdminBookings() {
             <span>Amount collected</span>
             <strong>{inr(payAmount)}</strong>
           </div>
+          {payPromoDiscount > 0 ? (
+            <p className="tiny" style={{ marginTop: -6, color: "var(--green)" }}>
+              {payTarget?.promoCode || payTarget?.pricing?.promoCode || "Promo"} applied —
+              {inr(payPromoDiscount)} off the customer total.
+            </p>
+          ) : null}
           {payUrgentFee > 0 ? (
             <p className="tiny muted" style={{ marginTop: -6 }}>
               Includes {inr(payUrgentFee)} urgent-job fee, paid directly to the professional.

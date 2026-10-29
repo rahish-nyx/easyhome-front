@@ -22,9 +22,16 @@ import { publicWorkerRef } from "../lib/queries";
 import { useAuth } from "../context/AuthContext";
 import { useCatalogue } from "../context/CatalogueContext";
 import { useLocation } from "../context/LocationContext";
+import { usePromo } from "../context/PromoContext";
 import { useToast } from "../context/ToastContext";
 import { api } from "../lib/api";
 import { inr } from "../lib/format";
+import {
+  calculatePromoDiscount,
+  promoAppliesToService,
+  promoDiscountLabel,
+  promoDiscountShort,
+} from "../lib/promos";
 import { SERVICE_META } from "../lib/constants";
 import { OUT_OF_ZONE_MESSAGE, evaluateZones } from "../lib/zones";
 import { usePageMeta } from "../lib/usePageMeta";
@@ -48,7 +55,15 @@ export default function Booking() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const toast = useToast();
-  const { services } = useCatalogue();
+  const { services, folders } = useCatalogue();
+  const {
+    code: promoCode,
+    activePromo,
+    status: promoStatus,
+    loading: promoLoading,
+    applyCode,
+    clearPromo,
+  } = usePromo();
   const {
     city,
     zones,
@@ -82,6 +97,7 @@ export default function Booking() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
+  const [couponInput, setCouponInput] = useState(promoCode || "");
 
   const service =
     services.find((item) => item.key === serviceKey) ||
@@ -97,7 +113,18 @@ export default function Booking() {
     urgency === "urgent" && !isPremium
       ? Math.round(budgetAmount * 0.1)
       : 0;
-  const estimatedTotal = budgetAmount + urgentFee;
+  const servicePromo = useMemo(
+    () =>
+      activePromo && promoAppliesToService(activePromo, service, folders)
+        ? activePromo
+        : null,
+    [activePromo, service, folders],
+  );
+  const promoDiscount = servicePromo
+    ? calculatePromoDiscount(servicePromo, budgetAmount)
+    : 0;
+  const originalTotal = budgetAmount + urgentFee;
+  const estimatedTotal = Math.max(0, originalTotal - promoDiscount);
 
   const workerRef = useMemo(
     () => (preferredWorkerId ? publicWorkerRef(preferredWorkerId) : null),
@@ -109,6 +136,10 @@ export default function Booking() {
   useEffect(() => {
     if (!serviceKey && services.length) setServiceKey(services[0].key);
   }, [serviceKey, services]);
+
+  useEffect(() => {
+    setCouponInput(promoCode || "");
+  }, [promoCode]);
 
   // A stale budget from a previous (cheaper/expensive) service is a classic
   // source of rejected bookings — reset it whenever the trade changes.
@@ -269,6 +300,7 @@ export default function Booking() {
       form.append("budget", String(Math.round(Number(budget))));
       form.append("urgency", urgency);
       form.append("addressLabel", addressLabel);
+      if (servicePromo) form.append("promoCode", servicePromo.couponCode);
       if (preferredWorkerId) form.append("preferredWorkerId", preferredWorkerId);
       if (city?.name) form.append("city", city.name);
       if (city?.state) form.append("state", city.state);
@@ -282,6 +314,7 @@ export default function Booking() {
       const result = await api.upload("/bookings", form);
       toast.success("Request sent. Matching you with a verified pro now.");
       for (const warning of result.warnings || []) toast.info(warning);
+      if (promoCode) clearPromo();
       navigate(`/bookings?created=${result.booking?.id || ""}`);
     } catch (error) {
       toast.error(error.message);
@@ -291,6 +324,11 @@ export default function Booking() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const applyCoupon = () => {
+    const next = applyCode(couponInput);
+    setCouponInput(next);
   };
 
   return (
@@ -535,6 +573,65 @@ export default function Booking() {
               ))}
             </div>
 
+            <div className="promo-code-box">
+              <div className="promo-code-box__head">
+                <span className="row" style={{ gap: 7 }}>
+                  <Sparkles size={16} /> Promo code
+                </span>
+                {servicePromo ? <strong className="promo-code-box__applied">Applied</strong> : null}
+              </div>
+              <div className="promo-code-box__row">
+                <Input
+                  aria-label="Promo code"
+                  value={couponInput}
+                  onChange={(event) => setCouponInput(event.target.value.toUpperCase())}
+                  placeholder="e.g. MONSOON20"
+                  maxLength={24}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={applyCoupon}
+                  disabled={!couponInput.trim() || promoLoading}
+                >
+                  Apply
+                </Button>
+                {promoCode ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      clearPromo();
+                      setCouponInput("");
+                    }}
+                  >
+                    Remove
+                  </Button>
+                ) : null}
+              </div>
+              {promoLoading && promoCode ? (
+                <p className="promo-code-box__status">Checking this code…</p>
+              ) : promoStatus === "invalid" ? (
+                <p className="promo-code-box__status is-error">
+                  This code is invalid or has expired.
+                </p>
+              ) : activePromo && !servicePromo ? (
+                <p className="promo-code-box__status is-error">
+                  {activePromo.couponCode} is valid but not available for {service.name}.
+                </p>
+              ) : servicePromo ? (
+                <p className="promo-code-box__status is-success">
+                  {servicePromo.title || "Promo"} · {promoDiscountLabel(servicePromo)} applied.
+                </p>
+              ) : (
+                <p className="promo-code-box__status">
+                  Have a code from a banner? It applies automatically when you open the offer.
+                </p>
+              )}
+            </div>
+
             <div style={{ marginTop: 14 }}>
               <ImageUpload
                 value={image}
@@ -625,9 +722,20 @@ export default function Booking() {
               <strong>{urgency === "urgent" ? "ASAP" : "Within 24h"}</strong>
             </div>
             <div className="summary-row">
-              <span>Your budget</span>
-              <strong>{inr(budget || minimum)}</strong>
+              <span>{servicePromo ? "Original price" : "Your budget"}</span>
+              <strong className={servicePromo ? "price-strike" : ""}>{inr(budgetAmount)}</strong>
             </div>
+            {servicePromo ? (
+              <div className="summary-row summary-row--promo">
+                <span>
+                  {servicePromo.title || "Promo"}{" "}
+                  <span className="summary-promo-code">
+                    {servicePromo.couponCode} · {promoDiscountShort(servicePromo)}
+                  </span>
+                </span>
+                <strong>-{inr(promoDiscount)}</strong>
+              </div>
+            ) : null}
             {urgency === "urgent" ? (
               <div className="summary-row">
                 <span>Urgent fee (10%)</span>
@@ -636,12 +744,10 @@ export default function Booking() {
                 </strong>
               </div>
             ) : null}
-            {urgency === "urgent" ? (
-              <div className="summary-row">
-                <span>Estimated total</span>
-                <strong>{inr(estimatedTotal)}</strong>
-              </div>
-            ) : null}
+            <div className="summary-row summary-row--total">
+              <span>Final payable</span>
+              <strong>{inr(estimatedTotal)}</strong>
+            </div>
           </div>
 
           <div className="summary-total">

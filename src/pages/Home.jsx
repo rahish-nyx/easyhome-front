@@ -20,6 +20,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useCatalogue } from "../context/CatalogueContext";
 import { useLocation } from "../context/LocationContext";
+import { usePromo } from "../context/PromoContext";
 import { useLiveQuery } from "../hooks/useLive";
 import { qUrgent } from "../lib/queries";
 import { api } from "../lib/api";
@@ -81,7 +82,8 @@ export default function Home() {
   );
 
   const { user, loading: authLoading } = useAuth();
-  const { services, folders, promos, settings } = useCatalogue();
+  const { services, folders, settings } = useCatalogue();
+  const { promos } = usePromo();
   const { city, point, zoneCheck } = useLocation();
   const location = useMemo(
     () =>

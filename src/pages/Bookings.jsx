@@ -273,11 +273,21 @@ function BookingCard({
 }) {
   const meta = STATUS_META[booking.status] || { hint: "" };
   const worker = booking.workerName;
+  const paidTotal =
+    booking.status === "completed" && booking.paidAt
+      ? Number(booking.pricing?.paymentTotal) || 0
+      : 0;
   const price =
+    paidTotal ||
     booking.pricing?.finalPrice ||
     booking.pricing?.workerPrice ||
     booking.pricing?.customerOffer ||
     booking.budget;
+  const urgentFee = Math.max(0, Number(booking.urgentFee) || 0);
+  const promoDiscount = Math.max(
+    0,
+    Number(booking.promoDiscount) || Number(booking.pricing?.promoDiscount) || 0,
+  );
   const windowMinutes = isPremium ? 20 : 7;
   const createdAt = toDate(booking.createdAt);
   const deadline = createdAt
@@ -374,13 +384,31 @@ function BookingCard({
                 ? "Agreed price"
                 : "Budget / quote"}
           </small>
-          {booking.urgency === "urgent" ? (
+          {promoDiscount > 0 ? (
+            <small
+              style={{
+                display: "block",
+                marginTop: 3,
+                color: "var(--green)",
+                fontWeight: 700,
+              }}
+            >
+              {paidTotal
+                ? `Saved ${inr(promoDiscount)} with ${booking.promoCode || booking.pricing?.promoCode || "promo"}`
+                : `${booking.promoCode || booking.pricing?.promoCode || "Promo"} · −${inr(promoDiscount)}`}
+            </small>
+          ) : null}
+          {urgentFee > 0 ? (
             <small style={{ display: "block", marginTop: 3 }}>
-              {Number(booking.urgentFee) > 0
-                ? `+ ${inr(booking.urgentFee)} urgent fee`
-                : booking.urgentFeeWaived || booking.customerPremium
-                  ? "No urgent fee — Pro benefit"
-                  : "No urgent fee"}
+              {paidTotal
+                ? `Includes ${inr(urgentFee)} urgent fee`
+                : `+ ${inr(urgentFee)} urgent fee`}
+            </small>
+          ) : booking.urgency === "urgent" ? (
+            <small style={{ display: "block", marginTop: 3 }}>
+              {booking.urgentFeeWaived || booking.customerPremium
+                ? "No urgent fee — Pro benefit"
+                : "No urgent fee"}
             </small>
           ) : null}
         </div>
@@ -657,7 +685,15 @@ function PaymentModal({ booking, profile, onClose, onDone }) {
     booking?.budget ||
     0;
   const urgentFee = Number(booking?.urgentFee) || 0;
-  const amount = baseAmount + urgentFee;
+  const subtotal = Number(baseAmount) + urgentFee;
+  const promoDiscount = Math.min(
+    subtotal,
+    Math.max(
+      0,
+      Number(booking?.promoDiscount) || Number(booking?.pricing?.promoDiscount) || 0,
+    ),
+  );
+  const amount = Math.max(0, subtotal - promoDiscount);
 
   const submit = async () => {
     if (!booking) return;
@@ -706,8 +742,25 @@ function PaymentModal({ booking, profile, onClose, onDone }) {
           <span className="small muted">
             {urgentFee > 0 ? "Total including urgent fee" : "Agreed amount"}
           </span>
-          <strong style={{ fontSize: 20 }}>{inr(amount)}</strong>
+          <span style={{ textAlign: "right" }}>
+            {promoDiscount > 0 ? (
+              <small
+                className="price-strike"
+                style={{ display: "block", fontSize: 12 }}
+              >
+                {inr(subtotal)}
+              </small>
+            ) : null}
+            <strong style={{ fontSize: 20 }}>{inr(amount)}</strong>
+          </span>
         </div>
+
+        {promoDiscount > 0 ? (
+          <p className="tiny" style={{ color: "var(--green)", fontWeight: 700 }}>
+            {booking?.promoCode || booking?.pricing?.promoCode || "Promo"} applied —
+            you save {inr(promoDiscount)}.
+          </p>
+        ) : null}
 
         {urgentFee > 0 ? (
           <p className="tiny muted">
