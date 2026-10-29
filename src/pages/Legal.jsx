@@ -128,8 +128,8 @@ const PAGES = {
       {
         heading: "Storage and security",
         body: [
-          "Authentication and data are hosted on Google Firebase. Access rules are enforced server-side; the browser is not trusted to write records directly.",
-          "KYC documents are stored privately in Cloudinary and forwarded to a private admin Telegram channel. They are not stored in Firestore or exposed as public images. No system is perfectly secure, but we work to limit and protect what we hold.",
+          "Authentication and data are hosted in MongoDB Atlas behind a Node.js API. Access rules are enforced server-side; the browser is not trusted to write records directly.",
+          "KYC documents are stored privately in Cloudinary and forwarded to a private admin Telegram channel. They are not stored in public storage or exposed as public images. No system is perfectly secure, but we work to limit and protect what we hold.",
         ],
       },
       {
@@ -142,7 +142,7 @@ const PAGES = {
       {
         heading: "Cookies and local storage",
         body: [
-          "EasyHome stores your sign-in session and selected city in your browser. Firestore caches recent data locally so the app works offline. You can clear this data from your browser settings.",
+          "EasyHome stores your sign-in session and selected city in your browser. Recent catalogue data is cached locally so the app works offline. You can clear this data from your browser settings.",
         ],
       },
     ],

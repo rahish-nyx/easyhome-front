@@ -31,7 +31,7 @@ const QUICK_REPLIES = [
 export default function Chat({ backTo = "/", embedded = false }) {
   usePageMeta("Support", "Chat with the EasyHome support team about bookings, payments and membership.");
 
-  const { fbUser, isPremium } = useAuth();
+  const { user, isPremium } = useAuth();
   const toast = useToast();
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -42,20 +42,20 @@ export default function Chat({ backTo = "/", embedded = false }) {
   const bodyRef = useRef(null);
 
   const query = useMemo(
-    () => (fbUser ? qChatMessages(fbUser.uid) : null),
-    [fbUser],
+    () => (user ? qChatMessages(user.uid) : null),
+    [user],
   );
   const { data: messages, loading, error } = useLiveQuery(query);
 
   useEffect(() => {
-    if (!fbUser?.uid) return undefined;
+    if (!user?.uid) return undefined;
     api.patch("/chat/read").catch(() => {});
     const mark = () => {
       if (document.visibilityState === "visible") api.patch("/chat/read").catch(() => {});
     };
     document.addEventListener("visibilitychange", mark);
     return () => document.removeEventListener("visibilitychange", mark);
-  }, [fbUser?.uid]);
+  }, [user?.uid]);
 
   useEffect(() => {
     if (!messages.length) return;

@@ -117,12 +117,12 @@ export default function Refer() {
     "Share EasyHome with a friend. After their first completed service and admin verification, ₹51 is approved for each of you.",
   );
 
-  const { fbUser, isWorker, loading: authLoading } = useAuth();
+  const { user, isWorker, loading: authLoading } = useAuth();
   const toast = useToast();
   const [state, setState] = useState({ loading: false, data: null, error: "" });
   const [copied, setCopied] = useState("");
 
-  const canRefer = Boolean(fbUser) && !isWorker;
+  const canRefer = Boolean(user) && !isWorker;
   const code = state.data?.code || "";
   const shareUrl = useMemo(() => {
     if (!code || typeof window === "undefined") return "";

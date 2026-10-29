@@ -76,7 +76,7 @@ export function OfflineBanner() {
 /* --------------------------------- Header --------------------------------- */
 
 export function SiteHeader() {
-  const { profile, fbUser, isAdmin, isWorker, isPremium, logout } = useAuth();
+  const { profile, user, isAdmin, isWorker, isPremium, logout } = useAuth();
   const { city, openPicker } = useCity();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -143,7 +143,7 @@ export function SiteHeader() {
           </nav>
 
           <div className="header-actions">
-            {fbUser ? (
+            {user ? (
               <>
                 <NotificationBell />
                 <div className="user-menu" ref={menuRef}>
@@ -173,7 +173,7 @@ export function SiteHeader() {
                     <div className="menu" role="menu">
                       <div className="menu__head">
                         <p className="menu__name">{profile?.name || "EasyHome account"}</p>
-                        <p className="menu__email">{profile?.email || fbUser.email}</p>
+                        <p className="menu__email">{profile?.email || user.email}</p>
                       </div>
                       <Link className="menu__item" to="/profile" onClick={() => setMenuOpen(false)}>
                         <User size={16} /> My profile
@@ -555,7 +555,7 @@ export function CityModal({ open, onClose }) {
 /* ------------------------------- Bottom nav ------------------------------- */
 
 export function BottomNav() {
-  const { fbUser, isWorker } = useAuth();
+  const { user, isWorker } = useAuth();
   const location = useLocation();
   const returnNext =
     location.pathname !== "/" && !location.pathname.startsWith("/auth")
@@ -566,15 +566,15 @@ export function BottomNav() {
     { to: "/services", label: "Services", icon: LayoutGrid },
     { to: "/bookings", label: "Bookings", icon: CalendarCheck },
     {
-      to: fbUser
+      to: user
         ? isWorker
           ? "/worker"
           : "/profile"
         : returnNext
           ? `/auth?next=${encodeURIComponent(returnNext)}`
           : "/auth",
-      label: fbUser ? (isWorker ? "Work" : "Profile") : "Sign in",
-      icon: fbUser ? (isWorker ? BriefcaseBusiness : User) : User,
+      label: user ? (isWorker ? "Work" : "Profile") : "Sign in",
+      icon: user ? (isWorker ? BriefcaseBusiness : User) : User,
     },
   ];
 

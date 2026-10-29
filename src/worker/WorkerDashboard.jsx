@@ -118,7 +118,7 @@ export default function WorkerDashboard() {
   );
 
   const {
-    fbUser,
+    user,
     profile,
     worker,
     isPremium,
@@ -145,13 +145,13 @@ export default function WorkerDashboard() {
   const commissions = commissionsState.data?.commissions || [];
 
   const myQuery = useMemo(
-    () => (fbUser ? qBookingsForWorker(fbUser.uid) : null),
-    [fbUser],
+    () => (user ? qBookingsForWorker(user.uid) : null),
+    [user],
   );
   const serviceKey = worker?.serviceKey;
   const feedQuery = useMemo(
-    () => (serviceKey && fbUser?.uid ? qJobFeed(serviceKey, fbUser.uid, 40) : null),
-    [serviceKey, fbUser?.uid],
+    () => (serviceKey && user?.uid ? qJobFeed(serviceKey, user.uid, 40) : null),
+    [serviceKey, user?.uid],
   );
   const { data: myBookings, loading: myLoading } = useLiveQuery(myQuery);
   const { data: feed, loading: feedLoading } = useLiveQuery(feedQuery);
@@ -1087,7 +1087,7 @@ function WorkerPromos({ worker, isPremium, onTab }) {
           <ChevronRight size={17} />
         </button>
 
-        <Link to="/worker/support" className="wk-promo wk-promo--dark">
+        <Link to="/worker/support" className="wk-promo wk-promo--support">
           <span className="wk-promo__icon">
             <Headphones size={20} />
           </span>

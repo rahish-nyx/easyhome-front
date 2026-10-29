@@ -1,8 +1,8 @@
 /* EasyHome service worker — same-origin app shell only.
- * Firebase Auth/Firestore and the API are deliberately never cached.
+ * The API and cross-origin media are deliberately never cached.
  */
 
-const VERSION = "easyhome-v8";
+const VERSION = "easyhome-v9";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const CURRENT_CACHES = new Set([SHELL_CACHE, ASSET_CACHE]);
@@ -87,10 +87,6 @@ function isSameOrigin(url) {
 
 function isApi(url) {
   return url.pathname === "/api" || url.pathname.startsWith("/api/");
-}
-
-function isFirebaseInternal(url) {
-  return url.pathname.startsWith("/__/");
 }
 
 function isAsset(url) {
@@ -178,9 +174,9 @@ self.addEventListener("fetch", (event) => {
 
   if (url.protocol !== "http:" && url.protocol !== "https:") return;
 
-  // Cross-origin traffic (fonts, Firebase, media CDNs) is never cached.
+  // Cross-origin traffic (fonts, media CDNs) is never cached.
   if (!isSameOrigin(url)) return;
-  if (isApi(url) || isFirebaseInternal(url)) return;
+  if (isApi(url)) return;
 
   if (request.mode === "navigate" || request.destination === "document") {
     event.respondWith(networkFirstNavigation(request));

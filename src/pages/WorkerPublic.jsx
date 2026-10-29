@@ -33,7 +33,7 @@ import { RatingStars, ServiceIcon } from "../components/common";
 
 export default function WorkerPublic() {
   const { id } = useParams();
-  const { fbUser } = useAuth();
+  const { user } = useAuth();
   const toast = useToast();
   const [sharing, setSharing] = useState(false);
   const { data, loading, error } = useAsync(
@@ -189,7 +189,7 @@ export default function WorkerPublic() {
             </span>
           </div>
 
-          {fbUser ? (
+          {user ? (
             <Link to="/chat" className="btn btn--ghost btn--sm btn--block" style={{ marginTop: 12 }}>
               <MessageSquare size={14} /> Ask support about this pro
             </Link>

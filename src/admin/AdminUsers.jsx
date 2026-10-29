@@ -378,7 +378,7 @@ export default function AdminUsers() {
         <p className="small muted">
           {disableTarget?.disabled
             ? "The user will be able to sign in and use EasyHome again immediately."
-            : "The user will be signed out of Firebase Auth and blocked from signing in. Worker profiles are hidden from customers. Existing data is preserved."}
+            : "The user will be signed out and blocked from signing in. Worker profiles are hidden from customers. Existing data is preserved."}
         </p>
       </ConfirmModal>
     </AdminPage>

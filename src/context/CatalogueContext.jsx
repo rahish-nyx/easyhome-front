@@ -18,16 +18,16 @@ import {
 const CatalogueContext = createContext(null);
 
 // The catalogue is almost static. Keep it in localStorage for 15 minutes and
-// let the API's in-memory/CDN cache absorb repeat requests. This avoids one
-// Firestore listener per collection on every page view, which is the main
-// source of read quota usage on the Spark plan.
-const CACHE_KEY = "easyhome:catalogue:v3";
+// let the API's in-memory/CDN cache absorb repeat requests so the dashboard
+// does not hit MongoDB for every page view.
+const CACHE_KEY = "easyhome:catalogue:v5";
 const CACHE_TTL_MS = 15 * 60 * 1000;
 
 // First paint comes from the bundled 181-category catalogue and footer copy,
 // so the storefront works instantly (and offline) before the API replies.
 const STATIC_CATALOGUE = {
   services: FALLBACK_SERVICES,
+  folders: [],
   cities: [],
   zones: [],
   promos: [],
@@ -44,11 +44,11 @@ function readCache() {
     const raw = window.localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw);
-    // Validate the shape so a partially-written cache (for example one saved
-    // while a Firestore listener was failing) cannot leave empty menus.
+    // Validate the shape so a partially-written cache cannot leave empty menus.
     if (
       !data ||
       !Array.isArray(data.services) ||
+      !Array.isArray(data.folders) ||
       !Array.isArray(data.cities) ||
       !Array.isArray(data.zones) ||
       !Array.isArray(data.footerLinks)
@@ -81,6 +81,7 @@ function writeCache(data) {
 function normalizePayload(payload) {
   return {
     services: Array.isArray(payload?.services) ? payload.services : [],
+    folders: Array.isArray(payload?.folders) ? payload.folders : [],
     cities: Array.isArray(payload?.cities) ? payload.cities : [],
     zones: Array.isArray(payload?.zones) ? payload.zones : [],
     promos: Array.isArray(payload?.promos) ? payload.promos : [],
@@ -264,6 +265,14 @@ export function CatalogueProvider({ children }) {
     [catalogue],
   );
 
+  const folders = useMemo(
+    () =>
+      (catalogue?.folders || [])
+        .filter((folder) => folder && folder.isLive !== false)
+        .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0)),
+    [catalogue],
+  );
+
   const zones = useMemo(
     () => (catalogue?.zones || []).filter(Boolean),
     [catalogue],
@@ -295,6 +304,8 @@ export function CatalogueProvider({ children }) {
       services,
       servicesLoading: loading,
       servicesError: error || null,
+      folders,
+      foldersLoading: loading,
       cities,
       citiesLoading: loading,
       zones,
@@ -312,6 +323,7 @@ export function CatalogueProvider({ children }) {
       services,
       loading,
       error,
+      folders,
       cities,
       zones,
       promos,

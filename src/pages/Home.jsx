@@ -4,8 +4,10 @@ import {
   ArrowRight,
   BadgeCheck,
   Bolt,
+  ChevronRight,
   Clock3,
   Crown,
+  Layers,
   MapPin,
   ShieldCheck,
   Sparkles,
@@ -29,11 +31,13 @@ import {
   jobInServiceArea,
 } from "../lib/geo";
 import { SERVICE_META } from "../lib/constants";
-import { SectionHeader } from "../components/ui";
+import { groupedServices } from "../lib/serviceGroups";
+import { SectionHeader, Modal } from "../components/ui";
 import {
   PromoCarousel,
   SearchBar,
   ServiceGrid,
+  ServiceIcon,
   WorkerCard,
 } from "../components/common";
 
@@ -71,8 +75,8 @@ export default function Home() {
     "Book verified cleaners, plumbers, electricians, AC technicians and more near you. Transparent prices, pay after the job.",
   );
 
-  const { fbUser, loading: authLoading } = useAuth();
-  const { services, promos, settings } = useCatalogue();
+  const { user, loading: authLoading } = useAuth();
+  const { services, folders, promos, settings } = useCatalogue();
   const { city, point, zoneCheck } = useLocation();
   const location = useMemo(
     () =>
@@ -133,7 +137,7 @@ export default function Home() {
     let firstRequest = true;
     let inFlight = false;
     const loadNearby = async () => {
-      // Do not spend Firestore reads polling a tab that is in the background.
+      // Do not spend API reads polling a tab that is in the background.
       if (inFlight || document.visibilityState !== "visible") return;
       inFlight = true;
       if (firstRequest) setNearbyLoading(true);
@@ -179,7 +183,7 @@ export default function Home() {
 
     loadNearby();
     // A one-minute cadence keeps the nearby list current without turning every
-    // open home page into a continuous stream of Firestore reads.
+    // open home page into a continuous stream of API requests.
     const timer = window.setInterval(loadNearby, 60_000);
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
@@ -193,7 +197,7 @@ export default function Home() {
   ]);
 
   useEffect(() => {
-    if (authLoading || fbUser) return undefined;
+    if (authLoading || user) return undefined;
 
     const cached = readTopRatedCache();
     if (cached && Date.now() - Number(cached.cachedAt) < TOP_RATED_CACHE_TTL_MS) {
@@ -229,9 +233,9 @@ export default function Home() {
     return () => {
       active = false;
     };
-  }, [authLoading, fbUser]);
+  }, [authLoading, user]);
 
-  const showingTopRated = !authLoading && !fbUser;
+  const showingTopRated = !authLoading && !user;
 
   const nearbyWithDistance = useMemo(
     () =>
@@ -247,6 +251,37 @@ export default function Home() {
   );
 
   const popular = services.slice(0, 10);
+  const [openFolder, setOpenFolder] = useState(null);
+  const folderGroups = useMemo(() => groupedServices(services), [services]);
+  const homeFolders = useMemo(() => {
+    if (folders.length) {
+      return folders.map((folder) => {
+        const name = folder.name || folder.id;
+        const list = services.filter(
+          (service) =>
+            service.folderId === folder.id ||
+            service.folder === name ||
+            (folder.serviceKeys || []).includes(service.key),
+        );
+        return {
+          id: folder.id || name,
+          name,
+          description: folder.description || "",
+          icon: folder.icon || "",
+          count: Number(folder.servicesCount) || list.length,
+          services: list.length ? list : folderGroups[name] || [],
+        };
+      });
+    }
+    return Object.entries(folderGroups).map(([name, list]) => ({
+      id: name,
+      name,
+      description: "",
+      icon: "",
+      count: list.length,
+      services: list,
+    }));
+  }, [folders, folderGroups, services]);
   const displayWorkers = showingTopRated ? topRated.workers : nearbyWithDistance;
   const displayLoading = showingTopRated ? topRated.loading : nearbyLoading;
   const displayError = showingTopRated ? topRated.error : nearbyResult.error;
@@ -310,7 +345,7 @@ export default function Home() {
           </div>
         </section>
 
-        {!fbUser ? (
+        {!user ? (
           <section className="section">
             <div className="guest-role">
               <div className="guest-role__intro">
@@ -354,15 +389,86 @@ export default function Home() {
           <SectionHeader
             eyebrow="What do you need?"
             title="Book a trusted pro"
-            subtitle={`${services.length} service categories, one accountable platform.`}
+            subtitle={`${homeFolders.length} service folders, ${services.length} services, one accountable platform.`}
             action={
               <Link to="/services" className="btn btn--outline btn--sm">
                 View all services <ArrowRight size={15} />
               </Link>
             }
           />
-          <ServiceGrid services={popular} />
+          {homeFolders.length ? (
+            <div className="home-folders">
+              {homeFolders.map((folder) => (
+                <button
+                  key={folder.id}
+                  type="button"
+                  className="home-folder"
+                  onClick={() => setOpenFolder(folder)}
+                >
+                  <span className="home-folder__icon">
+                    {folder.icon ? (
+                      <ServiceIcon icon={folder.icon} size={34} iconSize={19} />
+                    ) : (
+                      <Layers size={22} />
+                    )}
+                  </span>
+                  <span className="home-folder__body">
+                    <strong>{folder.name}</strong>
+                    <span className="home-folder__meta">
+                      {folder.count} service{folder.count === 1 ? "" : "s"}
+                    </span>
+                    {folder.description ? (
+                      <em className="home-folder__desc">{folder.description}</em>
+                    ) : null}
+                  </span>
+                  <ChevronRight size={18} className="home-folder__chev" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <ServiceGrid services={popular} />
+          )}
         </section>
+
+        <Modal
+          open={Boolean(openFolder)}
+          onClose={() => setOpenFolder(null)}
+          title={openFolder?.name}
+          subtitle={`${openFolder?.count || 0} services · pick one to book`}
+          size="lg"
+        >
+          <div className="folder-service-list">
+            {(openFolder?.services || []).map((service) => (
+              <Link
+                key={service.id || service.key}
+                to={`/book?service=${encodeURIComponent(service.key)}`}
+                className="folder-service"
+                onClick={() => setOpenFolder(null)}
+              >
+                <span className="folder-service__icon">
+                  <ServiceIcon icon={service.icon} service={service} size={40} iconSize={20} />
+                </span>
+                <span className="folder-service__body">
+                  <strong>{service.name}</strong>
+                  <small>
+                    {service.subheading ||
+                      SERVICE_META[service.key]?.blurb ||
+                      "Verified local professional"}
+                  </small>
+                </span>
+                <span className="folder-service__price">
+                  from {inr(service.fromPrice || SERVICE_META[service.key]?.from || 199)}
+                </span>
+                <ArrowRight size={16} />
+              </Link>
+            ))}
+            {!openFolder?.services?.length ? (
+              <p className="muted small" style={{ margin: 0 }}>
+                No services in this folder yet.
+              </p>
+            ) : null}
+          </div>
+        </Modal>
 
         <section className="section">
           <SectionHeader

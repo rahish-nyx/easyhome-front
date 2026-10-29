@@ -53,7 +53,7 @@ export default function Profile() {
 
   const {
     profile,
-    fbUser,
+    user,
     isAdmin,
     isWorker,
     isPremium,
@@ -76,8 +76,8 @@ export default function Profile() {
   const [city, setCity] = useState(profile?.city || "");
 
   const bookingsQuery = useMemo(
-    () => (fbUser ? qBookingsForCustomer(fbUser.uid) : null),
-    [fbUser],
+    () => (user ? qBookingsForCustomer(user.uid) : null),
+    [user],
   );
   const { data: bookings } = useLiveQuery(bookingsQuery);
 
@@ -198,7 +198,7 @@ export default function Profile() {
               />
             </div>
             <h2>{profile?.name || "EasyHome member"}</h2>
-            <p className="profile-card__email">{profile?.email || fbUser?.email}</p>
+            <p className="profile-card__email">{profile?.email || user?.email}</p>
 
             <div className="profile-card__badges">
               {emailVerified ? (
@@ -363,7 +363,7 @@ export default function Profile() {
                   />
                 </Field>
                 <Field label="Email" htmlFor="profile-email" hint="Contact support to change your login email.">
-                  <Input id="profile-email" value={profile?.email || fbUser?.email || ""} disabled />
+                  <Input id="profile-email" value={profile?.email || user?.email || ""} disabled />
                 </Field>
               </div>
               <div className="row" style={{ justifyContent: "flex-end" }}>
@@ -375,7 +375,7 @@ export default function Profile() {
 
             {!emailVerified ? (
               <div className="auth-note">
-                Verify <strong>{fbUser?.email}</strong> to create bookings and receive job
+                Verify <strong>{user?.email}</strong> to create bookings and receive job
                 updates. Check spam if you do not see the message.
               </div>
             ) : null}

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 
 /**
- * Cached API polling replaces Firestore listeners.
+ * Cached API polling keeps every dashboard in sync without open sockets.
  *
  * Every hook keeps its last good payload in a module-level cache so navigating
  * between pages never flashes an empty screen. Polling is paused while the tab

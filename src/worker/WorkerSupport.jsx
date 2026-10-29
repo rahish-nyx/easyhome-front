@@ -7,10 +7,10 @@ import { useAuth } from "../context/AuthContext";
 import { PageLoader } from "../components/ui";
 
 export default function WorkerSupport() {
-  const { fbUser, loading, isWorker } = useAuth();
+  const { user, loading, isWorker } = useAuth();
 
   if (loading) return <PageLoader label="Opening support…" />;
-  if (!fbUser) {
+  if (!user) {
     return (
       <Navigate
         to={`/auth?role=worker&next=${encodeURIComponent("/worker/support")}`}

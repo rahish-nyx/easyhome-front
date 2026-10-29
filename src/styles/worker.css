@@ -1,5 +1,5 @@
 /* ==========================================================================
-   EasyHome worker console — Dark-Ops Professional (blue / black)
+   EasyHome worker console â€” Dark-Ops Professional (blue / black)
    Large touch targets, high contrast, mobile-first.
    ========================================================================== */
 
@@ -1740,7 +1740,7 @@
 
 /* ------------------------------- Navigation ------------------------------ */
 
-/* Desktop top navigation links — hidden on mobile, shown on wide screens */
+/* Desktop top navigation links â€” hidden on mobile, shown on wide screens */
 .worker-top__links {
   display: none;
   align-items: center;
@@ -1780,7 +1780,7 @@
   background: var(--wk-blue-2);
 }
 
-/* Mobile bottom nav — hidden on desktop viewports */
+/* Mobile bottom nav â€” hidden on desktop viewports */
 .worker-nav {
   position: fixed;
   left: 50%;
@@ -3869,4 +3869,141 @@
   .wk-refer-row__amount {
     grid-column: 2;
   }
+}
+
+/* ---------------------- Header responsiveness + support ------------------- */
+
+/* Desktop: brand · tabs · actions on one line. The tab strip owns the free
+   space and scrolls horizontally instead of pushing the profile off-screen. */
+@media (min-width: 900px) {
+  .worker-top__inner {
+    flex-wrap: nowrap;
+    gap: 14px;
+    min-height: 68px;
+  }
+
+  .worker-top__inner > .brand {
+    flex: 0 0 auto;
+  }
+
+  .worker-top__links {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-left: 6px;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .worker-top__links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .worker-top__right {
+    flex: 0 0 auto;
+    margin-left: auto;
+    gap: 8px;
+  }
+}
+
+/* Tablet and mobile: tabs live in the bottom bar, so the header is a single
+   non-wrapping row with the brand on the left and actions on the right. */
+@media (max-width: 899px) {
+  .worker-top__inner {
+    flex-wrap: nowrap;
+    gap: 10px;
+    min-height: 62px;
+  }
+
+  .worker-top__inner > .brand {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .worker-top__right {
+    flex: 0 0 auto;
+    margin-left: auto;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .worker-top__inner {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .worker-top__inner > .brand .brand__name {
+    font-size: 15px;
+  }
+
+  .worker-top .brand__badge {
+    width: 30px;
+    height: 30px;
+  }
+
+  .wk-online-toggle {
+    height: 36px;
+    padding: 0 9px;
+    gap: 5px;
+    font-size: 11px;
+  }
+
+  .wk-online-toggle svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .wk-bell .icon-btn,
+  .worker-top__right > .wk-icon-link {
+    width: 36px;
+    height: 36px;
+  }
+
+  .worker-user .avatar,
+  .worker-user .wk-avatar {
+    width: 30px !important;
+    height: 30px !important;
+  }
+}
+
+/* "Need help" card: dark slate surface with a subtle electric-blue accent. */
+.worker-app .wk-promo--support {
+  background: linear-gradient(145deg, #0e1a2b, #091322 72%);
+  border-color: rgba(59, 130, 246, 0.46);
+  color: #f8fbff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 10px 24px rgba(8, 17, 32, 0.14);
+}
+
+.worker-app .wk-promo--support:hover {
+  background: linear-gradient(145deg, #14243a, #0b1829 72%);
+  border-color: #60a5fa;
+}
+
+.worker-app .wk-promo--support .wk-promo__icon {
+  background: rgba(59, 130, 246, 0.18);
+  border: 1px solid rgba(96, 165, 250, 0.36);
+  color: #eaf3ff;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
+}
+
+.worker-app .wk-promo--support strong {
+  color: #fff;
+}
+
+.worker-app .wk-promo--support small {
+  color: rgba(226, 238, 255, 0.74);
+}
+
+.worker-app .wk-promo--support > svg {
+  color: #93c5fd;
+}
+
+/* Keep the KYC shield crisp and bright against the light dashboard. */
+.worker-app .wk-kyc__icon,
+.worker-app .wk-promo--blue .wk-promo__icon {
+  background: linear-gradient(145deg, #2f6bff, #1769d2);
+  border: 1px solid rgba(23, 105, 210, 0.24);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(23, 105, 210, 0.24);
 }

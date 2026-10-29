@@ -36,9 +36,9 @@ function writeCache(key, workers) {
 }
 
 /**
- * Cache-first public worker directory. This replaces one Firestore listener
- * per Search/Services view with an API request that the server and browser
- * both cache. Listings are allowed to be a few minutes old.
+ * Cache-first public worker directory. This replaces a live listener per
+ * Search/Services view with an API request that the server and browser both
+ * cache. Listings are allowed to be a few minutes old.
  */
 export function useCachedWorkers(serviceKey = "", limit = 24) {
   const key = cacheKey(serviceKey, limit);

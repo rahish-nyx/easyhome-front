@@ -35,7 +35,7 @@ function userFromSession(payload) {
 }
 
 export function AuthProvider({ children }) {
-  const [fbUser, setFbUser] = useState(null);
+  const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [worker, setWorker] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -51,7 +51,7 @@ export function AuthProvider({ children }) {
     setProfile(nextProfile);
     setWorker(nextWorker);
     setIsAdmin(admin);
-    setFbUser(nextUser);
+    setUser(nextUser);
     return {
       user: nextUser,
       profile: nextProfile,
@@ -63,7 +63,7 @@ export function AuthProvider({ children }) {
   const resetSession = useCallback(() => {
     clearToken();
     clearLiveCache();
-    setFbUser(null);
+    setUser(null);
     setProfile(null);
     setWorker(null);
     setIsAdmin(false);
@@ -225,8 +225,7 @@ export function AuthProvider({ children }) {
 
   const value = useMemo(
     () => ({
-      fbUser,
-      user: fbUser,
+      user,
       profile,
       worker,
       role,
@@ -235,7 +234,7 @@ export function AuthProvider({ children }) {
       isAdmin,
       isPremium,
       premiumUntil,
-      emailVerified: fbUser?.emailVerified === true,
+      emailVerified: user?.emailVerified === true,
       loading,
       error,
       needsProfile: false,
@@ -251,7 +250,7 @@ export function AuthProvider({ children }) {
       refreshProfile,
     }),
     [
-      fbUser,
+      user,
       profile,
       worker,
       role,

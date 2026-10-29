@@ -431,18 +431,18 @@ const NOTIF_ICONS = {
 };
 
 export function NotificationBell() {
-  const { fbUser } = useAuth();
+  const { user } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [marking, setMarking] = useState(false);
   const wrapRef = useRef(null);
-  const query = useMemo(() => (fbUser ? qNotifications(fbUser.uid) : null), [fbUser]);
+  const query = useMemo(() => (user ? qNotifications(user.uid) : null), [user]);
   const { data: items, loading } = useLiveQuery(query);
   useNotificationSound(items, {
     loading,
-    userId: fbUser?.uid || "",
-    enabled: Boolean(fbUser),
+    userId: user?.uid || "",
+    enabled: Boolean(user),
   });
   const unread = items.filter((item) => !item.read).length;
 
@@ -477,7 +477,7 @@ export function NotificationBell() {
     }
   };
 
-  if (!fbUser) return null;
+  if (!user) return null;
 
   return (
     <div className="user-menu" ref={wrapRef}>
@@ -768,11 +768,11 @@ export function ImageUpload({
 /* ------------------------------ Protected route --------------------------- */
 
 export function ProtectedRoute({ children, adminOnly = false, role }) {
-  const { fbUser, isAdmin, isWorker, loading } = useAuth();
+  const { user, isAdmin, isWorker, loading } = useAuth();
   const location = useLocation();
 
   if (loading) return <PageLoader />;
-  if (!fbUser) {
+  if (!user) {
     const next = encodeURIComponent(`${location.pathname}${location.search}`);
     return <Navigate to={`/auth?next=${next}`} replace />;
   }
@@ -830,11 +830,8 @@ export function InstallCard({ className = "" }) {
 
 export function SetupScreen() {
   const toast = useToast();
-  const snippet = `  VITE_FIREBASE_API_KEY=...
-  VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-  VITE_FIREBASE_PROJECT_ID=your-project
-  VITE_FIREBASE_MESSAGING_SENDER_ID=...
-VITE_FIREBASE_APP_ID=...`;
+  const snippet = `  VITE_API_URL=http://localhost:5000
+  VITE_GOOGLE_CLIENT_ID=your-google-client-id`;
 
   return (
     <div className="setup">
@@ -846,22 +843,20 @@ VITE_FIREBASE_APP_ID=...`;
           EasyHome
         </div>
         <p className="eyebrow">One-minute setup</p>
-        <h1>Connect your Firebase project</h1>
+        <h1>Connect your EasyHome API</h1>
         <p>
-          The app shell is ready. Add your Firebase web credentials to start using live data,
-          authentication and offline caching.
+          The app shell is ready. Point it at the MongoDB + JWT backend to start
+          using live data, authentication and offline caching.
         </p>
 
         <div className="setup__steps">
           <div className="setup__step">
-            Create a Firebase project and enable <strong>Email/Password</strong> and{" "}
-            <strong>Google</strong> sign-in.
+            Start the API from <code>backend/</code> with{" "}
+            <code>MONGODB_URI</code> in <code>.env</code>.
           </div>
           <div className="setup__step">
-            Create a <strong>Firestore</strong> database for the live catalogue and bookings.
-          </div>
-          <div className="setup__step">
-            Copy <code>.env.example</code> → <code>.env.local</code> and paste your web app keys.
+            Copy <code>.env.example</code> → <code>.env.local</code> and set{" "}
+            <strong>VITE_API_URL</strong>.
           </div>
           <div className="setup__step">
             Configure Cloudinary credentials in the backend environment to enable image uploads.

@@ -52,13 +52,13 @@ export default function Bookings() {
     "Track every EasyHome request — live status, agreed prices, payments and reviews.",
   );
 
-  const { fbUser, profile, isPremium } = useAuth();
+  const { user, profile, isPremium } = useAuth();
   const toast = useToast();
   const [params] = useSearchParams();
   const created = params.get("created");
   const query = useMemo(
-    () => (fbUser ? qBookingsForCustomer(fbUser.uid) : null),
-    [fbUser],
+    () => (user ? qBookingsForCustomer(user.uid) : null),
+    [user],
   );
   const { data: bookings, loading, error } = useLiveQuery(query);
   const [tab, setTab] = useState("active");

@@ -112,7 +112,7 @@ export default function Tracking() {
   );
 
   const { id } = useParams();
-  const { fbUser } = useAuth();
+  const { user } = useAuth();
   const bookingRef = useMemo(() => bookingLiveRef(id), [id]);
   const live = useLiveDoc(bookingRef);
   const [snapshot, setSnapshot] = useState(null);
@@ -125,7 +125,7 @@ export default function Tracking() {
   }, []);
 
   useEffect(() => {
-    if (!id || !fbUser) return undefined;
+    if (!id || !user) return undefined;
     let active = true;
     api
       .get(`/bookings/${id}/tracking`)
@@ -138,7 +138,7 @@ export default function Tracking() {
     return () => {
       active = false;
     };
-  }, [id, fbUser, live.data?.trackingPhase, live.data?.workerId]);
+  }, [id, user, live.data?.trackingPhase, live.data?.workerId]);
 
   if (live.loading && !live.data && !snapshot) {
     return (

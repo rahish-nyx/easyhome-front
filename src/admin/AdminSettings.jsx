@@ -76,7 +76,7 @@ const ACTION_LABELS = {
 
 export default function AdminSettings() {
   const toast = useToast();
-  const { fbUser } = useAuth();
+  const { user } = useAuth();
   const [tab, setTab] = useState("general");
   const [form, setForm] = useState(EMPTY_SETTINGS);
   const [saving, setSaving] = useState(false);
@@ -732,7 +732,7 @@ export default function AdminSettings() {
                       {admin.email} · added {formatDateTime(admin.createdAt)}
                     </span>
                   </div>
-                  {admin.id === fbUser?.uid || admin.uid === fbUser?.uid ? (
+                  {admin.id === user?.uid || admin.uid === user?.uid ? (
                     <StatusPill status="admin" label="You" />
                   ) : (
                     <button
@@ -752,7 +752,7 @@ export default function AdminSettings() {
           <div className="adm-security-note">
             <Lock size={15} />
             <p>
-              Admin access is enforced with Firebase custom claims and a matching Firestore
+              Admin access is enforced with JWT claims and a matching MongoDB admin
               record. Adding an admin grants both; removing one revokes both. You cannot remove
               your own access.
             </p>
@@ -843,7 +843,7 @@ export default function AdminSettings() {
           <Field
             label="Temporary password"
             htmlFor="admin-password"
-            hint="Only needed when the email does not already have a Firebase account. Minimum 8 characters."
+            hint="Only needed when the email does not already have an EasyHome account. Minimum 8 characters."
           >
             <Input
               id="admin-password"

@@ -1,10 +1,10 @@
 /**
  * Lightweight REST descriptors used by `useLiveQuery`/`useLiveDoc`.
  *
- * The app no longer keeps an open Firestore listener per collection. Each
- * descriptor is a plain object: `{ key, path, select }` where `path` is an API
- * route and `select` optionally names the array/property to read from the
- * JSON response.
+ * The app polls REST endpoints instead of keeping an open listener per
+ * collection. Each descriptor is a plain object: `{ key, path, select }` where
+ * `path` is an API route and `select` optionally names the array/property to
+ * read from the JSON response.
  */
 export const liveQuery = (path, select = "") =>
   path ? { key: `${select || "data"}:${path}`, path, select } : null;

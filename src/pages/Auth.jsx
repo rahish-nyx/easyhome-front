@@ -80,7 +80,7 @@ export default function Auth() {
   };
 
   const {
-    fbUser,
+    user,
     profile,
     loading,
     signIn,
@@ -378,7 +378,7 @@ export default function Auth() {
   };
 
   const checkVerified = async () => {
-    if (!fbUser) return;
+    if (!user) return;
     setVerifying(true);
     try {
       const nextProfile = await refreshProfile();
@@ -399,14 +399,14 @@ export default function Auth() {
 
   if (loading) return <PageLoader label="Preparing sign in…" />;
 
-  if (fbUser && !justSignedUp && !resetToken) {
+  if (user && !justSignedUp && !resetToken) {
     return (
       <AuthShell role={profile?.role === "worker" ? "worker" : role}>
         <div className="auth-card">
           <div className="auth-card__head">
             <h2>You are signed in</h2>
             <p>
-              {profile?.name || fbUser.displayName || fbUser.email}
+              {profile?.name || user.displayName || user.email}
               {profile?.role === "worker" ? " · EasyHome Pro" : ""}
             </p>
           </div>
@@ -463,7 +463,7 @@ export default function Auth() {
             </span>
             <h2>Verify your email</h2>
             <p>
-              We sent a verification link to <strong>{fbUser?.email || form.email}</strong>. Open
+              We sent a verification link to <strong>{user?.email || form.email}</strong>. Open
               it to activate bookings{role === "worker" ? " and your worker application" : ""}.
             </p>
             <div className="stack">

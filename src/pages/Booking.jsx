@@ -59,7 +59,7 @@ export default function Booking() {
     showZoneNotice,
     openPicker,
   } = useLocation();
-  const { profile, fbUser, emailVerified, isPremium, resendVerification } = useAuth();
+  const { profile, user, emailVerified, isPremium, resendVerification } = useAuth();
 
   const initialKey = params.get("service") || "";
   const preferredWorkerId = params.get("worker") || "";
@@ -315,7 +315,7 @@ export default function Booking() {
           <div className="grow">
             <strong>Verify your email to confirm bookings</strong>
             <p style={{ color: "var(--amber)" }}>
-              We sent a link to <strong>{fbUser?.email}</strong>. This protects customers and
+              We sent a link to <strong>{user?.email}</strong>. This protects customers and
               workers from fake requests.
             </p>
           </div>

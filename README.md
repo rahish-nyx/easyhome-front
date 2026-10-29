@@ -1,6 +1,6 @@
 # EasyHome Web
 
-Commercial-grade PWA for booking verified home-service professionals. Built with React 19, Vite 8, React Router 7, Firebase Authentication, Cloud Firestore realtime listeners, and a service worker that keeps the app shell usable offline.
+Commercial-grade PWA for booking verified home-service professionals. Built with React 19, Vite 8, React Router 7, a MongoDB-backed Express API, JWT authentication, and a service worker that keeps the app shell usable offline.
 
 The app has three experiences in one codebase:
 
@@ -14,9 +14,9 @@ The app has three experiences in one codebase:
 
 - React 19 + Vite 8
 - React Router 7
-- Firebase Auth (email/password + Google) and Firestore (realtime `onSnapshot`, persistent local cache)
-- Express 5 + Firebase Admin SDK API for every write
-- CSS design systems: yellow/black customer theme, dark high-contrast worker theme, dark admin shell
+- JWT authentication (email/password + Google) issued by the EasyHome API
+- Express 5 + MongoDB (Mongoose) backend for every read and write
+- CSS design systems: yellow/black customer theme, high-contrast worker console, dark admin shell
 - Custom PWA manifest and service worker (`public/sw.js`)
 
 ## Quick start
@@ -32,28 +32,20 @@ The Vite dev server runs at `http://localhost:5173` and proxies `/api` to `http:
 ### Environment
 
 ```env
-VITE_FIREBASE_API_KEY=...
-VITE_FIREBASE_AUTH_DOMAIN=...
-VITE_FIREBASE_PROJECT_ID=...
-VITE_FIREBASE_MESSAGING_SENDER_ID=...
-VITE_FIREBASE_APP_ID=...
 VITE_API_URL=/api
-VITE_APP_URL=https://easyhome-bec14.web.app
+VITE_APP_URL=http://localhost:5173
+VITE_GOOGLE_CLIENT_ID=your-google-client-id
 ```
 
-Get the Firebase web config from **Firebase Console -> Project settings -> Your apps -> Web app -> Config**. Never put the service-account key in the frontend.
+`VITE_API_URL` accepts either a root-relative path (use `/api` with the Vite proxy or a same-origin reverse proxy) or an absolute API URL such as `https://api.example.com/api`. See [`../backend/README.md`](../backend/README.md) for the server environment, including `MONGODB_URI` and `JWT_SECRET`.
 
-## Firebase prerequisites
+## Backend prerequisites
 
-The app reads Firestore directly, so these must be enabled for the target project:
-
-1. **Authentication** - enable Email/Password and Google. Email verification is required before a customer can create a booking.
-2. **Cloud Firestore** - database in the region you want (the current project uses `asia-south1`).
+1. **MongoDB** - set `MONGODB_URI` in `backend/.env` and run `npm run seed` once.
+2. **JWT** - set a long random `JWT_SECRET`.
 3. **Media** - uploads require Cloudinary credentials on the API. KYC documents are stored privately in Cloudinary and are also sent to the configured admin Telegram chat.
-4. **Rules** - deploy `../backend/firestore.rules`. Client writes are denied; all mutations go through the API.
-5. **Indexes** - deploy `../backend/firestore.indexes.json` for the booking, feed, chat and admin queries.
-
-Deployment steps live in [`../backend/README.md`](../backend/README.md).
+4. **Google sign-in** (optional) - set `GOOGLE_CLIENT_ID` on the API and `VITE_GOOGLE_CLIENT_ID` on the frontend.
+5. **Catalogue folders** - run `node scripts/linkServices.mjs` in the backend to create the 15 folders and link every service.
 
 ## Scripts
 
@@ -66,9 +58,9 @@ Deployment steps live in [`../backend/README.md`](../backend/README.md).
 
 ## PWA and offline behaviour
 
-- `public/sw.js` caches only same-origin app-shell assets. It never caches Firebase, API or cross-origin traffic.
+- `public/sw.js` caches only same-origin app-shell assets. It never caches API or cross-origin traffic.
 - Navigations use network-first with a cached shell fallback. A network failure **or a 5xx response** falls back to the cached shell.
-- Firebase Firestore uses `persistentLocalCache` with multi-tab support, so previously loaded catalogue and booking data survives reloads.
+- `CatalogueContext` keeps the last catalogue response in `localStorage`, so previously loaded catalogue and booking data renders instantly on reload.
 - The app registers the service worker only in production builds (`src/main.jsx`).
 - Icons, maskable icon, manifest, robots and sitemap are in `public/`.
 
@@ -83,47 +75,36 @@ npm run preview
 
 ## Access and roles
 
-Custom claims are the source of truth for routing and authorisation:
+JWT claims are the source of truth for routing and authorisation:
 
 - `role: "customer" | "worker"`
 - `workerApproved: boolean`
-- `admin: boolean` (also backed by an `admins/{uid}` Firestore document)
+- `admin: boolean` (also backed by an `admins` MongoDB collection)
 
-The first admin is created by `npm run seed` in the backend after Authentication is enabled. Admin and worker bundles are lazy-loaded, so the customer storefront does not pay their download cost.
+The first admin is created by `npm run seed` in the backend. Admin and worker bundles are lazy-loaded, so the customer storefront does not pay their download cost.
 
-## Realtime data
+## Data flow
 
-- `src/lib/queries.js` defines all Firestore listeners.
-- `src/context/CatalogueContext.jsx` keeps services, cities, promos and settings live, with small offline fallbacks for a cold first launch.
-- Catalogue queries intentionally avoid composite indexes; filtering and ordering are done in memory for these small collections.
-- All writes call the Express API (`src/lib/api.js`); the client never writes to Firestore directly.
+- `src/lib/queries.js` defines the REST descriptors used by the polling hooks in `src/hooks/useLive.js`.
+- `src/context/CatalogueContext.jsx` loads services, folders, cities, promos and settings from `GET /api/public/bootstrap`, with bundled fallbacks for a cold first launch.
+- Customer folder browsing is driven by the same folders the admin console manages (15 seeded folders, every service linked).
+- All writes call the Express API (`src/lib/api.js`); the client never talks to the database directly.
 
 ## Deployment
 
-From the backend repository (it owns the Firebase project configuration):
+Build the frontend and deploy `dist/` to any static host (Vercel, Netlify, Cloudflare Pages, etc.). The backend deploys separately as a Node service.
 
 ```bash
-cd ../backend
-npx firebase-tools login
-npx firebase-tools deploy --only firestore:rules,firestore:indexes,hosting
+npm run build
 ```
 
-Hosting is configured to publish `../easyhomes/dist`. Build the frontend first.
-
-- `index.html` and `sw.js` are served with `no-cache`.
+- `index.html` and `sw.js` should be served with `no-cache`.
 - Hashed assets under `/assets/**` are immutable.
 - SPA routes rewrite to `index.html`.
-- Security headers are set in `backend/firebase.json`.
+- Set `VITE_API_URL=https://your-api-host.example.com/api` in the production build environment.
+- Add the frontend origin to `CORS_ORIGINS` in the backend environment.
 
-### Hosting the API
-
-Firebase Hosting serves static files only; it does not run Express. Before a production build, deploy the API to a Node host such as Render, Railway, Fly.io or Cloud Run, then set:
-
-```env
-VITE_API_URL=https://your-api-host.example.com/api
-```
-
-Add `https://easyhome-bec14.web.app` to `CORS_ORIGINS` in the backend environment and rebuild the frontend. The default `/api` value only works with the Vite dev proxy or when a reverse proxy on the same domain forwards `/api` to the API. If you prefer Firebase-only infrastructure, wrap the Express app as a Cloud Function and add an `/api/**` Hosting rewrite.
+The default `/api` value only works with the Vite dev proxy or when a reverse proxy on the same domain forwards `/api` to the API.
 
 ## Project layout
 
@@ -132,7 +113,7 @@ src/
   admin/        Admin shell and operational pages
   components/   Shared UI, layout, customer sections
   context/      Auth, catalogue, location and toast providers
-  hooks/        Firestore and async-data hooks
+  hooks/        Polling and async-data hooks
   lib/          API client, query definitions, formatting, constants
   pages/        Customer-facing routes
   worker/       Worker console
@@ -142,8 +123,8 @@ public/         Manifest, service worker, icons, offline page
 
 ## Troubleshooting
 
-- **Auth returns `CONFIGURATION_NOT_FOUND` or `BILLING_NOT_ENABLED`**: enable Authentication in the Firebase project. The current project needs its billing account linked before Identity Platform can initialise.
-- **Catalogue shows fallback data**: Firestore rules or indexes are not deployed yet, or the browser is offline.
-- **Smoke test passes locally but writes fail in production**: deploy `firestore.rules`; the default deny-all ruleset blocks client reads.
+- **API requests fail**: confirm `backend/.env` has `MONGODB_URI` and `JWT_SECRET`, then start `node src/index.js`.
+- **Signed out unexpectedly**: the JWT expired or the API restarted with a different `JWT_SECRET`; sign in again.
+- **Catalogue shows fallback data**: the API is unreachable or the browser is offline.
 - **Uploads fail**: confirm the API has valid Cloudinary credentials and can reach Cloudinary.
-- **Admin route redirects immediately**: sign in with an account that has the `admin` custom claim and an `admins/{uid}` document.
+- **Admin route redirects immediately**: sign in with an account that has the `admin` claim and a matching `admins` record.

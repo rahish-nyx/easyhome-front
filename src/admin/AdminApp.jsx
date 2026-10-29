@@ -56,7 +56,7 @@ const ICONS = {
 };
 
 export default function AdminApp() {
-  const { fbUser, profile, isAdmin, loading, logout, refreshClaims } = useAuth();
+  const { user, profile, isAdmin, loading, logout, refreshClaims } = useAuth();
   const toast = useToast();
   const location = useLocation();
   const navigate = useNavigate();
@@ -68,13 +68,13 @@ export default function AdminApp() {
   });
   const stats = overviewState.data?.stats;
   const notificationsQuery = useMemo(
-    () => (fbUser && isAdmin ? qNotifications(fbUser.uid) : null),
-    [fbUser, isAdmin],
+    () => (user && isAdmin ? qNotifications(user.uid) : null),
+    [user, isAdmin],
   );
   const notifications = useLiveQuery(notificationsQuery);
   useNotificationSound(notifications.data, {
     loading: notifications.loading,
-    userId: fbUser?.uid || "",
+    userId: user?.uid || "",
     enabled: Boolean(isAdmin),
   });
 
@@ -108,7 +108,7 @@ export default function AdminApp() {
 
   if (loading) return <PageLoader label="Loading operations console…" />;
 
-  if (!fbUser) {
+  if (!user) {
     return <Navigate to={`/auth?next=${encodeURIComponent("/admin")}`} replace />;
   }
 
@@ -122,7 +122,7 @@ export default function AdminApp() {
           <p className="adm-eyebrow">Restricted area</p>
           <h1>Admin access required</h1>
           <p>
-            You are signed in as <strong>{fbUser.email}</strong>, but this account does not have
+            You are signed in as <strong>{user.email}</strong>, but this account does not have
             admin claims yet. If access was just granted, refresh your claims.
           </p>
           <div className="admin-gate__actions">
@@ -237,10 +237,10 @@ export default function AdminApp() {
           <ExternalLink size={15} /> Open customer app
         </Link>
         <div className="adm-signed">
-          <Avatar name={profile?.name || fbUser.email} path={profile?.photoPath} size={36} />
+          <Avatar name={profile?.name || user.email} path={profile?.photoPath} size={36} />
           <div>
             <strong>{profile?.name || "Administrator"}</strong>
-            <span>{fbUser.email}</span>
+            <span>{user.email}</span>
           </div>
           <button type="button" onClick={logout} aria-label="Sign out" title="Sign out">
             <LogOut size={16} />
@@ -297,7 +297,7 @@ export default function AdminApp() {
               {counts.approvals ? `${counts.approvals} to review` : "All clear"}
             </Link>
             <Avatar
-              name={profile?.name || fbUser.email}
+              name={profile?.name || user.email}
               path={profile?.photoPath}
               size={34}
             />

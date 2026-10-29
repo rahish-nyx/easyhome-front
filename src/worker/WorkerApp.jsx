@@ -10,7 +10,7 @@ import WorkerApply from "./WorkerApply";
 import WorkerStatus from "./WorkerStatus";
 
 export default function WorkerApp() {
-  const { fbUser, worker, profile, loading, isWorker, logout, refreshClaims } = useAuth();
+  const { user, worker, profile, loading, isWorker, logout, refreshClaims } = useAuth();
 
   useEffect(() => {
     if (worker?.status === "approved") refreshClaims().catch(() => {});
@@ -24,7 +24,7 @@ export default function WorkerApp() {
     );
   }
 
-  if (!fbUser) {
+  if (!user) {
     return (
       <Navigate
         to={`/auth?role=worker&next=${encodeURIComponent("/worker")}`}
@@ -94,7 +94,7 @@ export default function WorkerApp() {
 }
 
 function WorkerGate({ profile, children }) {
-  const { fbUser, logout } = useAuth();
+  const { user, logout } = useAuth();
 
   return (
     <div className="worker-app">
@@ -110,10 +110,10 @@ function WorkerGate({ profile, children }) {
             <Headphones size={18} />
           </Link>
           <div className="worker-user">
-            <Avatar name={profile?.name || fbUser?.displayName} path={profile?.photoPath} size={34} />
+            <Avatar name={profile?.name || user?.displayName} path={profile?.photoPath} size={34} />
             <div>
               <strong>{profile?.name || "Worker account"}</strong>
-              <span>{fbUser?.email}</span>
+              <span>{user?.email}</span>
             </div>
           </div>
           <button
