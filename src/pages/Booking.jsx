@@ -666,9 +666,14 @@ export default function Booking() {
                     View profile
                   </Link>
                 </div>
-              ) : (
-                <div className="row small muted">
+              ) : workerState.loading ? (
+                <div className="row small muted" role="status" aria-live="polite">
                   <Loader2 size={15} className="spin" /> Loading preferred pro…
+                </div>
+              ) : (
+                <div className="inline-error" role="status">
+                  <AlertTriangle size={15} />
+                  This professional profile is unavailable. You can still send the request to a matching local pro.
                 </div>
               )}
               <p className="tiny muted" style={{ marginTop: 8 }}>

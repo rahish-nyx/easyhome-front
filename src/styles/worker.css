@@ -4008,15 +4008,21 @@
   }
 }
 
-/* Need help uses the same card and icon treatment as the other Grow cards. */
-.worker-app .wk-promo--support {
-  border-color: rgba(255, 255, 255, 0.15);
+/* KYC and support use the same unfilled icon treatment as Refer & earn. */
+.worker-app .wk-promo--blue .wk-promo__icon {
+  background: transparent;
+  border: 1px solid #c9ddf7;
+  color: var(--wk-blue);
 }
 
-.worker-app .wk-promo--support .wk-promo__icon,
-.worker-app .wk-promo--blue .wk-promo__icon {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+.worker-app .wk-promo--support {
+  border-color: #1f4f8d;
+}
+
+.worker-app .wk-promo--support .wk-promo__icon {
+  background: transparent;
+  border: 1px solid rgba(154, 196, 255, 0.45);
+  color: #9ac4ff;
 }
 
 /* --------------------- Wide laptop / desktop dashboard -------------------- */

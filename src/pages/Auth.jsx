@@ -473,6 +473,10 @@ export default function Auth() {
               We sent a verification link to <strong>{user?.email || form.email}</strong>. Open
               it to activate bookings{role === "worker" ? " and your worker application" : ""}.
             </p>
+            <div className="auth-verify-actions" role="status">
+              <strong>Check your inbox for “Verify your EasyHome email”</strong>
+              <span>Tap the yellow “Verify email” button in that message, then return here.</span>
+            </div>
             <div className="stack">
               <Button
                 size="lg"
@@ -481,7 +485,7 @@ export default function Auth() {
                 onClick={checkVerified}
                 icon={CheckCircle2}
               >
-                I have verified my email
+                Verify registered email
               </Button>
               <Button
                 variant="outline"

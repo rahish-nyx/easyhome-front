@@ -212,6 +212,31 @@ export default function WorkerDashboard() {
 
   const canAccept = Boolean(worker?.online) && (isPremium || (Number(worker?.dues) || 0) <= 0);
 
+  useEffect(() => {
+    if (!worker?.online || !navigator.geolocation) return undefined;
+    let active = true;
+    const syncLocation = () => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          if (!active) return;
+          api.patch("/worker/availability", {
+            online: true,
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          }).catch(() => {});
+        },
+        () => {},
+        { enableHighAccuracy: true, maximumAge: 30_000, timeout: 10_000 },
+      );
+    };
+    syncLocation();
+    const timer = window.setInterval(syncLocation, 120_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [worker?.online]);
+
   const setTab = (next) => {
     const search = new URLSearchParams(params);
     if (next === "home") search.delete("tab");
@@ -225,7 +250,23 @@ export default function WorkerDashboard() {
     const next = !worker?.online;
     setOnlineSaving(true);
     try {
-      await api.patch("/worker/availability", { online: next });
+      const location = {};
+      if (next && navigator.geolocation) {
+        try {
+          const position = await new Promise((resolve, reject) =>
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              maximumAge: 30_000,
+              timeout: 8_000,
+            }),
+          );
+          location.lat = position.coords.latitude;
+          location.lng = position.coords.longitude;
+        } catch {
+          // The worker can still go online; the server will use the saved area.
+        }
+      }
+      await api.patch("/worker/availability", { online: next, ...location });
       toast.success(
         next
           ? "You are online. New jobs in your trade will appear here."

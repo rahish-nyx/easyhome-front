@@ -34,11 +34,11 @@ export const qBookingsForCustomer = (uid) =>
 export const qBookingsForWorker = (uid) =>
   uid ? liveQuery("/worker/bookings", "bookings") : null;
 
-export const qJobFeed = (serviceKey, workerId) => {
+export const qJobFeed = (_serviceKey, workerId) => {
   if (!workerId) return null;
-  const params = new URLSearchParams();
-  if (serviceKey) params.set("serviceKey", serviceKey);
-  return liveQuery(`/worker/job-feed?${params.toString()}`, "jobs");
+  // The backend matches the worker's primary trade and saved trades. Do not
+  // narrow the feed to only serviceKey, otherwise secondary-trade jobs vanish.
+  return liveQuery("/worker/job-feed", "jobs");
 };
 
 export const qNotifications = (uid) =>
