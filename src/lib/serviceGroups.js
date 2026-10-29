@@ -204,3 +204,17 @@ export function groupedServices(services) {
   });
   return groups;
 }
+
+export function servicesInFolder(folder, services) {
+  if (!folder) return [];
+  const name = folder.name || folder.id;
+  const serviceKeys = Array.isArray(folder.serviceKeys) ? folder.serviceKeys : [];
+  return (services || []).filter((service) => {
+    const key = service?.key || service?.id;
+    return (
+      service?.folderId === folder.id ||
+      service?.folder === name ||
+      serviceKeys.includes(key)
+    );
+  });
+}

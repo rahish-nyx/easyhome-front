@@ -27,7 +27,11 @@ import {
   workerInServiceArea,
 } from "../lib/geo";
 import { SERVICE_META } from "../lib/constants";
-import { groupedServices, serviceGroup } from "../lib/serviceGroups";
+import {
+  groupedServices,
+  serviceGroup,
+  servicesInFolder,
+} from "../lib/serviceGroups";
 import { Badge, EmptyState, SectionHeader } from "../components/ui";
 import {
   SearchBar,
@@ -41,7 +45,8 @@ export default function Services() {
   const [params] = useSearchParams();
   const query = (params.get("q") || "").toLowerCase().trim();
   const groupParam = params.get("group") || "";
-  const { services } = useCatalogue();
+  const folderParam = params.get("folder") || "";
+  const { services, folders } = useCatalogue();
   const { city } = useLocation();
 
   const filtered = useMemo(() => {
@@ -59,13 +64,51 @@ export default function Services() {
   }
 
   return (
-    <ServicesList filtered={filtered} query={query} groupParam={groupParam} city={city} services={services} />
+    <ServicesList
+      filtered={filtered}
+      query={query}
+      groupParam={groupParam}
+      folderParam={folderParam}
+      folders={folders}
+      city={city}
+      services={services}
+    />
   );
 }
 
-function ServicesList({ filtered, query, groupParam, city, services }) {
+function ServicesList({
+  filtered,
+  query,
+  groupParam,
+  folderParam,
+  folders,
+  city,
+  services,
+}) {
+  const activeFolder = useMemo(() => {
+    if (!folderParam) return null;
+    return (
+      folders.find(
+        (folder) =>
+          String(folder.id) === folderParam || folder.name === folderParam,
+      ) || null
+    );
+  }, [folderParam, folders]);
+
+  const folderItems = useMemo(() => {
+    if (!folderParam) return [];
+    if (activeFolder) return servicesInFolder(activeFolder, filtered);
+    return filtered.filter((item) => serviceGroup(item.key) === folderParam);
+  }, [activeFolder, filtered, folderParam]);
+
+  const folderTitle = activeFolder?.name || folderParam;
+
   usePageMeta(
-    query ? `Services matching “${query}”` : "All home services",
+    folderParam
+      ? `${folderTitle} services`
+      : query
+        ? `Services matching “${query}”`
+        : "All home services",
     "Browse every EasyHome service category — cleaning, plumbing, electrical, appliance repair, beauty and more.",
   );
 
@@ -106,9 +149,25 @@ function ServicesList({ filtered, query, groupParam, city, services }) {
         </p>
       ) : null}
 
+      {folderParam ? (
+        <div style={{ marginBottom: 18 }}>
+          <Link
+            to="/services"
+            className="btn btn--ghost btn--sm"
+            style={{ paddingLeft: 0, marginBottom: 8 }}
+          >
+            <ArrowLeft size={15} /> All folders
+          </Link>
+          <h2 style={{ margin: 0 }}>{folderTitle}</h2>
+          <p className="small muted" style={{ margin: "4px 0 0" }}>
+            {folderItems.length} service{folderItems.length === 1 ? "" : "s"} in this folder. Pick one to book a verified pro.
+          </p>
+        </div>
+      ) : null}
+
       {filtered.length ? (
         <>
-          {!query && !groupParam ? (
+          {!query && !groupParam && !folderParam ? (
             <div className="service-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
               {Object.entries(groupedServices(filtered)).map(([groupName, groupItems]) => (
                 <Link
@@ -124,27 +183,27 @@ function ServicesList({ filtered, query, groupParam, city, services }) {
             </div>
           ) : null}
           {groupParam && !query ? (
-            <div className="service-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
-              {(filtered || []).filter((item) => serviceGroup(item.key) === groupParam).map((item) => {
-                const meta = SERVICE_META[item.key] || {};
-                return (
-                  <Link
-                    key={item.key || item.id}
-                    to={`/book?service=${encodeURIComponent(item.key)}`}
-                    className="service-tile"
-                    style={{ display: "flex", flexDirection: "column", padding: 18, borderRadius: 16, background: "#fff", border: "1px solid var(--line)", textDecoration: "none", color: "inherit" }}
-                  >
-                    <span className="service-tile__icon" style={{ marginBottom: 8 }}>
-                      <ServiceIcon icon={item.icon || meta.icon || "wrench"} service={item} size={36} iconSize={18} />
-                    </span>
-                    <strong style={{ fontSize: 15 }}>{item.name}</strong>
-                    <span style={{ fontSize: 12, color: "#777", marginTop: 4 }}>
-                      From {inr(item.fromPrice || meta.from || 199)}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
+            <ServiceTileGrid
+              items={(filtered || []).filter((item) => serviceGroup(item.key) === groupParam)}
+            />
+          ) : null}
+          {folderParam && !query ? (
+            folderItems.length ? (
+              <ServiceTileGrid items={folderItems} />
+            ) : (
+              <div className="card">
+                <EmptyState
+                  icon={Wrench}
+                  title="No services in this folder yet"
+                  body="This folder is ready, but no services have been assigned to it. Browse the full catalogue or ask support to arrange a custom visit."
+                  action={
+                    <Link to="/services" className="btn btn--outline btn--sm">
+                      Browse all services
+                    </Link>
+                  }
+                />
+              </div>
+            )
           ) : null}
         </>
       ) : (
@@ -185,6 +244,55 @@ function ServicesList({ filtered, query, groupParam, city, services }) {
           </Link>
         </div>
       </section>
+    </div>
+  );
+}
+
+function ServiceTileGrid({ items }) {
+  if (!items.length) return null;
+
+  return (
+    <div
+      className="service-grid"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+        gap: 16,
+      }}
+    >
+      {items.map((item) => {
+        const meta = SERVICE_META[item.key] || {};
+        return (
+          <Link
+            key={item.key || item.id}
+            to={`/book?service=${encodeURIComponent(item.key)}`}
+            className="service-tile"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              padding: 18,
+              borderRadius: 16,
+              background: "#fff",
+              border: "1px solid var(--line)",
+              textDecoration: "none",
+              color: "inherit",
+            }}
+          >
+            <span className="service-tile__icon" style={{ marginBottom: 8 }}>
+              <ServiceIcon
+                icon={item.icon || meta.icon || "wrench"}
+                service={item}
+                size={36}
+                iconSize={18}
+              />
+            </span>
+            <strong style={{ fontSize: 15 }}>{item.name}</strong>
+            <span style={{ fontSize: 12, color: "#777", marginTop: 4 }}>
+              From {inr(item.fromPrice || meta.from || 199)}
+            </span>
+          </Link>
+        );
+      })}
     </div>
   );
 }

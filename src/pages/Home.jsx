@@ -31,8 +31,8 @@ import {
   jobInServiceArea,
 } from "../lib/geo";
 import { SERVICE_META } from "../lib/constants";
-import { groupedServices } from "../lib/serviceGroups";
-import { SectionHeader, Modal } from "../components/ui";
+import { groupedServices, servicesInFolder } from "../lib/serviceGroups";
+import { SectionHeader } from "../components/ui";
 import {
   PromoCarousel,
   SearchBar,
@@ -251,18 +251,12 @@ export default function Home() {
   );
 
   const popular = services.slice(0, 10);
-  const [openFolder, setOpenFolder] = useState(null);
   const folderGroups = useMemo(() => groupedServices(services), [services]);
   const homeFolders = useMemo(() => {
     if (folders.length) {
       return folders.map((folder) => {
         const name = folder.name || folder.id;
-        const list = services.filter(
-          (service) =>
-            service.folderId === folder.id ||
-            service.folder === name ||
-            (folder.serviceKeys || []).includes(service.key),
-        );
+        const list = servicesInFolder(folder, services);
         return {
           id: folder.id || name,
           name,
@@ -399,11 +393,11 @@ export default function Home() {
           {homeFolders.length ? (
             <div className="home-folders">
               {homeFolders.map((folder) => (
-                <button
+                <Link
                   key={folder.id}
-                  type="button"
+                  to={`/services?folder=${encodeURIComponent(folder.id)}`}
                   className="home-folder"
-                  onClick={() => setOpenFolder(folder)}
+                  aria-label={`Browse ${folder.name} services`}
                 >
                   <span className="home-folder__icon">
                     {folder.icon ? (
@@ -422,53 +416,13 @@ export default function Home() {
                     ) : null}
                   </span>
                   <ChevronRight size={18} className="home-folder__chev" />
-                </button>
+                </Link>
               ))}
             </div>
           ) : (
             <ServiceGrid services={popular} />
           )}
         </section>
-
-        <Modal
-          open={Boolean(openFolder)}
-          onClose={() => setOpenFolder(null)}
-          title={openFolder?.name}
-          subtitle={`${openFolder?.count || 0} services · pick one to book`}
-          size="lg"
-        >
-          <div className="folder-service-list">
-            {(openFolder?.services || []).map((service) => (
-              <Link
-                key={service.id || service.key}
-                to={`/book?service=${encodeURIComponent(service.key)}`}
-                className="folder-service"
-                onClick={() => setOpenFolder(null)}
-              >
-                <span className="folder-service__icon">
-                  <ServiceIcon icon={service.icon} service={service} size={40} iconSize={20} />
-                </span>
-                <span className="folder-service__body">
-                  <strong>{service.name}</strong>
-                  <small>
-                    {service.subheading ||
-                      SERVICE_META[service.key]?.blurb ||
-                      "Verified local professional"}
-                  </small>
-                </span>
-                <span className="folder-service__price">
-                  from {inr(service.fromPrice || SERVICE_META[service.key]?.from || 199)}
-                </span>
-                <ArrowRight size={16} />
-              </Link>
-            ))}
-            {!openFolder?.services?.length ? (
-              <p className="muted small" style={{ margin: 0 }}>
-                No services in this folder yet.
-              </p>
-            ) : null}
-          </div>
-        </Modal>
 
         <section className="section">
           <SectionHeader
