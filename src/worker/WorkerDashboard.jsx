@@ -6,7 +6,6 @@ import {
   Banknote,
   Bell,
   BriefcaseBusiness,
-  CalendarCheck,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -93,6 +92,9 @@ const TABS = [
 
 const PRIMARY_TAB_IDS = ["home", "jobs", "earnings", "profile"];
 const PRIMARY_TABS = TABS.filter((item) => PRIMARY_TAB_IDS.includes(item.id));
+// Profile lives in the avatar menu and the mobile bottom bar. Keeping it out of
+// the desktop tab strip leaves the header room for the live job tools.
+const HEADER_TABS = TABS.filter((item) => item.id !== "profile");
 
 const PHASE_TOAST = {
   [TRACKING_PHASES.EN_ROUTE]: "Customer notified — you are on the way.",
@@ -355,7 +357,7 @@ export default function WorkerDashboard() {
         <div className="worker-top__inner">
           <Logo />
           <nav className="worker-top__links" aria-label="Worker sections">
-            {TABS.map((item) => (
+            {HEADER_TABS.map((item) => (
               <button
                 key={item.id}
                 type="button"
@@ -744,7 +746,7 @@ function WorkerProfileMenu({
             role="menuitem"
             onClick={() => choose(onBookings)}
           >
-            <CalendarCheck size={16} /> My Bookings
+            <BriefcaseBusiness size={16} /> My Jobs
           </button>
           <button
             type="button"

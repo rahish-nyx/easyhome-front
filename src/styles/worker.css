@@ -3977,3 +3977,63 @@
   background: #eaf3ff;
   color: var(--wk-blue);
 }
+
+/* --------------------- Wide laptop / desktop dashboard -------------------- */
+
+/* The worker console used to stay at 1180px forever, which left large empty
+   margins on 1366px laptops and 1920px monitors. Let the shell breathe once
+   there is room, and use the extra width for more job columns. */
+@media (min-width: 1280px) {
+  .worker-top__inner {
+    max-width: 1620px;
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .worker-main {
+    max-width: 1620px;
+    padding: 22px 28px 34px;
+  }
+
+  .wk-active-list,
+  .wk-job-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .wk-promos__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .wk-earnings-strip {
+    padding: 20px 24px;
+    gap: 18px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .worker-main {
+    padding-top: 26px;
+    padding-bottom: 40px;
+  }
+
+  .wk-hero {
+    margin-top: 30px;
+  }
+
+  .wk-section {
+    margin-top: 30px;
+  }
+
+  .wk-hero__stats > div {
+    min-width: 104px;
+    padding: 12px 16px;
+  }
+
+  .wk-quicklinks {
+    gap: 14px;
+  }
+
+  .wk-quicklinks button {
+    padding: 16px;
+  }
+}

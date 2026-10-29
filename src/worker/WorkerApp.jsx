@@ -4,6 +4,7 @@ import { Headphones, LogOut, ShieldCheck } from "lucide-react";
 import "../styles/worker.css";
 import { useAuth } from "../context/AuthContext";
 import { Avatar, Button, PageLoader } from "../components/ui";
+import { NotificationBell } from "../components/common";
 import { Logo } from "../components/layout";
 import WorkerDashboard from "./WorkerDashboard";
 import WorkerApply from "./WorkerApply";
@@ -99,34 +100,39 @@ function WorkerGate({ profile, children }) {
   return (
     <div className="worker-app">
       <header className="worker-top">
-        <Logo />
-        <div className="worker-top__right">
-          <Link
-            to="/worker/support"
-            className="wk-icon-link"
-            aria-label="Support"
-            title="Support"
-          >
-            <Headphones size={18} />
-          </Link>
-          <div className="worker-user">
-            <Avatar name={profile?.name || user?.displayName} path={profile?.photoPath} size={34} />
-            <div>
-              <strong>{profile?.name || "Worker account"}</strong>
-              <span>{user?.email}</span>
+        <div className="worker-top__inner">
+          <Logo />
+          <div className="worker-top__right">
+            <span className="wk-bell">
+              <NotificationBell />
+            </span>
+            <Link
+              to="/worker/support"
+              className="wk-icon-link"
+              aria-label="Support"
+              title="Support"
+            >
+              <Headphones size={18} />
+            </Link>
+            <div className="worker-user">
+              <Avatar name={profile?.name || user?.displayName} path={profile?.photoPath} size={34} />
+              <div>
+                <strong>{profile?.name || "Worker account"}</strong>
+                <span>{user?.email}</span>
+              </div>
             </div>
+            <button
+              type="button"
+              className="wk-icon-link"
+              aria-label="Sign out"
+              title="Sign out"
+              onClick={async () => {
+                await logout();
+              }}
+            >
+              <LogOut size={18} />
+            </button>
           </div>
-          <button
-            type="button"
-            className="wk-icon-link"
-            aria-label="Sign out"
-            title="Sign out"
-            onClick={async () => {
-              await logout();
-            }}
-          >
-            <LogOut size={18} />
-          </button>
         </div>
       </header>
 

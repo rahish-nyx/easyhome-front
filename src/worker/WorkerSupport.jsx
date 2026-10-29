@@ -3,6 +3,7 @@ import { ArrowLeft, Headphones } from "lucide-react";
 import "../styles/worker.css";
 import Chat from "../pages/Chat";
 import { Logo } from "../components/layout";
+import { NotificationBell } from "../components/common";
 import { useAuth } from "../context/AuthContext";
 import { PageLoader } from "../components/ui";
 
@@ -26,6 +27,9 @@ export default function WorkerSupport() {
         <div className="worker-top__inner">
           <Logo dark />
           <div className="worker-top__right">
+            <span className="wk-bell">
+              <NotificationBell />
+            </span>
             <Link to="/worker" className="wk-chip-btn">
               <ArrowLeft size={14} /> Back to dashboard
             </Link>
