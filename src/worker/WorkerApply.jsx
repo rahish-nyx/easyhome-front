@@ -329,6 +329,7 @@ export default function WorkerApply({ existing, onCancel }) {
             <button
               type="button"
               className="btn-link"
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 10px", background: "#0f766e", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
               onClick={async () => {
                 setZonePickerOpen(true);
                 setZoneLoading(true);
@@ -367,22 +368,22 @@ export default function WorkerApply({ existing, onCancel }) {
                 <div style={{ maxHeight: 220, overflow: "auto" }}>
                   {zones.map((z) => (
                     <button
-                      key={z.id || z.name}
+                      key={z.id || (z.cityName + "-" + z.areaName + "-" + z.state)}
                       type="button"
                       style={{ display: "block", width: "100%", textAlign: "left", padding: 8, border: "none", background: "transparent", borderBottom: "1px solid #eee", cursor: "pointer", fontSize: 13 }}
                       onClick={() => {
                         setForm((prev) => ({
                           ...prev,
-                          city: z.city || z.name || prev.city,
+                          city: z.cityName || z.name || prev.city,
                           state: z.state || prev.state,
-                          areaName: z.name || z.area || prev.areaName,
+                          areaName: z.areaName || z.name || prev.areaName,
                         }));
                         setZonePickerOpen(false);
                         setZones([]);
                       }}
                     >
-                      <strong>{z.name || z.area}</strong>
-                      {z.city ? ` — ${z.city}` : ""}{z.state ? `, ${z.state}` : ""}
+                      <strong>{z.cityName || z.areaName || z.name || "Zone"}</strong>
+                      {z.cityName ? ` — ${z.cityName}` : z.areaName ? ` — ${z.areaName}` : ""}{z.state ? `, ${z.state}` : ""}
                     </button>
                   ))}
                 </div>
