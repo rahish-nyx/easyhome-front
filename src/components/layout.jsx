@@ -637,7 +637,7 @@ function FooterSocialLink({ item }) {
 }
 
 export function SiteFooter() {
-  const { services, footerLinks, zones } = useCatalogue();
+  const { footerLinks, zones } = useCatalogue();
   const serviceLinks = footerLinks.filter((item) => item.group === "services");
   const socialLinks = footerLinks.filter((item) => item.group === "social");
   const liveCities = Array.from(
@@ -685,22 +685,14 @@ export function SiteFooter() {
 
         <div className="footer-col">
           <h2>Services</h2>
-          {serviceLinks.length
-            ? serviceLinks.map((item) => (
-                <Link key={item.id} to={item.href}>
-                  {item.label}
-                </Link>
-              ))
-            : services.slice(0, 6).map((service) => (
-                <Link key={service.id} to={`/services/${service.key}`}>
-                  {service.name}
-                </Link>
-              ))}
-          {!serviceLinks.length ? (
-            <Link to="/services" className="footer-col__more">
-              …and many more
+          {serviceLinks.map((item) => (
+            <Link key={item.id} to={item.href}>
+              {item.label}
             </Link>
-          ) : null}
+          ))}
+          <Link to="/services" className="footer-col__more">
+            Browse all services
+          </Link>
         </div>
 
         {footerGroups.map((group) => {

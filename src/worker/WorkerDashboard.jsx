@@ -1283,7 +1283,7 @@ function WorkerReferTab({ worker, profile }) {
 
 function WorkerFooter() {
   const standalone = useStandalone();
-  const { footerLinks, services } = useCatalogue();
+  const { footerLinks } = useCatalogue();
   const serviceLinks = footerLinks.filter((item) => item.group === "services");
   const legalLinks = footerLinks.filter((item) =>
     ["company", "legal", "support"].includes(item.group),
@@ -1319,22 +1319,14 @@ function WorkerFooter() {
 
         <div className="wk-footer__col">
           <h3>Services</h3>
-          {serviceLinks.length
-            ? serviceLinks.map((item) => (
-                <Link key={item.id} to={item.href}>
-                  {item.label}
-                </Link>
-              ))
-            : services.slice(0, 6).map((service) => (
-                <Link key={service.id} to={`/services/${service.key}`}>
-                  {service.name}
-                </Link>
-              ))}
-          {!serviceLinks.length ? (
-            <Link to="/services" className="wk-footer__more">
-              …and many more
+          {serviceLinks.map((item) => (
+            <Link key={item.id} to={item.href}>
+              {item.label}
             </Link>
-          ) : null}
+          ))}
+          <Link to="/services" className="wk-footer__more">
+            Browse all services
+          </Link>
         </div>
 
         <div className="wk-footer__col">

@@ -2,15 +2,19 @@ import { useMemo, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
+  Check,
   ExternalLink,
   Pencil,
   Plus,
   RefreshCw,
+  Search,
   Trash2,
 } from "lucide-react";
+import { invalidateCatalogueCache } from "../context/CatalogueContext";
 import { useToast } from "../context/ToastContext";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../lib/api";
+import { serviceGroup } from "../lib/serviceGroups";
 import { Button, Field, Input, Modal, Select } from "../components/ui";
 import {
   AdminPage,
@@ -56,12 +60,25 @@ export default function AdminFooterLinks() {
     const data = await api.get("/admin/footer-links");
     return data.links || [];
   }, []);
+  const serviceState = useAsync(async () => {
+    const data = await api.get("/admin/services");
+    return data.services || [];
+  }, []);
   const links = useMemo(() => state.data || [], [state.data]);
+  const services = useMemo(
+    () => (serviceState.data || []).filter((service) => service?.key),
+    [serviceState.data],
+  );
   const sorted = useMemo(
     () => [...links].sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0)),
     [links],
   );
-  const refresh = () => state.run().catch(() => {});
+  const refresh = () => {
+    // Footer edits invalidate the public bootstrap cache on the server. Clear
+    // the browser copy too so a normal reload shows the change immediately.
+    invalidateCatalogueCache();
+    return state.run().catch(() => {});
+  };
 
   const groupKeys = (groupId) =>
     groupId === "legal" ? ["company", "legal", "support"] : [groupId];
@@ -166,7 +183,7 @@ export default function AdminFooterLinks() {
     <AdminPage
       eyebrow="Public site"
       title="Footer links"
-      subtitle="Manage the links shown in the customer and worker footers. Changes publish to the site after refresh."
+      subtitle="Manage the links shown in the customer and worker footers. In the Services section you can add any EasyHome service or remove links you no longer want."
       actions={
         <>
           <Button variant="outline" icon={RefreshCw} loading={state.loading} onClick={refresh}>
@@ -264,11 +281,11 @@ export default function AdminFooterLinks() {
                           </button>
                           <button
                             type="button"
-                            className="adm-icon-action is-danger"
+                            className="adm-text-action is-danger"
                             aria-label={`Delete ${item.label}`}
                             onClick={() => setDeleteTarget(item)}
                           >
-                            <Trash2 size={15} />
+                            <Trash2 size={14} /> Delete
                           </button>
                         </div>
                       </article>
@@ -291,6 +308,12 @@ export default function AdminFooterLinks() {
           key={draft.id || "new"}
           draft={draft}
           loading={busy === "save"}
+          services={services}
+          servicesLoading={serviceState.loading}
+          servicesError={serviceState.error}
+          existingServiceHrefs={links
+            .filter((link) => link.group === "services" && link.id !== draft.id)
+            .map((link) => link.href)}
           onClose={() => setDraft(null)}
           onSave={save}
         />
@@ -323,11 +346,51 @@ export default function AdminFooterLinks() {
   );
 }
 
-function FooterLinkModal({ draft, loading, onClose, onSave }) {
+function FooterLinkModal({
+  draft,
+  loading,
+  services = [],
+  servicesLoading = false,
+  servicesError = null,
+  existingServiceHrefs = [],
+  onClose,
+  onSave,
+}) {
   const [form, setForm] = useState(draft || EMPTY_LINK);
   const [error, setError] = useState("");
+  const [serviceQuery, setServiceQuery] = useState("");
+
+  const takenServiceHrefs = useMemo(
+    () => new Set(existingServiceHrefs),
+    [existingServiceHrefs],
+  );
+  const filteredServices = useMemo(() => {
+    const term = serviceQuery.trim().toLowerCase();
+    return services
+      .filter((service) => {
+        if (!term) return true;
+        return `${service.name || ""} ${service.key || ""} ${serviceGroup(service.key)}`
+          .toLowerCase()
+          .includes(term);
+      })
+      .sort(
+        (a, b) =>
+          serviceGroup(a.key).localeCompare(serviceGroup(b.key)) ||
+          String(a.name || "").localeCompare(String(b.name || "")),
+      );
+  }, [services, serviceQuery]);
 
   if (!draft) return null;
+
+  const chooseService = (service) => {
+    setForm((prev) => ({
+      ...prev,
+      label: service.name || prev.label,
+      href: `/services/${service.key}`,
+      group: "services",
+    }));
+    setError("");
+  };
 
   const submit = () => {
     const label = String(form.label || "").trim();
@@ -362,9 +425,11 @@ function FooterLinkModal({ draft, loading, onClose, onSave }) {
       subtitle={
         form.group === "social"
           ? "Social links open in a new tab and can show an icon."
-          : "Footer destinations must be internal EasyHome routes."
+          : form.group === "services"
+            ? "Pick any EasyHome service below — its label and destination fill automatically."
+            : "Footer destinations must be internal EasyHome routes."
       }
-      size="sm"
+      size="md"
       footer={
         <>
           <Button variant="ghost" disabled={loading} onClick={onClose}>Cancel</Button>
@@ -373,28 +438,7 @@ function FooterLinkModal({ draft, loading, onClose, onSave }) {
       }
     >
       <div className="adm-form-grid">
-        <Field label="Link label" htmlFor="footer-link-label" required className="adm-span-2">
-          <Input
-            id="footer-link-label"
-            value={form.label || ""}
-            maxLength={50}
-            onChange={(event) => setForm((prev) => ({ ...prev, label: event.target.value }))}
-          />
-        </Field>
-        <Field label="Destination" htmlFor="footer-link-href" required className="adm-span-2">
-          <Input
-            id="footer-link-href"
-            value={form.href || ""}
-            maxLength={200}
-            placeholder={
-              form.group === "social"
-                ? "https://instagram.com/easyhome"
-                : "/legal/terms"
-            }
-            onChange={(event) => setForm((prev) => ({ ...prev, href: event.target.value }))}
-          />
-        </Field>
-        <Field label="Footer section" htmlFor="footer-link-group">
+        <Field label="Footer section" htmlFor="footer-link-group" className="adm-span-2">
           <Select
             id="footer-link-group"
             value={form.group || "services"}
@@ -412,11 +456,85 @@ function FooterLinkModal({ draft, loading, onClose, onSave }) {
             {GROUPS.map((group) => <option key={group.id} value={group.id}>{group.label}</option>)}
           </Select>
         </Field>
+
+        {form.group === "services" ? (
+          <Field
+            label="Choose an EasyHome service"
+            htmlFor="footer-service-search"
+            className="adm-span-2"
+            hint={
+              servicesError
+                ? servicesError.message
+                : `${services.length || "All"} services available. Selecting one fills the label and destination.`
+            }
+          >
+            <div className="adm-service-picker">
+              <div className="adm-service-picker__search">
+                <Search size={15} aria-hidden="true" />
+                <Input
+                  id="footer-service-search"
+                  value={serviceQuery}
+                  placeholder="Search by service name or category…"
+                  onChange={(event) => setServiceQuery(event.target.value)}
+                />
+              </div>
+              <div
+                className="adm-service-picker__list"
+                role="listbox"
+                aria-label="EasyHome services"
+              >
+                {servicesLoading ? (
+                  <p className="small muted">Loading services…</p>
+                ) : servicesError ? (
+                  <p className="small muted">
+                    Could not load the service catalogue. You can still type a label and
+                    destination below.
+                  </p>
+                ) : filteredServices.length ? (
+                  filteredServices.map((service) => {
+                    const href = `/services/${service.key}`;
+                    const selected = form.href === href;
+                    const taken = takenServiceHrefs.has(href);
+                    return (
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={selected}
+                        className={`adm-service-picker__option${selected ? " is-selected" : ""}`}
+                        disabled={taken}
+                        key={service.key}
+                        onClick={() => chooseService(service)}
+                      >
+                        <span>
+                          <strong>{service.name}</strong>
+                          <small>
+                            {serviceGroup(service.key)} · {href}
+                          </small>
+                        </span>
+                        {taken ? (
+                          <em className="adm-service-picker__tag">Added</em>
+                        ) : selected ? (
+                          <Check size={15} aria-hidden="true" />
+                        ) : null}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <p className="small muted">
+                    No services match “{serviceQuery}”. Clear the search to see all services.
+                  </p>
+                )}
+              </div>
+            </div>
+          </Field>
+        ) : null}
+
         {form.group === "social" ? (
           <Field
             label="Social icon"
             htmlFor="footer-link-icon"
             hint="Shown next to the label in the footer."
+            className="adm-span-2"
           >
             <Select
               id="footer-link-icon"
@@ -433,7 +551,41 @@ function FooterLinkModal({ draft, loading, onClose, onSave }) {
             </Select>
           </Field>
         ) : null}
-        <Field label="Display order" htmlFor="footer-link-order">
+
+        <Field label="Link label" htmlFor="footer-link-label" required className="adm-span-2">
+          <Input
+            id="footer-link-label"
+            value={form.label || ""}
+            maxLength={50}
+            onChange={(event) => setForm((prev) => ({ ...prev, label: event.target.value }))}
+          />
+        </Field>
+        <Field
+          label="Destination"
+          htmlFor="footer-link-href"
+          required
+          className="adm-span-2"
+          hint={
+            form.group === "services"
+              ? "Filled from the selected service. You can still override it with another EasyHome route."
+              : undefined
+          }
+        >
+          <Input
+            id="footer-link-href"
+            value={form.href || ""}
+            maxLength={200}
+            placeholder={
+              form.group === "social"
+                ? "https://instagram.com/easyhome"
+                : form.group === "services"
+                  ? "/services/home-cleaning"
+                  : "/legal/terms"
+            }
+            onChange={(event) => setForm((prev) => ({ ...prev, href: event.target.value }))}
+          />
+        </Field>
+        <Field label="Display order" htmlFor="footer-link-order" className="adm-span-2">
           <Input
             id="footer-link-order"
             type="number"

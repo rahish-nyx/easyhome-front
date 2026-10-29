@@ -20,8 +20,20 @@ const CatalogueContext = createContext(null);
 // The catalogue is almost static. Keep it in localStorage for 15 minutes and
 // let the API's in-memory/CDN cache absorb repeat requests so the dashboard
 // does not hit MongoDB for every page view.
-const CACHE_KEY = "easyhome:catalogue:v5";
+const CACHE_KEY = "easyhome:catalogue:v6";
+const LEGACY_CACHE_KEYS = ["easyhome:catalogue:v5"];
 const CACHE_TTL_MS = 15 * 60 * 1000;
+
+export function invalidateCatalogueCache() {
+  if (typeof window === "undefined") return;
+  try {
+    [CACHE_KEY, ...LEGACY_CACHE_KEYS].forEach((key) => {
+      window.localStorage.removeItem(key);
+    });
+  } catch {
+    /* Storage can be unavailable in private mode. */
+  }
+}
 
 // First paint comes from the bundled 181-category catalogue and footer copy,
 // so the storefront works instantly (and offline) before the API replies.
@@ -208,7 +220,8 @@ export function CatalogueProvider({ children }) {
       const payload = await api.get("/public/bootstrap");
       const next = normalizePayload(payload);
       if (!next.services.length) next.services = FALLBACK_SERVICES;
-      if (!next.footerLinks.length) next.footerLinks = DEFAULT_FOOTER_LINKS;
+      // An empty footerLinks array is a real admin choice (all links removed),
+      // so never replace it with bundled defaults.
       setCatalogue(next);
       hasDataRef.current = true;
       writeCache(next);
@@ -222,7 +235,10 @@ export function CatalogueProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (!initial.fresh) loadCatalogue();
+    // Always revalidate in the background. The cached payload paints instantly,
+    // but admin edits (especially footer links) should appear on the next load
+    // without waiting for the 15-minute client cache to expire.
+    loadCatalogue();
 
     const onVisibility = () => {
       if (document.visibilityState !== "visible") return;
@@ -243,7 +259,7 @@ export function CatalogueProvider({ children }) {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("storage", onStorage);
     };
-  }, [initial.fresh, loadCatalogue]);
+  }, [loadCatalogue]);
 
   // A stable clock keeps promo expiry deterministic during render while still
   // letting a banner roll over without a page reload.
@@ -285,10 +301,7 @@ export function CatalogueProvider({ children }) {
 
   const footerLinks = useMemo(
     () =>
-      (catalogue?.footerLinks?.length
-        ? catalogue.footerLinks
-        : DEFAULT_FOOTER_LINKS
-      )
+      (catalogue?.footerLinks || [])
         .filter((link) => link.active !== false)
         .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0)),
     [catalogue],
