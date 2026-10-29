@@ -52,6 +52,61 @@ export const FALLBACK_SERVICES = WORK_CATEGORIES.map((item, index) => ({
   active: true,
 }));
 
+// Default promo campaigns used on first paint or when the server has no promos configured yet.
+export const DEFAULT_PROMOS = [
+  {
+    id: "promo-welcome",
+    title: "Flat ₹100 Off Your First Service",
+    subtitle: "Use code WELCOME100 on cleaning, repairs or installations.",
+    kicker: "Welcome Offer",
+    ctaText: "Book now",
+    ctaLink: "/services",
+    couponCode: "WELCOME100",
+    discountType: "flat",
+    discountValue: 100,
+    theme: "yellow",
+    active: true,
+    order: 1,
+    placement: "customer_home",
+  },
+  {
+    id: "promo-pro-membership",
+    title: "EasyHome Pro Membership",
+    subtitle: "Get priority pro dispatch and zero urgent-job surcharges starting at ₹199/mo.",
+    kicker: "Membership",
+    ctaText: "Explore Pro",
+    ctaLink: "/subscription",
+    theme: "dark",
+    active: true,
+    order: 2,
+    placement: "customer_home",
+  },
+  {
+    id: "promo-seasonal-care",
+    title: "Seasonal Deep Clean & AC Service",
+    subtitle: "Verified experts at transparent fixed rates. Pay only after the job is done.",
+    kicker: "Trending Services",
+    ctaText: "View services",
+    ctaLink: "/services",
+    theme: "blue",
+    active: true,
+    order: 3,
+    placement: "customer_home",
+  },
+  {
+    id: "promo-worker-join",
+    title: "Are you a skilled technician?",
+    subtitle: "Join EasyHome Pro, get verified, and receive direct jobs with transparent payouts.",
+    kicker: "Work With Us",
+    ctaText: "Apply now",
+    ctaLink: "/auth?role=worker",
+    theme: "blue",
+    active: true,
+    order: 1,
+    placement: "worker_dashboard",
+  },
+];
+
 // Default footer structure. The admin console can override or deactivate these
 // records; this copy is used for the first paint and whenever the API is
 // unreachable, so the storefront never renders an empty footer.

@@ -37,6 +37,7 @@ import { useAuth } from "../context/AuthContext";
 import { useLocation as useCity } from "../context/LocationContext";
 import { useCatalogue } from "../context/CatalogueContext";
 import { useOnline, useStandalone } from "../hooks/useDevice";
+import { Capacitor } from "@capacitor/core";
 import { Avatar, Badge, Button, IconButton, Modal, Spinner } from "./ui";
 import { NotificationBell } from "./common";
 import { OutOfZoneModal } from "./geofence";
@@ -637,6 +638,16 @@ function FooterSocialLink({ item }) {
 }
 
 export function SiteFooter() {
+  const standalone = useStandalone();
+  const isMobile =
+    standalone ||
+    (typeof window !== "undefined" &&
+      (Capacitor?.isNativePlatform?.() ||
+        window.location.protocol === "capacitor:" ||
+        window.location.protocol === "file:"));
+
+  if (isMobile) return null;
+
   const { footerLinks, zones } = useCatalogue();
   const serviceLinks = footerLinks.filter((item) => item.group === "services");
   const socialLinks = footerLinks.filter((item) => item.group === "social");
@@ -654,7 +665,7 @@ export function SiteFooter() {
   ];
 
   return (
-    <footer className="site-footer">
+    <footer className="site-footer desktop-only hide-on-mobile">
       <div className="recruit">
         <div>
           <h2 className="recruit__title">Are you a skilled worker?</h2>
@@ -786,7 +797,7 @@ export function CustomerLayout() {
       <main id="main" className="pb-24 md:pb-0" style={{ paddingBottom: 'calc(var(--bottom-nav-h, 70px) + env(safe-area-inset-bottom))' }}>
         <Outlet />
       </main>
-      {standalone ? null : <SiteFooter />}
+      {standalone || Capacitor?.isNativePlatform?.() ? null : <SiteFooter />}
       <BottomNav />
       <CityModal open={pickerOpen} onClose={closePicker} />
       <OutOfZoneModal

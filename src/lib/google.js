@@ -1,3 +1,5 @@
+import { Capacitor } from "@capacitor/core";
+
 const SCRIPT_ID = "google-identity-services";
 
 let scriptPromise = null;
@@ -38,6 +40,13 @@ function loadScript() {
  * API verifies against Google's userinfo endpoint.
  */
 export async function requestGoogleAccessToken() {
+  if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+    throw Object.assign(
+      new Error("Google OAuth requires a desktop or external browser. Please sign in or register with your email and password."),
+      { code: "GOOGLE_WEBVIEW_UNSUPPORTED" },
+    );
+  }
+
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   if (!clientId) {
     throw Object.assign(

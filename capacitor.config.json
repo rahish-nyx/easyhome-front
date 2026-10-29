@@ -1,0 +1,12 @@
+{
+  "appId": "com.easyhome.app",
+  "appName": "EasyHome",
+  "webDir": "dist",
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": false,
+      "style": "LIGHT",
+      "backgroundColor": "#ffffff"
+    }
+  }
+}

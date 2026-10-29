@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 
 export function useOnline() {
   const [online, setOnline] = useState(
@@ -65,14 +66,15 @@ export function useStandalone() {
   const [standalone, setStandalone] = useState(
     typeof window === "undefined"
       ? false
-      : window.matchMedia?.("(display-mode: standalone)")?.matches ||
+      : Capacitor.isNativePlatform() ||
+          window.matchMedia?.("(display-mode: standalone)")?.matches ||
           window.navigator.standalone === true,
   );
 
   useEffect(() => {
     const media = window.matchMedia?.("(display-mode: standalone)");
     if (!media) return undefined;
-    const onChange = (event) => setStandalone(event.matches);
+    const onChange = (event) => setStandalone(Capacitor.isNativePlatform() || event.matches);
     media.addEventListener("change", onChange);
     return () => media.removeEventListener("change", onChange);
   }, []);

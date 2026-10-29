@@ -128,6 +128,7 @@
   -webkit-backdrop-filter: blur(18px);
   border-bottom: 1px solid #e3eaf3;
   box-shadow: 0 4px 18px rgba(17, 24, 39, 0.06);
+  padding-top: env(safe-area-inset-top);
 }
 
 .worker-top__inner {
@@ -1914,9 +1915,9 @@
   gap: 11px;
   width: 100%;
   padding: 14px;
-  border: 1px solid var(--wk-line);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 17px;
-  background: rgba(255, 255, 255, 0.035);
+  background: #0a0f1d;
   color: #fff;
   text-align: left;
   font-family: inherit;
@@ -1926,22 +1927,17 @@
 
 .wk-promo:hover {
   transform: translateY(-2px);
-  border-color: var(--wk-line-strong);
-  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: #0d1425;
 }
 
-.wk-promo--yellow {
-  border-color: rgba(255, 214, 10, 0.35);
-  background: linear-gradient(145deg, rgba(255, 214, 10, 0.16), rgba(255, 214, 10, 0.04));
-}
-
-.wk-promo--blue {
-  border-color: rgba(47, 107, 255, 0.38);
-  background: linear-gradient(145deg, rgba(47, 107, 255, 0.2), rgba(47, 107, 255, 0.04));
-}
-
-.wk-promo--dark {
-  background: rgba(0, 0, 0, 0.18);
+.wk-promo--yellow,
+.wk-promo--blue,
+.wk-promo--dark,
+.wk-promo--support,
+.wk-promo--green {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: #0a0f1d;
 }
 
 .wk-promo__icon {
@@ -1955,11 +1951,28 @@
   flex-shrink: 0;
 }
 
+.wk-promo--yellow .wk-promo__icon {
+  background: rgba(255, 214, 10, 0.15);
+  color: #ffd60a;
+}
+
 .wk-promo--blue .wk-promo__icon {
+  background: rgba(47, 107, 255, 0.15);
   color: #8fb4ff;
 }
 
+.wk-promo--green .wk-promo__icon {
+  background: rgba(52, 199, 89, 0.15);
+  color: #34c759;
+}
+
+.wk-promo--support .wk-promo__icon {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
 .wk-promo--dark .wk-promo__icon {
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
 }
 
@@ -1985,6 +1998,21 @@
 }
 
 /* ------------------------------- Worker footer ----------------------------- */
+
+.is-native .wk-footer,
+.is-mobile-app .wk-footer,
+.is-native .hide-on-mobile,
+.is-mobile-app .hide-on-mobile {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .wk-footer,
+  .hide-on-mobile,
+  .desktop-only {
+    display: none !important;
+  }
+}
 
 .wk-footer {
   margin-top: 34px;
@@ -3162,8 +3190,7 @@
   box-shadow: 0 10px 30px rgba(24, 55, 91, 0.05);
 }
 
-.wk-promos__head h2,
-.wk-promo strong {
+.wk-promos__head h2 {
   color: var(--wk-text);
 }
 
@@ -3171,23 +3198,24 @@
 .wk-promo--yellow,
 .wk-promo--blue,
 .wk-promo--dark,
+.wk-promo--support,
 .wk-promo--green {
-  background: #fff;
-  border-color: var(--wk-line);
-  color: var(--wk-text);
+  background: #0a0f1d;
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #fff;
 }
 
-.wk-promo--yellow {
-  border-color: #eddfbd;
+.wk-promo strong {
+  color: #fff;
 }
 
-.wk-promo--blue {
-  border-color: #d5e5f8;
+.wk-promo small {
+  color: rgba(255, 255, 255, 0.7);
 }
 
-.wk-promo__icon {
-  background: var(--wk-blue-soft);
-  color: var(--wk-blue);
+.wk-promo:hover {
+  background: #0d1425;
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .wk-footer {
@@ -3969,13 +3997,13 @@
 
 /* Need help uses the same card and icon treatment as the other Grow cards. */
 .worker-app .wk-promo--support {
-  border-color: var(--wk-line);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .worker-app .wk-promo--support .wk-promo__icon,
 .worker-app .wk-promo--blue .wk-promo__icon {
-  background: #eaf3ff;
-  color: var(--wk-blue);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
 /* --------------------- Wide laptop / desktop dashboard -------------------- */

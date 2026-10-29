@@ -1,5 +1,27 @@
+import { Capacitor } from "@capacitor/core";
+import { Preferences } from "@capacitor/preferences";
+
+export const PRODUCTION_API_URL = "https://easyhome-back.vercel.app/api";
+
 function resolveApiBase(value) {
   const raw = String(value || "").trim();
+  const isNative =
+    typeof window !== "undefined" &&
+    (Capacitor?.isNativePlatform?.() ||
+      window.location.protocol === "capacitor:" ||
+      window.location.protocol === "file:" ||
+      window.location.hostname === "localhost");
+
+  // When running inside native mobile APK or standalone shell
+  if (isNative) {
+    // If an explicit network IP (e.g. http://192.168.1.5:5000/api or 10.0.2.2:5000) was configured for local testing, use it
+    if (raw && /^https?:\/\//i.test(raw) && !raw.includes("localhost") && !raw.includes("127.0.0.1")) {
+      return raw.replace(/\/+$/, "");
+    }
+    // Never let Android APK try to call localhost/relative /api — always use production live backend
+    return PRODUCTION_API_URL;
+  }
+
   if (!raw) return "/api";
   // fetch() resolves a bare hostname against the app origin, so a value like
   // "api.example.com" silently calls the frontend instead of the API. Only
@@ -24,6 +46,22 @@ function readStoredToken() {
 
 let accessToken = readStoredToken();
 
+// Asynchronously hydrate from native Android Preferences if localStorage was wiped
+if (typeof window !== "undefined" && !accessToken && Capacitor?.isNativePlatform?.()) {
+  Preferences.get({ key: TOKEN_KEY })
+    .then(({ value }) => {
+      if (value && !accessToken) {
+        accessToken = value;
+        try {
+          window.localStorage.setItem(TOKEN_KEY, value);
+        } catch {
+          /* ignore */
+        }
+      }
+    })
+    .catch(() => {});
+}
+
 export function getToken() {
   return accessToken;
 }
@@ -36,6 +74,13 @@ export function setToken(token) {
     else window.localStorage.removeItem(TOKEN_KEY);
   } catch {
     /* Storage can be unavailable in private mode. */
+  }
+  if (Capacitor?.isNativePlatform?.()) {
+    if (accessToken) {
+      Preferences.set({ key: TOKEN_KEY, value: accessToken }).catch(() => {});
+    } else {
+      Preferences.remove({ key: TOKEN_KEY }).catch(() => {});
+    }
   }
 }
 

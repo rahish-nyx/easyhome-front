@@ -116,10 +116,14 @@ export default function Auth() {
     phone: "",
     referralCode: pendingReferralCode(),
     serviceKey: services[0]?.key || "",
+    secondaryServiceKey: "",
+    tertiaryServiceKey: "",
     area: city?.name || "",
     pricePerWork: "",
   });
   const serviceKey = form.serviceKey || services[0]?.key || "";
+  const secondaryServiceKey = form.secondaryServiceKey || "";
+  const tertiaryServiceKey = form.tertiaryServiceKey || "";
 
   // Capture ?ref=CODE from invite links and prefill the referral field. This
   // works for both customer and professional invites.
@@ -241,6 +245,7 @@ export default function Auth() {
                 SERVICE_META[serviceKey]?.name ||
                 serviceKey,
               serviceKey,
+              trades: [serviceKey, secondaryServiceKey, tertiaryServiceKey].filter(Boolean),
               area:
                 [city?.areaName, city?.name].filter(Boolean).join(", ") ||
                 form.area.trim(),
@@ -291,6 +296,7 @@ export default function Auth() {
                 SERVICE_META[serviceKey]?.name ||
                 serviceKey,
               serviceKey,
+              trades: [serviceKey, secondaryServiceKey, tertiaryServiceKey].filter(Boolean),
               area:
                 [city?.areaName, city?.name].filter(Boolean).join(", ") ||
                 form.area.trim(),
@@ -727,7 +733,7 @@ export default function Auth() {
 
               {role === "worker" ? (
                 <>
-                  <Field label="Your trade" htmlFor="signup-service" required>
+                  <Field label="Your trade (Primary)" htmlFor="signup-service" required>
                     <Select
                       id="signup-service"
                       value={serviceKey}
@@ -735,6 +741,38 @@ export default function Auth() {
                         setForm((prev) => ({ ...prev, serviceKey: event.target.value }))
                       }
                     >
+                      {services.map((service) => (
+                        <option key={service.key} value={service.key}>
+                          {service.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="Secondary Trade (Optional)" htmlFor="signup-secondary">
+                    <Select
+                      id="signup-secondary"
+                      value={secondaryServiceKey}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, secondaryServiceKey: event.target.value }))
+                      }
+                    >
+                      <option value="">None</option>
+                      {services.map((service) => (
+                        <option key={service.key} value={service.key}>
+                          {service.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="Tertiary Trade (Optional)" htmlFor="signup-tertiary">
+                    <Select
+                      id="signup-tertiary"
+                      value={tertiaryServiceKey}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, tertiaryServiceKey: event.target.value }))
+                      }
+                    >
+                      <option value="">None</option>
                       {services.map((service) => (
                         <option key={service.key} value={service.key}>
                           {service.name}

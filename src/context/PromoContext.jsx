@@ -9,6 +9,7 @@ import {
 import { useSearchParams } from "react-router-dom";
 import { useCatalogue } from "./CatalogueContext";
 import { api } from "../lib/api";
+import { DEFAULT_PROMOS } from "../lib/constants";
 import {
   PROMO_SESSION_KEY,
   normalizePromoCode,
@@ -81,7 +82,10 @@ export function PromoProvider({ children }) {
       document.removeEventListener("visibilitychange", onVisibilityChange);
   }, [refreshPromos]);
 
-  const promos = remotePromos ?? cataloguePromos;
+  const promos =
+    (remotePromos && remotePromos.length ? remotePromos : null) ??
+    (cataloguePromos && cataloguePromos.length ? cataloguePromos : null) ??
+    DEFAULT_PROMOS;
 
   const activePromo = useMemo(() => {
     if (!code) return null;

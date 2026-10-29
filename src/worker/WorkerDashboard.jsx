@@ -44,6 +44,7 @@ import { useToast } from "../context/ToastContext";
 import { useAsync } from "../hooks/useAsync";
 import { useLiveQuery } from "../hooks/useLive";
 import { useStandalone } from "../hooks/useDevice";
+import { Capacitor } from "@capacitor/core";
 import { qBookingsForWorker, qJobFeed } from "../lib/queries";
 import { api } from "../lib/api";
 import {
@@ -1285,6 +1286,17 @@ function WorkerReferTab({ worker, profile }) {
 
 function WorkerFooter() {
   const standalone = useStandalone();
+  const isMobile =
+    standalone ||
+    (typeof window !== "undefined" &&
+      (Capacitor?.isNativePlatform?.() ||
+        window.location.protocol === "capacitor:" ||
+        window.location.protocol === "file:"));
+
+  // Mobile APK and installed PWAs already provide app navigation; a marketing footer only
+  // adds noise and can collide with the fixed bottom navigation.
+  if (isMobile) return null;
+
   const { footerLinks } = useCatalogue();
   const serviceLinks = footerLinks.filter((item) => item.group === "services");
   const legalLinks = footerLinks.filter((item) =>
@@ -1294,12 +1306,8 @@ function WorkerFooter() {
     (item) => item.group === "professionals",
   );
 
-  // Installed PWAs already provide app navigation; a marketing footer only
-  // adds noise and can collide with the fixed bottom navigation.
-  if (standalone) return null;
-
   return (
-    <footer className="wk-footer wk-footer--compact">
+    <footer className="wk-footer wk-footer--compact desktop-only hide-on-mobile">
       <div className="wk-footer__main">
         <div className="wk-footer__brand">
           <div className="wk-footer__logo">

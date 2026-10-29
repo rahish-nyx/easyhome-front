@@ -664,6 +664,7 @@ body.adm-mode {
   background: rgba(7, 9, 14, 0.82);
   border-bottom: 1px solid var(--adm-line);
   backdrop-filter: blur(16px) saturate(140%);
+  padding-top: env(safe-area-inset-top);
 }
 
 .adm-burger {

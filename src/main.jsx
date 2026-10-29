@@ -1,7 +1,25 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { Capacitor } from "@capacitor/core";
+import { StatusBar, Style } from "@capacitor/status-bar";
 import App from "./App.jsx";
 import "./styles/app.css";
+
+// Configure mobile APK native shell
+if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+  document.documentElement.classList.add(
+    "is-native",
+    "is-mobile-app",
+    `platform-${Capacitor.getPlatform()}`,
+  );
+  try {
+    StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
+    StatusBar.setStyle({ style: Style.Light }).catch(() => {});
+    StatusBar.setBackgroundColor({ color: "#ffffff" }).catch(() => {});
+  } catch (err) {
+    console.warn("[EasyHome] StatusBar init error:", err);
+  }
+}
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { api } from "../lib/api";
-import { FALLBACK_SERVICES, DEFAULT_FOOTER_LINKS, DEFAULT_SETTINGS } from "../lib/constants";
+import { FALLBACK_SERVICES, DEFAULT_FOOTER_LINKS, DEFAULT_SETTINGS, DEFAULT_PROMOS } from "../lib/constants";
 import {
   DEFAULT_CUSTOMER_RULES,
   DEFAULT_WORKER_RULES,
@@ -45,7 +45,7 @@ const STATIC_CATALOGUE = {
   folders: [],
   cities: [],
   zones: [],
-  promos: [],
+  promos: DEFAULT_PROMOS,
   footerLinks: DEFAULT_FOOTER_LINKS,
   hiddenFooterHrefs: [],
   settings: null,
@@ -99,7 +99,7 @@ function normalizePayload(payload) {
     folders: Array.isArray(payload?.folders) ? payload.folders : [],
     cities: Array.isArray(payload?.cities) ? payload.cities : [],
     zones: Array.isArray(payload?.zones) ? payload.zones : [],
-    promos: Array.isArray(payload?.promos) ? payload.promos : [],
+    promos: Array.isArray(payload?.promos) && payload.promos.length ? payload.promos : DEFAULT_PROMOS,
     footerLinks: Array.isArray(payload?.footerLinks) ? payload.footerLinks : [],
     hiddenFooterHrefs: Array.isArray(payload?.hiddenFooterHrefs)
       ? payload.hiddenFooterHrefs

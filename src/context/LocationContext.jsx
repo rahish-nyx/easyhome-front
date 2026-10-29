@@ -327,17 +327,36 @@ export function LocationProvider({ children }) {
       let position = null;
       let ipLocation = null;
       try {
-        if (!navigator.geolocation) {
-          throw new Error("Geolocation is not supported by this device.");
+        const { Geolocation } = await import("@capacitor/geolocation");
+        const perm = await Geolocation.checkPermissions();
+        if (perm.location !== "granted") {
+          const req = await Geolocation.requestPermissions();
+          if (req.location !== "granted") throw new Error("Location permission denied.");
         }
-        position = await new Promise((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 0,
-          });
+        const geoPosition = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 15000,
         });
-      } catch (geolocationError) {
+        position = {
+          coords: {
+            latitude: geoPosition.coords.latitude,
+            longitude: geoPosition.coords.longitude,
+            accuracy: geoPosition.coords.accuracy,
+          }
+        };
+      } catch (e) {
+        try {
+          if (!navigator.geolocation) {
+            throw new Error("Geolocation is not supported by this device.");
+          }
+          position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 15000,
+              maximumAge: 0,
+            });
+          });
+        } catch (geolocationError) {
         try {
           ipLocation = await api.get("/public/ip-location");
         } catch {
@@ -356,7 +375,8 @@ export function LocationProvider({ children }) {
           "Using approximate IP location after geolocation failed:",
           geolocationError.code || "unsupported",
         );
-      }
+      } // end catch (geolocationError)
+      } // end catch (e)
 
       if (ipLocation) {
         const reportedCity = String(ipLocation.city).trim();

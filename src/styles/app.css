@@ -46,6 +46,11 @@
   --header-h: 72px;
   --bottom-nav-h: 70px;
 
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+
   --font-display: "Plus Jakarta Sans", "SF Pro Display", -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -1274,6 +1279,7 @@ ol {
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   border-bottom: 1px solid var(--line);
+  padding-top: env(safe-area-inset-top);
 }
 
 .header-inner {
@@ -1506,9 +1512,11 @@ ol {
     top: calc(var(--header-h, 64px) + 8px);
     left: 12px;
     right: 12px;
-    width: auto;
+    width: calc(100vw - 24px);
     max-width: 380px;
     margin-inline: auto;
+    max-height: calc(100dvh - var(--header-h, 64px) - 24px);
+    overflow-y: auto;
   }
 
   .worker-app .notif-menu {
@@ -4960,8 +4968,11 @@ ol {
     stroke-width: 2.4;
   }
 
-  .site-footer {
-    margin-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));
+  .site-footer,
+  .wk-footer,
+  .hide-on-mobile,
+  .desktop-only {
+    display: none !important;
   }
 
   .toast-stack {
@@ -4978,7 +4989,7 @@ ol {
 
   .auth-panel {
     min-height: 100dvh;
-    padding: 30px 20px;
+    padding: calc(24px + env(safe-area-inset-top, 0px)) 20px 30px;
   }
 }
 
@@ -6361,4 +6372,23 @@ ol {
   .home-folder {
     padding: 14px;
   }
+}
+
+/* ==========================================================================
+   Mobile APK / Native Shell Overrides
+   ========================================================================== */
+.is-native .site-footer,
+.is-native .wk-footer,
+.is-native .hide-on-mobile,
+.is-native .desktop-only,
+.is-mobile-app .site-footer,
+.is-mobile-app .wk-footer,
+.is-mobile-app .hide-on-mobile,
+.is-mobile-app .desktop-only {
+  display: none !important;
+}
+
+.is-native .site-header,
+.is-mobile-app .site-header {
+  padding-top: env(safe-area-inset-top, 0px);
 }
