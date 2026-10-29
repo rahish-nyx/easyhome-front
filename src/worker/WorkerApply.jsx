@@ -325,6 +325,70 @@ export default function WorkerApply({ existing, onCancel }) {
               ) : null}
             </Select>
           </Field>
+          <div style={{ marginTop: 6, display: "flex", gap: 8, alignItems: "center" }}>
+            <button
+              type="button"
+              className="btn-link"
+              onClick={async () => {
+                setZonePickerOpen(true);
+                setZoneLoading(true);
+                try {
+                  const res = await api.get("/public/bootstrap");
+                  const data = await res.json?.() || res;
+                  setZones((data.zones || []).filter((z) => z.isActive !== false));
+                } catch {
+                  setZones([]);
+                } finally {
+                  setZoneLoading(false);
+                }
+              }}
+            >
+              Change service zone
+            </button>
+            {form.areaName && (
+              <span style={{ fontSize: 13, color: "#555" }}>
+                {form.areaName}{form.city ? `, ${form.city}` : ""}
+              </span>
+            )}
+          </div>
+          {zonePickerOpen && (
+            <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 10, background: "#f8f9fa", marginTop: 6 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <strong style={{ fontSize: 14 }}>Select service zone</strong>
+                <button type="button" onClick={() => { setZonePickerOpen(false); setZones([]); }} style={{ fontSize: 12 }}>
+                  Close
+                </button>
+              </div>
+              {zoneLoading ? (
+                <div style={{ fontSize: 13, color: "#777" }}>Loading zones…</div>
+              ) : zones.length === 0 ? (
+                <div style={{ fontSize: 13, color: "#777" }}>No zones available.</div>
+              ) : (
+                <div style={{ maxHeight: 220, overflow: "auto" }}>
+                  {zones.map((z) => (
+                    <button
+                      key={z.id || z.name}
+                      type="button"
+                      style={{ display: "block", width: "100%", textAlign: "left", padding: 8, border: "none", background: "transparent", borderBottom: "1px solid #eee", cursor: "pointer", fontSize: 13 }}
+                      onClick={() => {
+                        setForm((prev) => ({
+                          ...prev,
+                          city: z.city || z.name || prev.city,
+                          state: z.state || prev.state,
+                          areaName: z.name || z.area || prev.areaName,
+                        }));
+                        setZonePickerOpen(false);
+                        setZones([]);
+                      }}
+                    >
+                      <strong>{z.name || z.area}</strong>
+                      {z.city ? ` — ${z.city}` : ""}{z.state ? `, ${z.state}` : ""}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <Field
             label="Short bio (optional)"
             htmlFor="apply-bio"
