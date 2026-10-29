@@ -28,6 +28,7 @@ import {
 } from "../lib/referral";
 import { usePageMeta } from "../lib/usePageMeta";
 import { Button, Field, Input, PageLoader, Select } from "../components/ui";
+import { CityModal } from "../components/layout";
 import logo from "../assets/logo.png";
 
 const AUTH_ERRORS = {
@@ -1020,6 +1021,7 @@ function RoleSelectionScreen({ onPick, next }) {
 
 function AuthShell({ children, role = "customer" }) {
   const worker = role === "worker";
+  const { pickerOpen, closePicker } = useLocation();
   return (
     <div className={`auth-page ${worker ? "auth-page--worker" : ""}`}>
       <aside className="auth-brand">
@@ -1076,6 +1078,7 @@ function AuthShell({ children, role = "customer" }) {
       </aside>
 
       <main className="auth-panel">{children}</main>
+      <CityModal open={pickerOpen} onClose={closePicker} />
     </div>
   );
 }

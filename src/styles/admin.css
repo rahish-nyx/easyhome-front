@@ -648,6 +648,7 @@ body.adm-mode {
 .admin-main {
   margin-left: 252px;
   min-height: 100dvh;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
@@ -656,6 +657,9 @@ body.adm-mode {
   position: sticky;
   top: 0;
   z-index: 40;
+  box-sizing: border-box;
+  min-width: 0;
+  isolation: isolate;
   display: flex;
   align-items: center;
   gap: 15px;
@@ -680,6 +684,8 @@ body.adm-mode {
 }
 
 .adm-crumb {
+  flex: 1 1 auto;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -703,6 +709,8 @@ body.adm-mode {
 
 .adm-topbar__right {
   margin-left: auto;
+  flex: 0 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -4573,6 +4581,14 @@ body.adm-mode .modal .upload__copy small {
   }
 }
 
+@media (max-width: 900px) {
+  .adm-topbar { gap: 8px; padding-left: 14px; padding-right: 14px; }
+  .adm-system,
+  .adm-topbar__date,
+  .adm-topbar__chip { display: none; }
+  .adm-topbar__right { gap: 6px; }
+}
+
 @media (max-width: 760px) {
   .adm-content {
     padding: 18px 14px 36px;
@@ -5858,6 +5874,14 @@ body.adm-mode .modal .upload__copy small {
   .adm-track-side {
     position: static;
   }
+}
+
+@media (max-width: 900px) {
+  .adm-topbar { gap: 8px; padding-left: 14px; padding-right: 14px; }
+  .adm-system,
+  .adm-topbar__date,
+  .adm-topbar__chip { display: none; }
+  .adm-topbar__right { gap: 6px; }
 }
 
 @media (max-width: 760px) {

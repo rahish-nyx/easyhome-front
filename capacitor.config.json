@@ -2,6 +2,10 @@
   "appId": "com.easyhome.app",
   "appName": "EasyHome",
   "webDir": "dist",
+  "server": {
+    "url": "https://easyhome-front.vercel.app",
+    "cleartext": false
+  },
   "plugins": {
     "StatusBar": {
       "overlaysWebView": false,

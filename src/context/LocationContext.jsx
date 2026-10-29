@@ -124,7 +124,7 @@ function apiZone(zone) {
 }
 
 export function LocationProvider({ children }) {
-  const { cities, zones } = useCatalogue();
+  const { cities, zones, refreshCatalogue } = useCatalogue();
   const [savedCity, setCityState] = useState(() => safeCity(readJson(CITY_KEY)));
   const [coords, setCoordsState] = useState(() => {
     const saved = readJson(COORDS_KEY);
@@ -611,9 +611,12 @@ export function LocationProvider({ children }) {
   }, [availableCities, zones, commitCoords]);
 
   const openPicker = useCallback(() => {
+    // Revalidate live zones whenever the picker opens so new admin coverage
+    // appears immediately instead of waiting for the catalogue cache.
+    refreshCatalogue?.({ bust: true }).catch(() => {});
     setPickerOpen(true);
     setZoneNotice(null);
-  }, []);
+  }, [refreshCatalogue]);
   const closePicker = useCallback(() => setPickerOpen(false), []);
 
   const dismissZoneNotice = useCallback(() => {

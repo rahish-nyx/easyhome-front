@@ -3197,26 +3197,39 @@
 .wk-promo,
 .wk-promo--yellow,
 .wk-promo--blue,
-.wk-promo--dark,
-.wk-promo--support,
 .wk-promo--green {
-  background: #0a0f1d;
-  border-color: rgba(255, 255, 255, 0.15);
+  background: #fff;
+  border-color: var(--wk-line);
+  color: var(--wk-text);
+}
+
+.wk-promo--yellow { border-color: #ead9ad; }
+.wk-promo--blue { border-color: #c9ddf7; }
+.wk-promo--green { border-color: #cbe8d3; }
+
+.wk-promo--support {
+  background: #0a1424;
+  border-color: #1f4f8d;
   color: #fff;
 }
 
-.wk-promo strong {
-  color: #fff;
-}
-
-.wk-promo small {
-  color: rgba(255, 255, 255, 0.7);
-}
+.wk-promo strong { color: var(--wk-text); }
+.wk-promo small { color: var(--wk-muted); }
+.wk-promo--support strong { color: #fff; }
+.wk-promo--support small { color: rgba(255, 255, 255, 0.72); }
 
 .wk-promo:hover {
-  background: #0d1425;
-  border-color: rgba(255, 255, 255, 0.25);
+  background: #f7fbff;
+  border-color: var(--wk-blue);
 }
+
+.wk-promo--support:hover { background: #10203a; }
+.wk-promo--yellow .wk-promo__icon { background: #fff5d8; color: #b77900; }
+.wk-promo--blue .wk-promo__icon { background: #eaf3ff; color: #1d4ed8; }
+.wk-promo--green .wk-promo__icon { background: #eaf8ee; color: #16803b; }
+.wk-promo--support .wk-promo__icon { background: rgba(255, 255, 255, 0.1); color: #9ac4ff; }
+.wk-promo > svg { color: var(--wk-muted); }
+.wk-promo--support > svg { color: #9ac4ff; }
 
 .wk-footer {
   border-color: #111827;
