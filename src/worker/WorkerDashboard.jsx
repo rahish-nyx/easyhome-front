@@ -145,6 +145,7 @@ export default function WorkerDashboard() {
   const [completeTarget, setCompleteTarget] = useState(null);
   const [paymentTarget, setPaymentTarget] = useState(null);
   const [feeTarget, setFeeTarget] = useState(null);
+  const [hiddenHistory, setHiddenHistory] = useState(() => new Set());
 
   const earningsState = useAsync(() => api.get("/worker/earnings"), []);
   const commissionsState = useAsync(() => api.get("/worker/commission"), []);
@@ -163,6 +164,33 @@ export default function WorkerDashboard() {
   const { data: myBookings, loading: myLoading } = useLiveQuery(myQuery);
   const { data: feed, loading: feedLoading } = useLiveQuery(feedQuery);
 
+  const previousFeedCount = useRef(0);
+  useEffect(() => {
+    if (feed.length > previousFeedCount.current) {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+          const ctx = new AudioContext();
+          const oscillator = ctx.createOscillator();
+          const gain = ctx.createGain();
+          oscillator.type = "sine";
+          oscillator.frequency.value = 880;
+          gain.gain.value = 0.12;
+          oscillator.connect(gain);
+          gain.connect(ctx.destination);
+          oscillator.start();
+          window.setTimeout(() => {
+            oscillator.stop();
+            ctx.close().catch(() => {});
+          }, 220);
+        }
+      } catch {
+        /* Audio may be blocked until the worker interacts with the page. */
+      }
+    }
+    previousFeedCount.current = feed.length;
+  }, [feed.length]);
+
   const activeJobs = useMemo(
     () =>
       myBookings
@@ -175,8 +203,13 @@ export default function WorkerDashboard() {
   );
 
   const history = useMemo(
-    () => myBookings.filter((job) => job.status === "completed").slice(0, 20),
-    [myBookings],
+    () =>
+      myBookings
+        .filter(
+          (job) => job.status === "completed" && !job.workerHidden && !hiddenHistory.has(job.id),
+        )
+        .slice(0, 20),
+    [myBookings, hiddenHistory],
   );
 
   const gps = useGpsBroadcast(activeJobs);
@@ -402,6 +435,19 @@ export default function WorkerDashboard() {
     }
   };
 
+  const hideHistory = async (job) => {
+    setBusy(`hide:${job.id}`);
+    try {
+      await api.post(`/worker/jobs/${job.id}/hide-history`, {});
+      setHiddenHistory((previous) => new Set([...previous, job.id]));
+      toast.success("Removed from history.");
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setBusy("");
+    }
+  };
+
   const handleFeesPaid = async () => {
     setFeeTarget(null);
     toast.success("Fees verified automatically. New jobs are unlocked.");
@@ -568,6 +614,7 @@ export default function WorkerDashboard() {
             gps={gps}
             onAccept={acceptJob}
             onGoOnline={toggleOnline}
+            onHideHistory={hideHistory}
           />
         ) : null}
 
@@ -1502,6 +1549,7 @@ function JobsTab({
   onAccept,
   onGoOnline,
   gps,
+  onHideHistory,
 }) {
   return (
     <>
@@ -1592,6 +1640,15 @@ function JobsTab({
                   </strong>
                   <span>{job.paidAt ? "Customer paid" : "Awaiting payment"}</span>
                 </div>
+                <button
+                  type="button"
+                  className="wk-icon-btn"
+                  aria-label="Remove from history"
+                  onClick={() => onHideHistory?.(job)}
+                  disabled={busy === `hide:${job.id}`}
+                >
+                  <X size={14} />
+                </button>
               </div>
             ))}
           </div>
