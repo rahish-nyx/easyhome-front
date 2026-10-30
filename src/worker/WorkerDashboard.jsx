@@ -146,6 +146,8 @@ export default function WorkerDashboard() {
   const [paymentTarget, setPaymentTarget] = useState(null);
   const [feeTarget, setFeeTarget] = useState(null);
   const [hiddenHistory, setHiddenHistory] = useState(() => new Set());
+  const [optimisticActive, setOptimisticActive] = useState([]);
+  const [hiddenFeedIds, setHiddenFeedIds] = useState(() => new Set());
 
   const earningsState = useAsync(() => api.get("/worker/earnings"), []);
   const commissionsState = useAsync(() => api.get("/worker/commission"), []);
@@ -191,16 +193,25 @@ export default function WorkerDashboard() {
     previousFeedCount.current = feed.length;
   }, [feed.length]);
 
-  const activeJobs = useMemo(
-    () =>
-      myBookings
-        .filter((job) => ["accepted", "ongoing"].includes(job.status))
-        .sort((a, b) => {
-          if (a.status !== b.status) return a.status === "ongoing" ? -1 : 1;
-          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-        }),
-    [myBookings],
-  );
+  const activeJobs = useMemo(() => {
+    const fromServer = myBookings.filter((job) =>
+      ["accepted", "ongoing"].includes(job.status),
+    );
+    const serverIds = new Set(fromServer.map((job) => job.id));
+    const optimistic = optimisticActive.filter((job) => !serverIds.has(job.id));
+    return [...optimistic, ...fromServer].sort((a, b) => {
+      if (a.status !== b.status) return a.status === "ongoing" ? -1 : 1;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+  }, [myBookings, optimisticActive]);
+
+  // Drop optimistic entries once the server list has caught up.
+  useEffect(() => {
+    const serverIds = new Set(myBookings.map((job) => job.id));
+    setOptimisticActive((previous) =>
+      previous.filter((job) => !serverIds.has(job.id)),
+    );
+  }, [myBookings]);
 
   const history = useMemo(
     () =>
@@ -230,6 +241,7 @@ export default function WorkerDashboard() {
     if (!worker) return [];
     return feed
       .filter((job) => {
+        if (hiddenFeedIds.has(job.bookingId || job.id)) return false;
         if (job.preferredWorkerId && job.preferredWorkerId !== worker.id) return false;
         if (job.serviceZoneId && !activeZoneIds.has(job.serviceZoneId)) return false;
         return true;
@@ -342,6 +354,18 @@ export default function WorkerDashboard() {
     setBusy(`accept:${job.id}`);
     try {
       await api.post(`/worker/jobs/${job.id}/accept`);
+      setOptimisticActive((previous) => [
+        {
+          ...job,
+          id: job.id,
+          status: "accepted",
+          activeJob: true,
+          trackingPhase: "assigned",
+          createdAt: job.createdAt || new Date().toISOString(),
+        },
+        ...previous.filter((item) => item.id !== job.id),
+      ]);
+      setHiddenFeedIds((previous) => new Set([...previous, job.id]));
       toast.success("Job accepted. Contact details unlock after you confirm the price.");
       setTab("jobs");
     } catch (error) {
