@@ -53,6 +53,8 @@ function friendly(error) {
   return AUTH_ERRORS[error?.code] || error?.message || "Something went wrong. Try again.";
 }
 
+const handledVerifyTokens = new Set();
+
 export default function Auth() {
   usePageMeta("Sign in", "Sign in or create your EasyHome account to book verified home services.");
 
@@ -108,7 +110,6 @@ export default function Auth() {
   const [terms, setTerms] = useState(false);
   const [error, setError] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const handledLink = useRef("");
 
   const [form, setForm] = useState({
     name: "",
@@ -137,19 +138,28 @@ export default function Auth() {
 
   // Email links land on /auth?verify=TOKEN or /auth?reset=TOKEN.
   useEffect(() => {
-    if (!verifyToken || handledLink.current === verifyToken) return undefined;
-    handledLink.current = verifyToken;
+    if (!verifyToken || handledVerifyTokens.has(verifyToken)) return undefined;
+    handledVerifyTokens.add(verifyToken);
     let active = true;
     setVerifying(true);
     verifyEmail(verifyToken)
-      .then(() => {
+      .then((session) => {
         if (!active) return;
         toast.success("Email verified. You are all set.");
         const nextParams = new URLSearchParams(window.location.search);
         nextParams.delete("verify");
         setParams(nextParams, { replace: true });
+        const verifiedRole =
+          session?.role || session?.profile?.role || session?.user?.role;
+        const requestedNext = new URLSearchParams(window.location.search).get("next");
+        if (verifiedRole === "worker") {
+          window.location.assign(requestedNext || "/worker");
+        } else if (requestedNext) {
+          window.location.assign(requestedNext);
+        }
       })
       .catch((verifyError) => {
+        handledVerifyTokens.delete(verifyToken);
         if (active) toast.error(friendly(verifyError));
       })
       .finally(() => {
