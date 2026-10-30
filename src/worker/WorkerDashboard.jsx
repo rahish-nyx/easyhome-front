@@ -259,7 +259,10 @@ export default function WorkerDashboard() {
       });
   }, [feed, worker, activeZoneIds]);
 
-  const canAccept = Boolean(worker?.online) && (isPremium || (Number(worker?.dues) || 0) <= 0);
+  const canAccept =
+    Boolean(worker?.online) &&
+    (isPremium || (Number(worker?.dues) || 0) <= 0) &&
+    activeJobs.length === 0;
 
   useEffect(() => {
     if (!worker?.online || !navigator.geolocation) return undefined;
@@ -1134,6 +1137,7 @@ function HomeTab({
         onConfirm={onConfirm}
         onPhase={onPhase}
         onComplete={onComplete}
+            onReceivePayment={setPaymentTarget}
         gps={gps}
         onSeeAll={() => onTab("jobs")}
       />
@@ -1625,6 +1629,7 @@ function JobsTab({
         onConfirm={onConfirm}
         onPhase={onPhase}
         onComplete={onComplete}
+            onReceivePayment={setPaymentTarget}
         gps={gps}
       />
 
@@ -1742,6 +1747,7 @@ function TrackTab({
           onConfirm={onConfirm}
           onPhase={onPhase}
           onComplete={onComplete}
+            onReceivePayment={setPaymentTarget}
           gps={gps}
         />
       )}
@@ -1760,6 +1766,7 @@ function ActiveJobsSection({
   onConfirm,
   onPhase,
   onComplete,
+  onReceivePayment,
   gps,
   onSeeAll,
 }) {
@@ -1788,9 +1795,10 @@ function ActiveJobsSection({
               onQuote={() => onQuote(job)}
               onConfirm={() => onConfirm(job)}
               onPhase={(phase) => onPhase(job, phase)}
-              onComplete={() => onComplete(job)}
-              gps={gps?.jobId === job.id ? gps : null}
-            />
+               onComplete={() => onComplete(job)}
+               onReceivePayment={() => onReceivePayment?.(job)}
+               gps={gps?.jobId === job.id ? gps : null}
+              />
           ))}
         </div>
       ) : (
@@ -1937,6 +1945,7 @@ function ActiveJobCard({
   onConfirm,
   onPhase,
   onComplete,
+  onReceivePayment,
   gps,
 }) {
   const [phone, setPhone] = useState("");
@@ -1951,10 +1960,16 @@ function ActiveJobCard({
     job.trackingPhase ||
     (job.status === "ongoing" ? TRACKING_PHASES.WORKING : TRACKING_PHASES.ASSIGNED);
   const meta = trackingMeta(phase, job.status);
-  const phaseIndex = Math.max(
-    0,
-    TRACKING_PHASES.findIndex((item) => item.id === phase),
-  );
+  const milestoneIndex =
+    phase === "completed"
+      ? 4
+      : phase === "working"
+        ? 3
+        : phase === "arrived"
+          ? 2
+          : phase === "en_route" || phase === "assigned"
+            ? 1
+            : 0;
   const nextAction =
     phase === TRACKING_PHASES.ASSIGNED
       ? { phase: TRACKING_PHASES.EN_ROUTE, label: "Start journey", hint: "Notify customer you are on the way", icon: Navigation }
@@ -2040,9 +2055,9 @@ function ActiveJobCard({
           <span
             key={item.id}
             className={
-              index < phaseIndex || phase === TRACKING_PHASES.COMPLETED
+              index < milestoneIndex || phase === TRACKING_PHASES.COMPLETED
                 ? "is-done"
-                : index === phaseIndex
+                : index === milestoneIndex
                   ? "is-current"
                   : ""
             }
@@ -2177,23 +2192,49 @@ function ActiveJobCard({
           </>
         ) : null}
 
-        {confirmed && nextAction ? (
+        {confirmed && phase !== TRACKING_PHASES.COMPLETED ? (
+          phase === TRACKING_PHASES.WORKING ? (
+            <button
+              type="button"
+              className="wk-btn wk-btn--block wk-btn--complete"
+              onClick={onComplete}
+              disabled={busy}
+            >
+              <CheckCircle2 size={22} />
+              <span>
+                <strong>Complete job</strong>
+                <small>Finish the job and open payment collection</small>
+              </span>
+              <ChevronRight size={18} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="wk-btn wk-btn--block wk-phase-btn"
+              onClick={() => onPhase(TRACKING_PHASES.WORKING)}
+              disabled={busy}
+            >
+              <Zap size={22} />
+              <span>
+                <strong>Start job</strong>
+                <small>Begin work and start the timer</small>
+              </span>
+              <ChevronRight size={18} />
+            </button>
+          )
+        ) : null}
+
+        {confirmed && phase === TRACKING_PHASES.COMPLETED ? (
           <button
             type="button"
-            className={`wk-btn wk-btn--block wk-phase-btn${
-              nextAction.phase === TRACKING_PHASES.COMPLETED ? " wk-btn--complete" : ""
-            }`}
-            onClick={() =>
-              nextAction.phase === TRACKING_PHASES.COMPLETED
-                ? onComplete()
-                : onPhase(nextAction.phase)
-            }
+            className="wk-btn wk-btn--block wk-btn--primary"
+            onClick={onReceivePayment}
             disabled={busy}
           >
-            <NextIcon size={22} />
+            <Wallet size={22} />
             <span>
-              <strong>{nextAction.label}</strong>
-              <small>{nextAction.hint}</small>
+              <strong>Receive payment</strong>
+              <small>Collect cash or request UPI payment</small>
             </span>
             <ChevronRight size={18} />
           </button>
