@@ -42,6 +42,11 @@ const FILTERS = [
   { id: "alerts", label: "Alerted" },
 ];
 
+const MODES = [
+  { id: "jobs", label: "Active jobs" },
+  { id: "workers", label: "Online workers" },
+];
+
 const PHASE_TONES = {
   assigned: "blue",
   en_route: "blue",
@@ -58,11 +63,14 @@ export default function AdminTracking() {
   const toast = useToast();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  const [mode, setMode] = useState("jobs");
   const [selectedId, setSelectedId] = useState("");
+  const [selectedWorkerId, setSelectedWorkerId] = useState("");
   const [busy, setBusy] = useState("");
 
   const trackingState = useAsync(() => api.get("/admin/live-tracking"), []);
   const jobs = trackingState.data?.jobs || [];
+  const onlineWorkers = trackingState.data?.workers || [];
   const stats = trackingState.data?.stats || {};
 
   useEffect(() => {
@@ -78,6 +86,12 @@ export default function AdminTracking() {
     if (jobs.some((job) => job.id === selectedId)) return;
     setSelectedId(jobs[0].id);
   }, [jobs, selectedId]);
+
+  useEffect(() => {
+    if (!onlineWorkers.length) return;
+    if (onlineWorkers.some((worker) => worker.id === selectedWorkerId)) return;
+    setSelectedWorkerId(onlineWorkers[0].id);
+  }, [onlineWorkers, selectedWorkerId]);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -98,7 +112,21 @@ export default function AdminTracking() {
     });
   }, [jobs, query, filter]);
 
+  const filteredWorkers = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return onlineWorkers;
+    return onlineWorkers.filter((worker) =>
+      [worker.name, worker.service, worker.area, worker.city, worker.phone]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(term)),
+    );
+  }, [onlineWorkers, query]);
+
   const selected = jobs.find((job) => job.id === selectedId) || filtered[0] || null;
+  const selectedWorker =
+    onlineWorkers.find((worker) => worker.id === selectedWorkerId) ||
+    filteredWorkers[0] ||
+    null;
 
   const refresh = () => trackingState.run().catch(() => {});
 
@@ -185,24 +213,31 @@ export default function AdminTracking() {
 
       <div className="adm-track-layout">
         <Panel
-          title="Active field jobs"
-          subtitle="Sorted with delayed and alerted jobs first."
+          title={mode === "jobs" ? "Active field jobs" : "Online workers"}
+          subtitle={
+            mode === "jobs"
+              ? "Sorted with delayed and alerted jobs first."
+              : "Workers currently online with a fresh GPS heartbeat."
+          }
           className="adm-track-main"
           action={
             <div className="adm-toolbar adm-toolbar--compact">
-              <SegTabs
-                items={FILTERS.map((item) => ({
-                  ...item,
-                  count:
-                    item.id === "inactive"
-                      ? stats.inactive || 0
-                      : item.id === "alerts"
-                        ? stats.alerts || 0
-                        : stats.active || 0,
-                }))}
-                value={filter}
-                onChange={setFilter}
-              />
+              <SegTabs items={MODES} value={mode} onChange={setMode} />
+              {mode === "jobs" ? (
+                <SegTabs
+                  items={FILTERS.map((item) => ({
+                    ...item,
+                    count:
+                      item.id === "inactive"
+                        ? stats.inactive || 0
+                        : item.id === "alerts"
+                          ? stats.alerts || 0
+                          : stats.active || 0,
+                  }))}
+                  value={filter}
+                  onChange={setFilter}
+                />
+              ) : null}
             </div>
           }
         >
@@ -210,8 +245,100 @@ export default function AdminTracking() {
             value={query}
             onChange={setQuery}
             onClear={() => setQuery("")}
-            placeholder="Search worker, customer, service or area…"
+            placeholder={
+              mode === "jobs"
+                ? "Search worker, customer, service or area…"
+                : "Search online worker, service or area…"
+            }
           />
+
+          {mode === "workers" ? (
+            filteredWorkers.length ? (
+              <div className="adm-track-list">
+                {filteredWorkers.map((worker) => (
+                  <article
+                    key={worker.id}
+                    className={`adm-track-card${
+                      selectedWorker?.id === worker.id ? " is-selected" : ""
+                    }`}
+                    onClick={() => setSelectedWorkerId(worker.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setSelectedWorkerId(worker.id);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <div className="adm-track-card__top">
+                      <span className="adm-track-card__pulse">
+                        <Radio size={15} />
+                      </span>
+                      <div className="grow">
+                        <div className="adm-track-card__title">
+                          <strong>{worker.name}</strong>
+                          <StatusPill
+                            status={worker.onActiveJob ? "working" : "online"}
+                            label={worker.onActiveJob ? "On a job" : "Available"}
+                            tone={worker.onActiveJob ? "purple" : "green"}
+                          />
+                        </div>
+                        <span>
+                          {worker.service || "Worker"} · {worker.area || worker.city || "Area"}
+                        </span>
+                      </div>
+                      <div className="adm-track-card__eta">
+                        <strong>{worker.rating ? `${worker.rating.toFixed(1)} ★` : "New"}</strong>
+                        <span>{worker.jobsCompleted || 0} jobs</span>
+                      </div>
+                    </div>
+                    <div className="adm-track-card__meta">
+                      <span>
+                        <Clock3 size={12} /> Seen {worker.lastSeenAt ? timeAgo(worker.lastSeenAt) : "recently"}
+                      </span>
+                      <span className="adm-mono">
+                        <MapPin size={12} />
+                        {Number.isFinite(Number(worker.lat))
+                          ? `${Number(worker.lat).toFixed(4)}, ${Number(worker.lng).toFixed(4)}`
+                          : "No GPS"}
+                      </span>
+                    </div>
+                    <div
+                      className="adm-track-card__actions"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {worker.phone ? (
+                        <a className="adm-icon-link" href={`tel:${worker.phone}`} title="Call worker">
+                          <Phone size={15} />
+                        </a>
+                      ) : null}
+                      <a
+                        className="adm-icon-link"
+                        href={mapsUrl(worker.lat, worker.lng, worker.area)}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Open worker location"
+                      >
+                        <Navigation size={15} />
+                      </a>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <EmptyBlock
+                icon={onlineWorkers.length ? SearchX : Users}
+                title={onlineWorkers.length ? "No matching workers" : "No online workers"}
+                body={
+                  onlineWorkers.length
+                    ? "Try another search term."
+                    : "Workers appear here when they go online and share GPS."
+                }
+              />
+            )
+          ) : (
+            <>
 
           {trackingState.loading && !trackingState.data ? (
             <LoadingBlock label="Connecting to field tracking…" />
@@ -355,11 +482,75 @@ export default function AdminTracking() {
               }
             />
           )}
+            </>
+          )}
         </Panel>
 
         <aside className="adm-track-side">
-          <Panel title="Selected worker" subtitle="Live location and accountability snapshot.">
-            {selected ? (
+          <Panel
+            title={mode === "jobs" ? "Selected worker" : "Selected online worker"}
+            subtitle="Live location and accountability snapshot."
+          >
+            {mode === "workers" ? (
+              selectedWorker ? (
+                <>
+                  <CoverageMap
+                    center={{ lat: selectedWorker.lat, lng: selectedWorker.lng, name: selectedWorker.name }}
+                    radiusKm={2}
+                    jobs={[]}
+                  />
+                  <div className="adm-track-side__facts">
+                    <div>
+                      <span>Worker</span>
+                      <strong>{selectedWorker.name}</strong>
+                    </div>
+                    <div>
+                      <span>Service</span>
+                      <strong>{selectedWorker.service || "—"}</strong>
+                    </div>
+                    <div>
+                      <span>Area</span>
+                      <strong>{selectedWorker.area || selectedWorker.city || "—"}</strong>
+                    </div>
+                    <div>
+                      <span>Status</span>
+                      <strong>{selectedWorker.onActiveJob ? "On a job" : "Available"}</strong>
+                    </div>
+                    <div>
+                      <span>Last seen</span>
+                      <strong>
+                        {selectedWorker.lastSeenAt ? formatDateTime(selectedWorker.lastSeenAt) : "—"}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Phone</span>
+                      <strong>{selectedWorker.phone || "—"}</strong>
+                    </div>
+                  </div>
+                  <div className="adm-track-side__actions">
+                    {selectedWorker.phone ? (
+                      <a className="adm-view-link" href={`tel:${selectedWorker.phone}`}>
+                        <Phone size={13} /> Call worker
+                      </a>
+                    ) : null}
+                    <a
+                      className="adm-view-link"
+                      href={mapsUrl(selectedWorker.lat, selectedWorker.lng, selectedWorker.area)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open map <ArrowUpRight size={13} />
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <EmptyBlock
+                  icon={MapPin}
+                  title="Select a worker"
+                  body="Choose an online worker to inspect their live GPS position."
+                />
+              )
+            ) : selected ? (
               <>
                 <CoverageMap
                   center={

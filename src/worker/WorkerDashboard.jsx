@@ -28,6 +28,7 @@ import {
   Radio,
   ReceiptText,
   RefreshCw,
+  Send,
   Share2,
   ShieldCheck,
   Sparkles,
@@ -56,6 +57,7 @@ import {
   formatDateTime,
   inr,
   timeAgo,
+  toDate,
 } from "../lib/format";
 import { PLANS, SERVICE_META, TRACKING_PHASES, trackingMeta } from "../lib/constants";
 import { rolePlans, workerFeePct } from "../lib/plans";
@@ -85,13 +87,14 @@ import { TrackingBuzzer, useGpsBroadcast, useTrackingAlert } from "./tracking";
 const TABS = [
   { id: "home", label: "Home", icon: Home },
   { id: "jobs", label: "Jobs", icon: BriefcaseBusiness },
+  { id: "track", label: "Track", icon: Send },
   { id: "earnings", label: "Earnings", icon: Wallet },
   { id: "refer", label: "Refer", icon: Gift },
   { id: "membership", label: "Membership", icon: Crown },
   { id: "profile", label: "Profile", icon: UserRound },
 ];
 
-const PRIMARY_TAB_IDS = ["home", "jobs", "earnings", "profile"];
+const PRIMARY_TAB_IDS = ["home", "jobs", "track", "earnings", "profile"];
 const PRIMARY_TABS = TABS.filter((item) => PRIMARY_TAB_IDS.includes(item.id));
 // Profile lives in the avatar menu and the mobile bottom bar. Keeping it out of
 // the desktop tab strip leaves the header room for the live job tools.
@@ -140,6 +143,7 @@ export default function WorkerDashboard() {
   const [priceTarget, setPriceTarget] = useState(null);
   const [confirmTarget, setConfirmTarget] = useState(null);
   const [completeTarget, setCompleteTarget] = useState(null);
+  const [paymentTarget, setPaymentTarget] = useState(null);
   const [feeTarget, setFeeTarget] = useState(null);
 
   const earningsState = useAsync(() => api.get("/worker/earnings"), []);
@@ -367,10 +371,29 @@ export default function WorkerDashboard() {
     setBusy(`complete:${job.id}`);
     try {
       await api.patch(`/worker/jobs/${job.id}/complete`);
-      toast.success("Job completed. Collect payment from the customer.");
       setCompleteTarget(null);
+      setPaymentTarget(job);
+      toast.success("Job completed. Choose how you will accept payment.");
       await refreshMoney();
-      setTab("home");
+    } catch (error) {
+      toast.error(error.message);
+      throw error;
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const submitPaymentMode = async (job, mode) => {
+    setBusy(`payment:${job.id}:${mode}`);
+    try {
+      await api.post(`/worker/jobs/${job.id}/payment-mode`, { mode });
+      toast.success(
+        mode === "upi"
+          ? "UPI payment requested. The customer can now pay you."
+          : "Cash collection recorded. The customer can confirm payment.",
+      );
+      setPaymentTarget(null);
+      setTab("track");
     } catch (error) {
       toast.error(error.message);
       throw error;
@@ -452,10 +475,12 @@ export default function WorkerDashboard() {
               worker={worker}
               profile={profile}
               isPremium={isPremium}
+              dues={Number(worker.dues) || 0}
               onProfile={() => setTab("profile")}
               onBookings={() => setTab("jobs")}
               onMembership={() => setTab("membership")}
               onRefer={() => setTab("refer")}
+              onFees={() => setTab("earnings")}
               onLogout={logout}
             />
           </div>
@@ -542,6 +567,24 @@ export default function WorkerDashboard() {
             onComplete={setCompleteTarget}
             gps={gps}
             onAccept={acceptJob}
+            onGoOnline={toggleOnline}
+          />
+        ) : null}
+
+        {tab === "track" ? (
+          <TrackTab
+            worker={worker}
+            activeJobs={activeJobs}
+            loading={myLoading}
+            busy={busy}
+            canAccept={canAccept}
+            isPremium={isPremium}
+            focusJobId={focusJobId}
+            onQuote={setPriceTarget}
+            onConfirm={setConfirmTarget}
+            onPhase={advanceJob}
+            onComplete={setCompleteTarget}
+            gps={gps}
             onGoOnline={toggleOnline}
           />
         ) : null}
@@ -638,6 +681,12 @@ export default function WorkerDashboard() {
         onClose={() => setCompleteTarget(null)}
         onConfirm={() => submitComplete(completeTarget)}
       />
+      <PaymentModeModal
+        job={paymentTarget}
+        busy={Boolean(busy)}
+        onClose={() => setPaymentTarget(null)}
+        onChoose={(mode) => submitPaymentMode(paymentTarget, mode)}
+      />
       <FeesModal
         commission={feeTarget}
         onClose={() => setFeeTarget(null)}
@@ -715,10 +764,12 @@ function WorkerProfileMenu({
   worker,
   profile,
   isPremium,
+  dues,
   onProfile,
   onBookings,
   onMembership,
   onRefer,
+  onFees,
   onLogout,
 }) {
   const [open, setOpen] = useState(false);
@@ -803,6 +854,17 @@ function WorkerProfileMenu({
             onClick={() => choose(onRefer)}
           >
             <Gift size={16} /> Refer &amp; Earn
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={Number(dues) > 0 ? "is-danger" : ""}
+            onClick={() => choose(onFees)}
+          >
+            <ReceiptText size={16} /> Fees Due
+            {Number(dues) > 0 ? (
+              <span className="wk-profile-menu__due">{inr(dues)}</span>
+            ) : null}
           </button>
           <button
             type="button"
@@ -1545,6 +1607,67 @@ function JobsTab({
   );
 }
 
+/* -------------------------------- Track tab ------------------------------- */
+
+function TrackTab({
+  activeJobs,
+  loading,
+  busy,
+  focusJobId,
+  onQuote,
+  onConfirm,
+  onPhase,
+  onComplete,
+  gps,
+}) {
+  const gpsLive = gps?.status === "sharing";
+  return (
+    <>
+      <div className="wk-page-head">
+        <div>
+          <p className="wk-eyebrow">Live tracking</p>
+          <h1>Track your jobs</h1>
+          <p>
+            Start work, watch the job timer and complete the job when the
+            customer is happy. Arrival is detected automatically within 150 m.
+          </p>
+        </div>
+        <span className={`wk-gps-pill${gpsLive ? " is-on" : ""}`}>
+          <Radio size={12} />
+          {gpsLive
+            ? "GPS live"
+            : gps?.status === "denied"
+              ? "GPS blocked"
+              : "GPS waiting"}
+        </span>
+      </div>
+
+      {!activeJobs.length && !loading ? (
+        <div className="wk-empty">
+          <Send size={28} />
+          <strong>No live jobs right now</strong>
+          <p>
+            Accepted jobs appear here with the customer phone, live location and
+            Start / Complete controls.
+          </p>
+        </div>
+      ) : (
+        <ActiveJobsSection
+          jobs={activeJobs}
+          loading={loading}
+          busy={busy}
+          focusJobId={focusJobId}
+          onQuote={onQuote}
+          onConfirm={onConfirm}
+          onPhase={onPhase}
+          onComplete={onComplete}
+          gps={gps}
+        />
+      )}
+    </>
+  );
+}
+
 /* -------------------------------- Job lists ------------------------------- */
 
 function ActiveJobsSection({
@@ -1763,6 +1886,31 @@ function ActiveJobCard({
             : null;
   const gpsLive = gps?.status === "sharing";
   const NextIcon = nextAction?.icon;
+  const [clock, setClock] = useState(Date.now());
+
+  useEffect(() => {
+    if (![TRACKING_PHASES.ARRIVED, TRACKING_PHASES.WORKING].includes(phase)) {
+      return undefined;
+    }
+    const timer = setInterval(() => setClock(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [phase]);
+
+  const startedAt =
+    toDate(job.startedAt) ||
+    (phase === TRACKING_PHASES.WORKING ? toDate(job.trackingStatusUpdatedAt) : null);
+  const elapsedSeconds = startedAt
+    ? Math.max(0, Math.floor((clock - startedAt.getTime()) / 1000))
+    : null;
+  const arrivedAt = toDate(job.arrivedAt);
+  const autoStartSeconds =
+    phase === TRACKING_PHASES.ARRIVED && arrivedAt
+      ? Math.max(0, Math.floor((arrivedAt.getTime() + 8 * 60_000 - clock) / 1000))
+      : null;
+  const formatClock = (seconds) =>
+    `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(
+      seconds % 60,
+    ).padStart(2, "0")}`;
 
   useEffect(() => {
     let active = true;
@@ -1830,6 +1978,30 @@ function ActiveJobCard({
           <span>
             No update recorded recently. Customer tracking is waiting — update your phase or
             refresh GPS.
+          </span>
+        </div>
+      ) : null}
+
+      {phase === TRACKING_PHASES.WORKING && elapsedSeconds !== null ? (
+        <div className="wk-job-timer" role="timer" aria-label="Job timer">
+          <span className="wk-job-timer__icon">
+            <Timer size={18} />
+          </span>
+          <div className="grow">
+            <strong>{formatClock(elapsedSeconds)}</strong>
+            <small>Job timer running · tap Complete when the work is done</small>
+          </div>
+          <span className="wk-badge wk-badge--green">Live</span>
+        </div>
+      ) : null}
+
+      {phase === TRACKING_PHASES.ARRIVED && autoStartSeconds !== null ? (
+        <div className="wk-alert wk-alert--warn">
+          <Timer size={16} />
+          <span>
+            {autoStartSeconds > 0
+              ? `Work starts automatically in ${formatClock(autoStartSeconds)}. Tap Start work now to begin.`
+              : "Arrival timer elapsed — work will start automatically on the next check."}
           </span>
         </div>
       ) : null}
@@ -2756,6 +2928,63 @@ function CompleteModal({ job, busy, onClose, onConfirm }) {
           Collect payment directly from the customer by cash or UPI. EasyHome fees are
           recorded separately.
         </p>
+      </div>
+    </Modal>
+  );
+}
+
+function PaymentModeModal({ job, busy, onClose, onChoose }) {
+  return (
+    <Modal
+      open={Boolean(job)}
+      onClose={onClose}
+      title="Accept payment by UPI or cash"
+      subtitle={job ? `${job.service} · ${inr(job.pricing?.finalPrice || job.budget || 0)}` : ""}
+      size="sm"
+      footer={
+        <Button variant="ghost" onClick={onClose}>
+          Decide later
+        </Button>
+      }
+    >
+      <div className="stack">
+        <div className="wk-confirm-amount">
+          <span>Amount to collect</span>
+          <strong>{inr(job?.pricing?.finalPrice || job?.budget || 0)}</strong>
+        </div>
+        <p className="small muted">
+          Choose how the customer will pay you. This tells the customer which
+          payment method to use when confirming the job.
+        </p>
+        <button
+          type="button"
+          className="wk-btn wk-btn--primary wk-btn--block"
+          onClick={() => onChoose("upi")}
+          disabled={busy}
+        >
+          <IndianRupee size={18} />
+          <span>
+            <strong>UPI payment</strong>
+            <small>Customer pays to your UPI ID</small>
+          </span>
+          <ChevronRight size={18} />
+        </button>
+        <button
+          type="button"
+          className="wk-btn wk-btn--outline wk-btn--block"
+          onClick={() => onChoose("cash")}
+          disabled={busy}
+        >
+          <Banknote size={18} />
+          <span>
+            <strong>Cash payment</strong>
+            <small>Collect cash on site</small>
+          </span>
+          <ChevronRight size={18} />
+        </button>
+        {job?.upiId ? (
+          <p className="tiny muted">Your UPI ID: {job.upiId}</p>
+        ) : null}
       </div>
     </Modal>
   );

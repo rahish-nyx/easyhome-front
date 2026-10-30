@@ -4,6 +4,7 @@ import {
   ArrowRight,
   BadgeCheck,
   CalendarCheck,
+  Camera,
   CheckCircle2,
   CircleAlert,
   Clock3,
@@ -13,6 +14,7 @@ import {
   MapPin,
   MessageSquare,
   Navigation,
+  Phone,
   ReceiptText,
   Star,
   Timer,
@@ -24,8 +26,15 @@ import { useToast } from "../context/ToastContext";
 import { useLiveQuery } from "../hooks/useLive";
 import { qBookingsForCustomer } from "../lib/queries";
 import { api } from "../lib/api";
+import { distanceKm, distanceLabel } from "../lib/geo";
+import { mediaUrl } from "../lib/media";
 import { formatDateTime, inr, toDate } from "../lib/format";
-import { SERVICE_META, STATUS_META, STATUS_TABS } from "../lib/constants";
+import {
+  SERVICE_META,
+  STATUS_META,
+  STATUS_TABS,
+  TRACKING_META,
+} from "../lib/constants";
 import { usePageMeta } from "../lib/usePageMeta";
 import {
   Avatar,
@@ -72,9 +81,13 @@ export default function Bookings() {
     const active = bookings.filter((item) =>
       ["pending", "accepted", "ongoing"].includes(item.status),
     );
+    const track = bookings.filter(
+      (item) =>
+        Boolean(item.workerId) && ["accepted", "ongoing"].includes(item.status),
+    );
     const completed = bookings.filter((item) => item.status === "completed");
     const cancelled = bookings.filter((item) => item.status === "cancelled");
-    return { active, completed, cancelled };
+    return { active, track, completed, cancelled };
   }, [bookings]);
 
   const shown = groups[tab] || [];
@@ -176,20 +189,32 @@ export default function Bookings() {
         ) : (
           <div className="card">
             <EmptyState
-              icon={tab === "completed" ? CheckCircle2 : tab === "cancelled" ? X : CalendarCheck}
+              icon={
+                tab === "completed"
+                  ? CheckCircle2
+                  : tab === "cancelled"
+                    ? X
+                    : tab === "track"
+                      ? Navigation
+                      : CalendarCheck
+              }
               title={
                 tab === "completed"
                   ? "No completed bookings yet"
                   : tab === "cancelled"
                     ? "Nothing cancelled"
-                    : "No active bookings"
+                    : tab === "track"
+                      ? "No live jobs to track"
+                      : "No active bookings"
               }
               body={
                 tab === "active"
                   ? "Book a verified professional and track the request here from acceptance to payment."
-                  : tab === "completed"
-                    ? "Completed jobs and receipts will appear here."
-                    : "Cancelled requests will be kept here for your records."
+                  : tab === "track"
+                    ? "Once a pro accepts, their live location, phone number and job timer appear here."
+                    : tab === "completed"
+                      ? "Completed jobs and receipts will appear here."
+                      : "Cancelled requests will be kept here for your records."
               }
               action={
                 tab === "active" ? (
@@ -304,6 +329,32 @@ function BookingCard({
     booking.pricing?.workerPrice &&
     !booking.pricing?.confirmedAt;
   const alreadyOffered = Boolean(booking.pricing?.customerOffer);
+  const accepted =
+    Boolean(booking.workerId) &&
+    ["accepted", "ongoing", "completed"].includes(booking.status);
+  const livePoint =
+    booking.currentLat !== null &&
+    booking.currentLat !== undefined &&
+    booking.currentLng !== null &&
+    booking.currentLng !== undefined
+      ? { lat: Number(booking.currentLat), lng: Number(booking.currentLng) }
+      : null;
+  const targetPoint = {
+    lat: booking.location?.lat,
+    lng: booking.location?.lng,
+  };
+  const distance = accepted ? distanceKm(livePoint, targetPoint) : null;
+  const phase =
+    booking.trackingPhase ||
+    (booking.status === "ongoing"
+      ? "working"
+      : booking.status === "accepted"
+        ? booking.workerId
+          ? "assigned"
+          : "requested"
+        : booking.status);
+  const phaseMeta = TRACKING_META[phase] || null;
+  const photo = mediaUrl(booking.imagePath);
 
   return (
     <article className="card booking-card">
@@ -341,6 +392,72 @@ function BookingCard({
       <p className="small muted" style={{ marginTop: 12 }}>
         {meta.hint}
       </p>
+
+      <div
+        style={{
+          display: "grid",
+          gap: 10,
+          marginTop: 12,
+          padding: 12,
+          borderRadius: 12,
+          background: "var(--surface-2, #f7f7f8)",
+          border: "1px solid var(--line, #e6e6ea)",
+        }}
+      >
+        {booking.description ? (
+          <div>
+            <div className="tiny muted">Your message</div>
+            <p className="small" style={{ margin: "2px 0 0" }}>
+              {booking.description}
+            </p>
+          </div>
+        ) : null}
+        {photo ? (
+          <a href={photo} target="_blank" rel="noreferrer">
+            <img
+              src={photo}
+              alt={`${booking.service} reference`}
+              style={{
+                width: "100%",
+                maxHeight: 180,
+                objectFit: "cover",
+                borderRadius: 10,
+                display: "block",
+              }}
+            />
+          </a>
+        ) : null}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+          <span className="tiny">
+            <Phone size={12} /> You: {booking.customerPhone || "number on file"}
+          </span>
+          {accepted && booking.workerPhone ? (
+            <a className="tiny" href={`tel:${booking.workerPhone}`} style={{ fontWeight: 700 }}>
+              <Phone size={12} /> Call pro: {booking.workerPhone}
+            </a>
+          ) : (
+            <span className="tiny muted">
+              <Phone size={12} /> Pro number unlocks after acceptance
+            </span>
+          )}
+          <span className="tiny">
+            <MapPin size={12} />{" "}
+            {booking.location?.label || booking.addressLabel || booking.area || "Location shared"}
+          </span>
+          {distance !== null ? (
+            <span className="tiny">
+              <Navigation size={12} /> {distanceLabel(distance)}
+            </span>
+          ) : null}
+          {phaseMeta ? <Badge tone={phaseMeta.tone}>{phaseMeta.label}</Badge> : null}
+        </div>
+        {!accepted && booking.status === "pending" ? (
+          <span className="tiny muted">
+            <Timer size={12} /> Finding a pro — your phone stays private until a
+            professional accepts.
+          </span>
+        ) : null}
+      </div>
 
       <div className="booking-card__body">
         <div className="booking-card__worker">

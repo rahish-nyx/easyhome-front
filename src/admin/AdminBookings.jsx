@@ -102,6 +102,21 @@ export default function AdminBookings() {
     setRadius(Number(first.radiusKm) || 15);
   }, [cities, cityId]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      bookingsState.run().catch(() => {});
+    }, 20_000);
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
+  useEffect(() => {
+    if (!selected) return;
+    const fresh = bookings.find((booking) => booking.id === selected.id);
+    if (fresh && fresh !== selected) setSelected(fresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingsState.data]);
+
   const city = cities.find((item) => item.id === cityId) || null;
 
   const activeJobs = useMemo(

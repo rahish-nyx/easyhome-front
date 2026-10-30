@@ -4,10 +4,12 @@ import {
   ArrowLeft,
   Clock3,
   Headphones,
+  ImagePlus,
   PhoneCall,
   Send,
   ShieldCheck,
   Sparkles,
+  X,
   XCircle,
   Zap,
 } from "lucide-react";
@@ -17,6 +19,8 @@ import { useLiveQuery } from "../hooks/useLive";
 import { qChatMessages } from "../lib/queries";
 import { api } from "../lib/api";
 import { clockTime } from "../lib/format";
+import { compressImage } from "../lib/image";
+import { mediaUrl } from "../lib/media";
 import { usePageMeta } from "../lib/usePageMeta";
 import { Button, Input, Modal, Spinner } from "../components/ui";
 
@@ -39,7 +43,11 @@ export default function Chat({ backTo = "/", embedded = false }) {
   const [ending, setEnding] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [uploading, setUploading] = useState(false);
   const bodyRef = useRef(null);
+  const fileRef = useRef(null);
 
   const query = useMemo(
     () => (user ? qChatMessages(user.uid) : null),
@@ -64,16 +72,51 @@ export default function Chat({ backTo = "/", embedded = false }) {
     if (!loaded) setLoaded(true);
   }, [messages, loaded]);
 
+  const pickImage = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      const compressed = await compressImage(file, { maxWidth: 1280, quality: 0.82 });
+      setImage(compressed);
+      setImagePreview((previous) => {
+        if (previous) URL.revokeObjectURL(previous);
+        return URL.createObjectURL(compressed);
+      });
+    } catch {
+      toast.error("That image could not be prepared. Try a different photo.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const clearImage = () => {
+    setImage(null);
+    setImagePreview((previous) => {
+      if (previous) URL.revokeObjectURL(previous);
+      return "";
+    });
+  };
+
   const send = async (value) => {
     const message = String(value ?? text).trim();
-    if (!message) return;
+    if (!message && !image) return;
     if (message.length > 1000) {
       toast.error("Keep messages under 1000 characters.");
       return;
     }
     setSending(true);
     try {
-      await api.post("/chat", { text: message });
+      if (image) {
+        const form = new FormData();
+        if (message) form.append("text", message);
+        form.append("image", image, image.name || "photo.jpg");
+        await api.upload("/chat", form);
+        clearImage();
+      } else {
+        await api.post("/chat", { text: message });
+      }
       setText("");
     } catch (sendError) {
       toast.error(sendError.message);
@@ -202,7 +245,22 @@ export default function Chat({ backTo = "/", embedded = false }) {
             const mine = message.senderRole !== "admin";
             return (
               <div key={message.id} className={`chat-msg${mine ? " chat-msg--mine" : ""}`}>
-                {message.text}
+                {message.imagePath ? (
+                  <a
+                    href={mediaUrl(message.imagePath)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="chat-msg__image-link"
+                  >
+                    <img
+                      className="chat-msg__image"
+                      src={mediaUrl(message.imagePath)}
+                      alt="Attachment"
+                      loading="lazy"
+                    />
+                  </a>
+                ) : null}
+                {message.text ? <span>{message.text}</span> : null}
                 <span className="chat-msg__time">
                   {message.senderRole === "admin" ? "Support · " : ""}
                   {clockTime(message.createdAt)}
@@ -220,6 +278,14 @@ export default function Chat({ backTo = "/", embedded = false }) {
               </button>
             ))}
           </div>
+          {imagePreview ? (
+            <div className="chat-attachment">
+              <img src={imagePreview} alt="Ready to send" />
+              <button type="button" onClick={clearImage} aria-label="Remove attachment">
+                <X size={14} />
+              </button>
+            </div>
+          ) : null}
           <form
             className="chat-compose"
             onSubmit={(event) => {
@@ -227,6 +293,23 @@ export default function Chat({ backTo = "/", embedded = false }) {
               send();
             }}
           >
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={pickImage}
+            />
+            <button
+              type="button"
+              className="chat-attach-btn"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading || sending}
+              aria-label="Attach a photo"
+              title="Attach a photo"
+            >
+              {uploading ? <Spinner size={16} /> : <ImagePlus size={18} />}
+            </button>
             <Input
               value={text}
               maxLength={1000}
@@ -234,7 +317,12 @@ export default function Chat({ backTo = "/", embedded = false }) {
               placeholder="Write a message…"
               aria-label="Message support"
             />
-            <Button type="submit" loading={sending} disabled={!text.trim()} icon={Send}>
+            <Button
+              type="submit"
+              loading={sending}
+              disabled={!text.trim() && !image}
+              icon={Send}
+            >
               <span className="sr-only">Send</span>
             </Button>
           </form>

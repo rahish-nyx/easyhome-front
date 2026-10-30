@@ -2,36 +2,77 @@ import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 
 export const PRODUCTION_API_URL = "https://easyhome-back.vercel.app/api";
+const API_OVERRIDE_KEY = "easyhome:apiBase";
+
+function isNativeShell() {
+  if (typeof window === "undefined") return false;
+  return Boolean(
+    Capacitor?.isNativePlatform?.() ||
+      window.location.protocol === "capacitor:" ||
+      window.location.protocol === "file:",
+  );
+}
+
+function readApiOverride() {
+  if (typeof window === "undefined") return "";
+  try {
+    const stored = window.localStorage.getItem(API_OVERRIDE_KEY) || "";
+    if (stored) return stored;
+  } catch {
+    /* storage can be blocked */
+  }
+  return String(window.__EASYHOME_API_BASE__ || "");
+}
+
+function normalizeBase(value) {
+  return String(value || "").trim().replace(/\/+$/, "");
+}
 
 function resolveApiBase(value) {
-  const raw = String(value || "").trim();
-  const isNative =
-    typeof window !== "undefined" &&
-    (Capacitor?.isNativePlatform?.() ||
-      window.location.protocol === "capacitor:" ||
-      window.location.protocol === "file:" ||
-      window.location.hostname === "localhost");
+  const raw = normalizeBase(value);
+  const override = normalizeBase(readApiOverride());
+  const native = isNativeShell();
 
-  // When running inside native mobile APK or standalone shell
-  if (isNative) {
-    // If an explicit network IP (e.g. http://192.168.1.5:5000/api or 10.0.2.2:5000) was configured for local testing, use it
-    if (raw && /^https?:\/\//i.test(raw) && !raw.includes("localhost") && !raw.includes("127.0.0.1")) {
-      return raw.replace(/\/+$/, "");
+  // A runtime override is how the Android app points at a LAN development
+  // server without rebuilding: localStorage.setItem("easyhome:apiBase",
+  // "http://192.168.1.20:5000/api").
+  if (override && /^https?:\/\//i.test(override)) return override;
+
+  if (native) {
+    // An explicit non-loopback absolute URL (LAN IP or production) wins.
+    if (raw && /^https?:\/\//i.test(raw) && !/localhost|127\.0\.0\.1/i.test(raw)) {
+      return raw;
     }
-    // Never let Android APK try to call localhost/relative /api — always use production live backend
+    // A relative /api in the native shell would resolve against the WebView
+    // origin (https://localhost), so always use the production API instead.
     return PRODUCTION_API_URL;
   }
 
+  // Browser: use the configured absolute URL, a root-relative proxy, or the
+  // Vite/Vercel same-origin proxy. Bare hostnames are not valid fetch bases.
   if (!raw) return "/api";
-  // fetch() resolves a bare hostname against the app origin, so a value like
-  // "api.example.com" silently calls the frontend instead of the API. Only
-  // accept absolute URLs or root-relative paths, and fall back to the
-  // same-origin proxy (see vercel.json) for anything else.
-  if (!/^https?:\/\//i.test(raw) && !raw.startsWith("/")) return "/api";
-  return raw.replace(/\/+$/, "");
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith("/")) return raw;
+  return "/api";
 }
 
-export const API_BASE = resolveApiBase(import.meta.env.VITE_API_URL);
+export function getApiBase() {
+  return resolveApiBase(import.meta.env.VITE_API_URL);
+}
+
+export function setApiBaseOverride(value) {
+  if (typeof window === "undefined") return getApiBase();
+  try {
+    const next = normalizeBase(value);
+    if (next) window.localStorage.setItem(API_OVERRIDE_KEY, next);
+    else window.localStorage.removeItem(API_OVERRIDE_KEY);
+  } catch {
+    /* storage can be blocked */
+  }
+  return getApiBase();
+}
+
+export const API_BASE = getApiBase();
 
 const TOKEN_KEY = "easyhome:token";
 
@@ -105,7 +146,7 @@ function authHeaders() {
 async function refreshAccessToken() {
   if (!accessToken) return false;
   try {
-    const response = await fetch(`${API_BASE}/auth/refresh`, {
+    const response = await fetch(`${getApiBase()}/auth/refresh`, {
       method: "POST",
       headers: { ...authHeaders(), "Content-Type": "application/json" },
       body: "{}",
@@ -137,7 +178,7 @@ async function request(
   }
 
   try {
-    const response = await fetch(`${API_BASE}${path}`, {
+    const response = await fetch(`${getApiBase()}${path}`, {
       method,
       headers,
       body: payload,
@@ -197,7 +238,7 @@ export const api = {
   /** Fetch a protected binary (e.g. KYC) and return an object URL. */
   async blob(path) {
     const headers = authHeaders();
-    const response = await fetch(`${API_BASE}${path}`, { headers });
+    const response = await fetch(`${getApiBase()}${path}`, { headers });
     if (!response.ok) {
       const data = await response.json().catch(() => null);
       throw new ApiError(data?.error || "Could not load this file.", {

@@ -263,6 +263,7 @@ export const ADMIN_NAV = [
 
 export const STATUS_TABS = [
   { id: "active", label: "Active" },
+  { id: "track", label: "Track" },
   { id: "completed", label: "Completed" },
   { id: "cancelled", label: "Cancelled" },
 ];

@@ -38,15 +38,13 @@ function loadScript() {
 /**
  * Opens the Google account chooser and returns an OAuth access token that the
  * API verifies against Google's userinfo endpoint.
+ *
+ * Works in the browser and in the Capacitor WebView (which loads the hosted
+ * frontend). Google blocks embedded WebViews for full OAuth redirects, but the
+ * token popup is attempted anyway so the app can show a precise error instead
+ * of silently disabling the button.
  */
 export async function requestGoogleAccessToken() {
-  if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
-    throw Object.assign(
-      new Error("Google OAuth requires a desktop or external browser. Please sign in or register with your email and password."),
-      { code: "GOOGLE_WEBVIEW_UNSUPPORTED" },
-    );
-  }
-
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   if (!clientId) {
     throw Object.assign(
@@ -56,6 +54,9 @@ export async function requestGoogleAccessToken() {
   }
 
   await loadScript();
+
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "this app";
 
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -70,25 +71,58 @@ export async function requestGoogleAccessToken() {
       client = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: "openid email profile",
+        ux_mode: "popup",
         callback: (response) => {
-          if (response?.access_token) finish(resolve, response.access_token);
-          else finish(reject, new Error("Google did not return an access token."));
-        },
-        error_callback: (googleError) => {
-          const reason = googleError?.type || googleError?.message || "";
+          if (response?.access_token) {
+            finish(resolve, response.access_token);
+            return;
+          }
           finish(
             reject,
-            new Error(
-              reason === "popup_closed"
-                ? "Google sign-in was closed before finishing."
-                : "Google sign-in could not be completed.",
+            Object.assign(
+              new Error(
+                response?.error === "access_denied"
+                  ? "Google sign-in was cancelled."
+                  : "Google did not return an access token.",
+              ),
+              { code: response?.error || "GOOGLE_TOKEN_MISSING" },
             ),
+          );
+        },
+        error_callback: (googleError) => {
+          const reason = String(
+            googleError?.type || googleError?.message || "",
+          ).toLowerCase();
+          let message = "Google sign-in could not be completed.";
+          if (reason.includes("origin") || reason.includes("mismatch")) {
+            message = `Google sign-in is not authorized for ${origin}. Add this exact origin under Google Cloud Console → APIs & Services → Credentials → OAuth client → Authorized JavaScript origins.`;
+          } else if (reason.includes("popup")) {
+            message =
+              "Your browser blocked the Google sign-in window. Allow popups for EasyHome, or use email and password.";
+          } else if (reason.includes("cancel") || reason.includes("closed")) {
+            message = "Google sign-in was closed before finishing.";
+          }
+          finish(
+            reject,
+            Object.assign(new Error(message), {
+              code: reason || "GOOGLE_POPUP_FAILED",
+            }),
           );
         },
       });
       client.requestAccessToken({ prompt: "select_account" });
     } catch (error) {
-      finish(reject, error);
+      finish(
+        reject,
+        Object.assign(
+          new Error(
+            Capacitor.isNativePlatform()
+              ? "Google sign-in is unavailable in this app build. Use email and password, or open EasyHome in Chrome."
+              : "Google sign-in could not be started.",
+          ),
+          { code: "GOOGLE_START_FAILED", cause: error },
+        ),
+      );
     }
   });
 }

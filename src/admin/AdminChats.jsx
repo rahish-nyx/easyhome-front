@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   Check,
   CheckCheck,
+  ImagePlus,
   Inbox,
   MessageSquare,
   Phone,
@@ -10,6 +11,7 @@ import {
   Send,
   ShieldCheck,
   UserRound,
+  X,
   XCircle,
   Zap,
 } from "lucide-react";
@@ -17,6 +19,8 @@ import { useToast } from "../context/ToastContext";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../lib/api";
 import { formatDateTime, timeAgo } from "../lib/format";
+import { compressImage } from "../lib/image";
+import { mediaUrl } from "../lib/media";
 import { Avatar, Button } from "../components/ui";
 import {
   AdminPage,
@@ -35,10 +39,14 @@ export default function AdminChats() {
   const [query, setQuery] = useState("");
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [ending, setEnding] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [handlingCall, setHandlingCall] = useState("");
   const scrollRef = useRef(null);
+  const fileRef = useRef(null);
   const lastMessageId = useRef("");
 
   const threadsState = useAsync(() => api.get("/admin/chats"), []);
@@ -65,7 +73,7 @@ export default function AdminChats() {
       threadsState.run().catch(() => {});
       callsState.run().catch(() => {});
       if (uid) messagesState.run().catch(() => {});
-    }, 12000);
+    }, 5000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid]);
@@ -88,11 +96,46 @@ export default function AdminChats() {
     );
   }, [threads, query]);
 
+  const pickImage = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      const compressed = await compressImage(file, { maxWidth: 1280, quality: 0.82 });
+      setImage(compressed);
+      setImagePreview((previous) => {
+        if (previous) URL.revokeObjectURL(previous);
+        return URL.createObjectURL(compressed);
+      });
+    } catch {
+      toast.error("That image could not be prepared. Try a different photo.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const clearImage = () => {
+    setImage(null);
+    setImagePreview((previous) => {
+      if (previous) URL.revokeObjectURL(previous);
+      return "";
+    });
+  };
+
   const send = async () => {
-    if (!uid || !text.trim()) return;
+    if (!uid || (!text.trim() && !image)) return;
     setSending(true);
     try {
-      await api.post(`/admin/chats/${uid}`, { text: text.trim() });
+      if (image) {
+        const form = new FormData();
+        if (text.trim()) form.append("text", text.trim());
+        form.append("image", image, image.name || "photo.jpg");
+        await api.upload(`/admin/chats/${uid}`, form);
+        clearImage();
+      } else {
+        await api.post(`/admin/chats/${uid}`, { text: text.trim() });
+      }
       setText("");
       await Promise.allSettled([messagesState.run(), threadsState.run()]);
     } catch (error) {
@@ -339,7 +382,23 @@ export default function AdminChats() {
                             />
                           ) : null}
                           <div className="adm-msg__body">
-                            <div className="adm-msg__bubble">{message.text}</div>
+                            <div className="adm-msg__bubble">
+                              {message.imagePath ? (
+                                <a
+                                  href={mediaUrl(message.imagePath)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  <img
+                                    className="adm-msg__image"
+                                    src={mediaUrl(message.imagePath)}
+                                    alt="Attachment"
+                                    loading="lazy"
+                                  />
+                                </a>
+                              ) : null}
+                              {message.text ? <span>{message.text}</span> : null}
+                            </div>
                             <span className="adm-msg__meta">
                               {mine ? "EasyHome Support" : message.senderName || "User"} ·{" "}
                               {formatDateTime(message.createdAt)}
@@ -359,6 +418,31 @@ export default function AdminChats() {
                 </div>
 
                 <footer className="adm-chat__compose">
+                  {imagePreview ? (
+                    <div className="adm-chat__attachment">
+                      <img src={imagePreview} alt="Ready to send" />
+                      <button type="button" onClick={clearImage} aria-label="Remove attachment">
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ) : null}
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={pickImage}
+                  />
+                  <button
+                    type="button"
+                    className="adm-chat__attach"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading || sending}
+                    aria-label="Attach a photo"
+                    title="Attach a photo"
+                  >
+                    {uploading ? <RefreshCw size={16} className="spin" /> : <ImagePlus size={18} />}
+                  </button>
                   <textarea
                     rows={1}
                     value={text}
@@ -375,7 +459,7 @@ export default function AdminChats() {
                   <Button
                     icon={Send}
                     loading={sending}
-                    disabled={!text.trim()}
+                    disabled={!text.trim() && !image}
                     onClick={send}
                   >
                     Send

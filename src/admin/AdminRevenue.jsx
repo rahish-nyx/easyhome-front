@@ -240,7 +240,7 @@ export default function AdminRevenue() {
         <StatCard
           label="Fees"
           value={inr(revenue.commissionTotal)}
-          hint="Approved worker fees"
+          hint={`${inr(revenue.feesDue || 0)} still due`}
           icon={Wallet}
           tone="green"
         />
