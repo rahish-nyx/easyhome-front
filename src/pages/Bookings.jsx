@@ -624,9 +624,9 @@ function BookingCard({
           </Badge>
         ) : null}
 
-        {booking.status === "accepted" || booking.status === "ongoing" ? (
+        {["pending", "accepted", "ongoing"].includes(booking.status) ? (
           <Link to={`/bookings/${booking.id}/track`} className="btn btn--dark btn--sm">
-            <Navigation size={14} /> Live tracking
+            <Navigation size={14} /> Track
           </Link>
         ) : null}
 
