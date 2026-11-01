@@ -17,6 +17,7 @@ import { useToast } from "../context/ToastContext";
 import { api } from "../lib/api";
 import { SERVICE_META } from "../lib/constants";
 import { Button, Field, Input, Select, Textarea } from "../components/ui";
+import "../styles/worker.css";
 
 const MAX_TRADES = 3;
 
