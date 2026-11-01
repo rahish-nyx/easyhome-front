@@ -256,21 +256,27 @@ export default function WorkerDashboard() {
 
   const available = useMemo(() => {
     if (!worker) return [];
+    // The backend already matches jobs to this worker's zones. Only apply the
+    // zone filter here when zone data is actually loaded — otherwise a slow or
+    // failed bootstrap would hide every job in the feed.
+    const zonesKnown = activeZoneIds.size > 0;
+    const inZone = (job) =>
+      Boolean(zonesKnown && job.serviceZoneId && activeZoneIds.has(job.serviceZoneId));
+
     return feed
       .filter((job) => {
         if (hiddenFeedIds.has(job.bookingId || job.id)) return false;
         if (job.preferredWorkerId && job.preferredWorkerId !== worker.id) return false;
-        if (job.serviceZoneId && !activeZoneIds.has(job.serviceZoneId)) return false;
+        if (zonesKnown && job.serviceZoneId && !activeZoneIds.has(job.serviceZoneId)) {
+          return false;
+        }
         return true;
       })
       .map((job) => ({
         ...job,
         id: job.bookingId || job.id,
-        sameServiceZone: Boolean(job.serviceZoneId && activeZoneIds.has(job.serviceZoneId)),
-        distance:
-          job.serviceZoneId && activeZoneIds.has(job.serviceZoneId)
-            ? null
-            : distanceKm(worker, job),
+        sameServiceZone: inZone(job),
+        distance: inZone(job) ? null : distanceKm(worker, job),
       }))
       .sort((a, b) => {
         if (a.priority !== b.priority) return a.priority === "pro" ? -1 : 1;
@@ -325,6 +331,9 @@ export default function WorkerDashboard() {
     setOnlineOverride(next);
     try {
       await api.patch("/worker/availability", { online: next });
+      // Sync the auth profile so the rest of the console (accept gate, header
+      // pill) sees the new availability immediately instead of a stale value.
+      await Promise.resolve(refreshProfile?.()).catch(() => {});
       if (next && navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
@@ -356,7 +365,7 @@ export default function WorkerDashboard() {
   };
 
   const acceptJob = async (job) => {
-    if (!worker?.online) {
+    if (!isOnline) {
       toast.error("Go online first to accept jobs.");
       return;
     }
