@@ -167,7 +167,16 @@ export default function Tracking() {
   }
 
   const tracking = snapshot?.tracking || {};
-  const phase = booking.trackingPhase || tracking.phase || "";
+  const phase =
+    booking.trackingPhase ||
+    tracking.phase ||
+    (booking.status === "ongoing"
+      ? "working"
+      : booking.status === "accepted" && booking.workerId
+        ? "assigned"
+        : booking.status === "completed"
+          ? "completed"
+          : "");
   const meta = trackingMeta(phase, booking.status);
   const worker = tracking.worker || null;
   const workerName = booking.workerName || worker?.name || "EasyHome professional";

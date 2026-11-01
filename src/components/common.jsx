@@ -31,7 +31,7 @@ import { api } from "../lib/api";
 import { mediaUrl } from "../lib/media";
 import { promoLink } from "../lib/promos";
 import { cx, inr, isActiveUntil, timeAgo } from "../lib/format";
-import { STATUS_META, SERVICE_META } from "../lib/constants";
+import { STATUS_META, SERVICE_META, TRACKING_PHASES } from "../lib/constants";
 import { iconFor } from "../lib/iconMap";
 import { useAuth } from "../context/AuthContext";
 import { useCatalogue } from "../context/CatalogueContext";
@@ -586,13 +586,6 @@ export function StatusBadge({ status }) {
   return <Badge tone={meta.tone}>{meta.label}</Badge>;
 }
 
-const TIMELINE = [
-  { id: "pending", label: "Requested" },
-  { id: "accepted", label: "Pro assigned" },
-  { id: "ongoing", label: "In progress" },
-  { id: "completed", label: "Completed" },
-];
-
 export function BookingTimeline({ booking }) {
   if (!booking) return null;
   if (booking.status === "cancelled") {
@@ -605,10 +598,19 @@ export function BookingTimeline({ booking }) {
       </div>
     );
   }
-  const current = TIMELINE.findIndex((step) => step.id === booking.status);
+  const phase =
+    booking.trackingPhase ||
+    (booking.status === "completed"
+      ? "completed"
+      : booking.status === "ongoing"
+        ? "working"
+        : booking.status === "accepted" && booking.workerId
+          ? "assigned"
+          : "");
+  const current = TRACKING_PHASES.findIndex((step) => step.id === phase);
   return (
     <div className="booking-timeline">
-      {TIMELINE.map((step, index) => (
+      {TRACKING_PHASES.map((step, index) => (
         <span key={step.id} className={cx("timeline-step", index <= current && "is-done")}>
           {step.label}
         </span>

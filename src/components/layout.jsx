@@ -773,14 +773,12 @@ export function CustomerLayout() {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [location.pathname]);
 
-  // Customer and professional sessions stay separate. Public legal pages are
-  // safe for anyone; every other customer route sends a professional back to
-  // their own console (support gets its own worker-safe route).
+  // Customer and professional sessions stay separate. A professional account
+  // must always land in the worker console; customer and public routes are for
+  // guests and customer accounts only.
   if (
     isWorker &&
-    !location.pathname.startsWith("/legal/") &&
-    location.pathname !== "/faq" &&
-    !location.pathname.startsWith("/workers/")
+    !location.pathname.startsWith("/worker")
   ) {
     return (
       <Navigate

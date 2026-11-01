@@ -1,15 +1,14 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import {
-  ArrowRight,
   BadgeCheck,
   BriefcaseBusiness,
   CheckCircle2,
   Crosshair,
-  IndianRupee,
   MapPin,
+  Search,
   ShieldCheck,
   Sparkles,
+  X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCatalogue } from "../context/CatalogueContext";
@@ -19,6 +18,12 @@ import { api } from "../lib/api";
 import { SERVICE_META } from "../lib/constants";
 import { Button, Field, Input, Select, Textarea } from "../components/ui";
 
+const MAX_TRADES = 3;
+
+function uniqueTrades(list) {
+  return [...new Set(list.filter(Boolean))].slice(0, MAX_TRADES);
+}
+
 export default function WorkerApply({ existing, onCancel }) {
   const { profile, refreshClaims } = useAuth();
   const { services } = useCatalogue();
@@ -26,46 +31,70 @@ export default function WorkerApply({ existing, onCancel }) {
   const toast = useToast();
 
   const base = existing || profile || {};
+  const savedTrades = uniqueTrades(
+    Array.isArray(base.trades) ? base.trades : [base.serviceKey].filter(Boolean),
+  );
+
   const [form, setForm] = useState({
     name: base.name || "",
     phone: base.phone || "",
-    serviceKey: "",
-    secondaryServiceKey: "",
-    optionalServiceKey: "",
+    serviceKey: savedTrades[0] || "",
+    secondaryServiceKey: savedTrades[1] || "",
+    optionalServiceKey: savedTrades[2] || "",
     state: base.state || city?.state || "",
     city: base.city || city?.name || "",
     areaName: base.areaName || city?.areaName || "",
-    pricePerWork: "",
-    bio: "",
+    pricePerWork: base.pricePerWork ? String(base.pricePerWork) : "",
+    bio: base.bio || "",
   });
+
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [coords, setCoords] = useState(null);
   const [locating, setLocating] = useState(false);
+
+  // Service-zone picker
   const [zonePickerOpen, setZonePickerOpen] = useState(false);
   const [zones, setZones] = useState([]);
   const [zoneLoading, setZoneLoading] = useState(false);
-  const selectedCityForZone = cities.find(
-    (item) => item.name === form.city && (!form.state || item.state?.toLowerCase() === String(form.state).toLowerCase()),
+  const [zoneError, setZoneError] = useState("");
+  const [zoneQuery, setZoneQuery] = useState("");
+
+  const stateCities = citiesForState(form.state);
+  const selectedCity = useMemo(
+    () =>
+      cities.find(
+        (item) =>
+          item.name === form.city &&
+          (!form.state ||
+            !item.state ||
+            item.state.toLowerCase() === String(form.state).toLowerCase()),
+      ),
+    [cities, form.city, form.state],
   );
+  const areaOptions = useMemo(
+    () =>
+      (selectedCity?.localAreas || [])
+        .map((area) => (typeof area === "string" ? area : area?.name))
+        .filter(Boolean),
+    [selectedCity],
+  );
+
+  const filteredZones = useMemo(() => {
+    const query = zoneQuery.trim().toLowerCase();
+    if (!query) return zones;
+    return zones.filter((zone) =>
+      [zone.label, zone.cityName, zone.areaName, zone.state]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query)),
+    );
+  }, [zones, zoneQuery]);
 
   useEffect(() => {
     if (!form.serviceKey && services.length) {
       setForm((prev) => ({ ...prev, serviceKey: services[0].key }));
     }
   }, [services, form.serviceKey]);
-
-  const stateCities = citiesForState(form.state);
-  const selectedCity = cities.find(
-    (item) =>
-      item.name === form.city &&
-      (!form.state ||
-        !item.state ||
-        item.state.toLowerCase() === String(form.state).toLowerCase()),
-  );
-  const areaOptions = (selectedCity?.localAreas || [])
-    .map((area) => (typeof area === "string" ? area : area?.name))
-    .filter(Boolean);
 
   const set = (field) => (event) =>
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
@@ -96,6 +125,17 @@ export default function WorkerApply({ existing, onCancel }) {
     }));
   };
 
+  const tradeOptions = (slot) =>
+    services.filter((service) => {
+      if (service.key === form[slot]) return true;
+      const chosen = uniqueTrades([
+        form.serviceKey,
+        form.secondaryServiceKey,
+        form.optionalServiceKey,
+      ]);
+      return !chosen.includes(service.key);
+    });
+
   const capture = async () => {
     if (!navigator.geolocation) {
       toast.error("This device does not support location.");
@@ -122,6 +162,55 @@ export default function WorkerApply({ existing, onCancel }) {
     }
   };
 
+  const openZonePicker = async () => {
+    setZonePickerOpen(true);
+    if (zones.length) return;
+    setZoneLoading(true);
+    setZoneError("");
+    try {
+      const data = await api.get("/public/zones");
+      setZones(Array.isArray(data?.zones) ? data.zones : []);
+    } catch (loadError) {
+      // Older API deployments do not expose /public/zones yet. The bootstrap
+      // payload carries the same active zones, so fall back to it.
+      try {
+        const bootstrap = await api.get("/public/bootstrap");
+        const list = Array.isArray(bootstrap?.zones) ? bootstrap.zones : [];
+        setZones(
+          list
+            .filter((zone) => zone && zone.isActive !== false)
+            .map((zone) => ({
+              id: zone.id,
+              cityName: zone.cityName || "",
+              state: zone.state || "",
+              areaName: zone.areaName || "",
+              label:
+                [zone.areaName, zone.cityName, zone.state].filter(Boolean).join(", ") ||
+                zone.cityName ||
+                "Service zone",
+              radiusKm: zone.radiusKm ?? null,
+            })),
+        );
+      } catch {
+        setZoneError(loadError?.message || "Could not load service zones.");
+      }
+    } finally {
+      setZoneLoading(false);
+    }
+  };
+
+  const applyZone = (zone) => {
+    setForm((prev) => ({
+      ...prev,
+      city: zone.cityName || prev.city,
+      state: zone.state || prev.state,
+      areaName: zone.areaName || prev.areaName,
+    }));
+    setZonePickerOpen(false);
+    setZoneQuery("");
+    toast.success(`Service area set to ${zone.label}.`);
+  };
+
   const submit = async (event) => {
     event.preventDefault();
     setError("");
@@ -135,7 +224,7 @@ export default function WorkerApply({ existing, onCancel }) {
       return;
     }
     if (!form.serviceKey) {
-      setError("Choose your trade.");
+      setError("Choose your primary trade.");
       return;
     }
     if (!form.state.trim() || !form.city.trim() || !form.areaName.trim()) {
@@ -143,19 +232,24 @@ export default function WorkerApply({ existing, onCancel }) {
       return;
     }
 
+    const trades = uniqueTrades([
+      form.serviceKey,
+      form.secondaryServiceKey,
+      form.optionalServiceKey,
+    ]);
+
     setBusy(true);
     try {
       const service = services.find((item) => item.key === form.serviceKey);
       await api.post("/auth/worker/apply", {
         name: form.name.trim(),
         phone: form.phone,
-        service: service?.name || SERVICE_META[form.serviceKey]?.name || form.serviceKey,
-        serviceKey: form.serviceKey,
-        trades: [
+        service:
+          service?.name ||
+          SERVICE_META[form.serviceKey]?.name ||
           form.serviceKey,
-          ...(form.secondaryServiceKey ? [form.secondaryServiceKey] : []),
-          ...(form.optionalServiceKey ? [form.optionalServiceKey] : []),
-        ].filter(Boolean),
+        serviceKey: form.serviceKey,
+        trades,
         area: `${form.areaName.trim()}, ${form.city.trim()}`,
         areaName: form.areaName.trim(),
         city: form.city.trim(),
@@ -183,8 +277,8 @@ export default function WorkerApply({ existing, onCancel }) {
         </p>
         <h2>Apply in two minutes.</h2>
         <p>
-          Tell us your trade and the area you serve. Our team reviews every application before
-          your profile goes live.
+          Tell us your trades and the area you serve. Our team reviews every
+          application before your profile goes live.
         </p>
       </div>
 
@@ -218,6 +312,7 @@ export default function WorkerApply({ existing, onCancel }) {
               required
             />
           </Field>
+
           <Field label="Mobile number" htmlFor="apply-phone" required>
             <Input
               id="apply-phone"
@@ -235,36 +330,52 @@ export default function WorkerApply({ existing, onCancel }) {
               required
             />
           </Field>
-          <Field label="Your trade (required)" htmlFor="apply-service" required>
-            <Select id="apply-service" value={form.serviceKey} onChange={set("serviceKey")}>
+
+          <Field label="Primary trade" htmlFor="apply-service" required>
+            <Select
+              id="apply-service"
+              value={form.serviceKey}
+              onChange={set("serviceKey")}
+            >
               <option value="">Select trade…</option>
-              {services.map((service) => (
+              {tradeOptions("serviceKey").map((service) => (
                 <option key={service.key} value={service.key}>
                   {service.name}
                 </option>
               ))}
             </Select>
           </Field>
+
           <Field label="Second trade (optional)" htmlFor="apply-service-2">
-            <Select id="apply-service-2" value={form.secondaryServiceKey} onChange={set("secondaryServiceKey")}>
+            <Select
+              id="apply-service-2"
+              value={form.secondaryServiceKey}
+              onChange={set("secondaryServiceKey")}
+            >
               <option value="">— None —</option>
-              {services.map((service) => (
+              {tradeOptions("secondaryServiceKey").map((service) => (
                 <option key={service.key} value={service.key}>
                   {service.name}
                 </option>
               ))}
             </Select>
           </Field>
+
           <Field label="Third trade (optional)" htmlFor="apply-service-3">
-            <Select id="apply-service-3" value={form.optionalServiceKey} onChange={set("optionalServiceKey")}>
+            <Select
+              id="apply-service-3"
+              value={form.optionalServiceKey}
+              onChange={set("optionalServiceKey")}
+            >
               <option value="">— None —</option>
-              {services.map((service) => (
+              {tradeOptions("optionalServiceKey").map((service) => (
                 <option key={service.key} value={service.key}>
                   {service.name}
                 </option>
               ))}
             </Select>
           </Field>
+
           <Field label="Starting price (₹)" htmlFor="apply-price">
             <Input
               id="apply-price"
@@ -276,8 +387,13 @@ export default function WorkerApply({ existing, onCancel }) {
               placeholder="299"
             />
           </Field>
+
           <Field label="State" htmlFor="apply-state" required>
-            <Select id="apply-state" value={form.state} onChange={(event) => chooseState(event.target.value)}>
+            <Select
+              id="apply-state"
+              value={form.state}
+              onChange={(event) => chooseState(event.target.value)}
+            >
               <option value="">Select a state…</option>
               {states.map((state) => (
                 <option key={state} value={state}>
@@ -289,8 +405,13 @@ export default function WorkerApply({ existing, onCancel }) {
               ) : null}
             </Select>
           </Field>
+
           <Field label="City" htmlFor="apply-city" required>
-            <Select id="apply-city" value={form.city} onChange={(event) => chooseCity(event.target.value)}>
+            <Select
+              id="apply-city"
+              value={form.city}
+              onChange={(event) => chooseCity(event.target.value)}
+            >
               <option value="">Select a city…</option>
               {stateCities.map((item) => (
                 <option key={item.id || item.name} value={item.name}>
@@ -302,6 +423,7 @@ export default function WorkerApply({ existing, onCancel }) {
               ) : null}
             </Select>
           </Field>
+
           <Field
             label="Local area"
             htmlFor="apply-area"
@@ -325,89 +447,31 @@ export default function WorkerApply({ existing, onCancel }) {
               ) : null}
             </Select>
           </Field>
-          <div style={{ marginTop: 6, display: "flex", gap: 8, alignItems: "center" }}>
-            <button
-              type="button"
-              className="btn-link"
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 10px", background: "#0f766e", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
-              onClick={async () => {
-                setZonePickerOpen(true);
-                setZoneLoading(true);
-                try {
-                  const res = await api.get("/public/bootstrap");
-                  const data = await res.json?.() || res;
-                  setZones((data.zones || []).filter((z) => z.isActive !== false));
-                } catch {
-                  setZones([]);
-                } finally {
-                  setZoneLoading(false);
-                }
-              }}
-            >
-              Change service zone
-            </button>
-            {form.areaName && (
-              <span style={{ fontSize: 13, color: "#555" }}>
-                {form.areaName}{form.city ? `, ${form.city}` : ""}
-              </span>
-            )}
-          </div>
-          {zonePickerOpen && (
-            <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 10, background: "#f8f9fa", marginTop: 6 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <strong style={{ fontSize: 14 }}>Select service zone</strong>
-                <button type="button" onClick={() => { setZonePickerOpen(false); setZones([]); }} style={{ fontSize: 12 }}>
-                  Close
-                </button>
-              </div>
-              {zoneLoading ? (
-                <div style={{ fontSize: 13, color: "#777" }}>Loading zones…</div>
-              ) : zones.length === 0 ? (
-                <div style={{ fontSize: 13, color: "#777" }}>No zones available.</div>
-              ) : (
-                <div style={{ maxHeight: 220, overflow: "auto" }}>
-                  {zones.map((z) => (
-                    <button
-                      key={z.id || (z.cityName + "-" + z.areaName + "-" + z.state)}
-                      type="button"
-                      style={{ display: "block", width: "100%", textAlign: "left", padding: 8, border: "none", background: "transparent", borderBottom: "1px solid #eee", cursor: "pointer", fontSize: 13 }}
-                      onClick={() => {
-                        setForm((prev) => ({
-                          ...prev,
-                          city: z.cityName || z.name || prev.city,
-                          state: z.state || prev.state,
-                          areaName: z.areaName || z.name || prev.areaName,
-                        }));
-                        setZonePickerOpen(false);
-                        setZones([]);
-                      }}
-                    >
-                      <strong>{z.cityName || z.areaName || z.name || "Zone"}</strong>
-                      {z.cityName ? ` — ${z.cityName}` : z.areaName ? ` — ${z.areaName}` : ""}{z.state ? `, ${z.state}` : ""}
-                    </button>
-                  ))}
-                </div>
-              )}
+
+          <div className="wk-span-2 wk-service-area">
+            <div>
+              <span className="wk-service-area__label">Service area</span>
+              <strong className="wk-service-area__value">
+                <MapPin size={14} />
+                {form.areaName
+                  ? `${form.areaName}${form.city ? `, ${form.city}` : ""}${
+                      form.state ? `, ${form.state}` : ""
+                    }`
+                  : "No area selected yet"}
+              </strong>
             </div>
-          )}
-          <Field
-            label="Short bio (optional)"
-            htmlFor="apply-bio"
-            hint={`${form.bio.length}/400 — experience, specialties, languages`}
-            className="wk-span-2"
-          >
-            <Textarea
-              id="apply-bio"
-              rows={3}
-              maxLength={400}
-              value={form.bio}
-              onChange={set("bio")}
-              placeholder="8 years of plumbing experience. Specialise in leak detection and bathroom fittings. Hindi and English."
-            />
-          </Field>
+            <Button type="button" variant="outline" size="sm" onClick={openZonePicker}>
+              Change
+            </Button>
+          </div>
         </div>
 
-        <button type="button" className="wk-location-btn" onClick={capture} disabled={locating}>
+        <button
+          type="button"
+          className="wk-location-btn"
+          onClick={capture}
+          disabled={locating}
+        >
           <Crosshair size={16} />
           {locating
             ? "Capturing location…"
@@ -423,28 +487,92 @@ export default function WorkerApply({ existing, onCancel }) {
           <span>
             <MapPin size={14} /> Local jobs near you
           </span>
-          <span>
-            <IndianRupee size={14} /> Transparent payouts
-          </span>
         </div>
 
-        <Button type="submit" size="lg" className="wk-btn wk-btn--primary wk-btn--block" loading={busy}>
-          Submit application <ArrowRight size={17} />
-        </Button>
-
-        <p className="wk-fineprint">
-          Applying does not guarantee work. EasyHome reviews identity and trade details before
-          activating an account. You can upload a government ID after applying.
-        </p>
+        <div className="wk-form-actions">
+          {onCancel ? (
+            <Button type="button" variant="ghost" onClick={onCancel}>
+              Cancel
+            </Button>
+          ) : null}
+          <Button type="submit" disabled={busy}>
+            {busy ? "Submitting…" : "Submit application"}
+          </Button>
+        </div>
       </form>
 
-      <p className="wk-fineprint">
-        Have an account?{" "}
-        <Link to="/auth?next=%2Fworker" style={{ color: "#7aa2ff" }}>
-          Sign in as a worker
-        </Link>
-        .
-      </p>
+      {zonePickerOpen ? (
+        <div className="wk-modal" role="dialog" aria-modal="true" aria-label="Select service zone">
+          <div className="wk-modal__backdrop" onClick={() => setZonePickerOpen(false)} />
+          <div className="wk-modal__panel">
+            <div className="wk-modal__head">
+              <div>
+                <p className="wk-eyebrow">
+                  <MapPin size={13} /> Service area
+                </p>
+                <h3>Choose your work zone</h3>
+              </div>
+              <button
+                type="button"
+                className="wk-modal__close"
+                onClick={() => setZonePickerOpen(false)}
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <label className="wk-zone-search">
+              <Search size={15} />
+              <input
+                type="search"
+                value={zoneQuery}
+                onChange={(event) => setZoneQuery(event.target.value)}
+                placeholder="Search city, area or state…"
+                autoFocus
+              />
+            </label>
+
+            <div className="wk-zone-list">
+              {zoneLoading ? (
+                <p className="wk-zone-state">Loading live service zones…</p>
+              ) : zoneError ? (
+                <p className="wk-zone-state wk-zone-state--error">{zoneError}</p>
+              ) : filteredZones.length === 0 ? (
+                <p className="wk-zone-state">
+                  {zones.length === 0
+                    ? "No live service zones are configured yet. Please try again later."
+                    : "No zones match your search."}
+                </p>
+              ) : (
+                filteredZones.map((zone) => {
+                  const active =
+                    zone.cityName === form.city &&
+                    zone.areaName === form.areaName;
+                  return (
+                    <button
+                      key={zone.id || zone.label}
+                      type="button"
+                      className={`wk-zone-option${active ? " is-active" : ""}`}
+                      onClick={() => applyZone(zone)}
+                    >
+                      <MapPin size={16} />
+                      <span>
+                        <strong>{zone.areaName || zone.cityName || zone.label}</strong>
+                        <small>
+                          {[zone.cityName, zone.state].filter(Boolean).join(", ") || zone.label}
+                          {zone.radiusKm ? ` · ${zone.radiusKm} km radius` : ""}
+                        </small>
+                      </span>
+                      {active ? <BadgeCheck size={16} /> : null}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

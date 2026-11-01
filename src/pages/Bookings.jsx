@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowRight,
@@ -414,7 +414,8 @@ function BookingCard({
         ) : null}
         {photo ? (
           <a href={photo} target="_blank" rel="noreferrer">
-            <img
+             <img
+               className="booking-card__photo"
               src={photo}
               alt={`${booking.service} reference`}
               style={{
@@ -607,9 +608,17 @@ function BookingCard({
         ) : null}
 
         {booking.status === "completed" && !booking.paidAt ? (
-          <Button size="sm" variant="primary" onClick={onPay} icon={Wallet}>
-            Confirm payment
-          </Button>
+          <>
+            {booking.workerPaymentMode ? (
+              <span className="tiny muted">
+                Your pro requested {booking.workerPaymentMode.toUpperCase()}. Pay them directly,
+                then confirm it here.
+              </span>
+            ) : null}
+            <Button size="sm" variant="primary" onClick={onPay} icon={Wallet}>
+              Confirm payment
+            </Button>
+          </>
         ) : null}
 
         {booking.status === "completed" && booking.paidAt && !booking.reviewId ? (
@@ -796,6 +805,10 @@ function PaymentModal({ booking, profile, onClose, onDone }) {
   const [reference, setReference] = useState("");
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    if (booking?.workerPaymentMode) setMode(booking.workerPaymentMode);
+  }, [booking?.id, booking?.workerPaymentMode]);
+
   const baseAmount =
     booking?.pricing?.finalPrice ||
     booking?.pricing?.workerPrice ||
@@ -890,8 +903,6 @@ function PaymentModal({ booking, profile, onClose, onDone }) {
           <Select id="pay-mode" value={mode} onChange={(event) => setMode(event.target.value)}>
             <option value="cash">Cash</option>
             <option value="upi">UPI</option>
-            <option value="online">Online transfer</option>
-            <option value="card">Card</option>
           </Select>
         </Field>
 

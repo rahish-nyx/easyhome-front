@@ -38,6 +38,7 @@ import {
   UserRound,
   Wallet,
   Zap,
+  X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCatalogue } from "../context/CatalogueContext";
@@ -94,10 +95,10 @@ const TABS = [
   { id: "profile", label: "Profile", icon: UserRound },
 ];
 
-const PRIMARY_TAB_IDS = ["home", "jobs", "track", "earnings", "profile"];
+const PRIMARY_TAB_IDS = ["home", "jobs", "track", "earnings"];
 const PRIMARY_TABS = TABS.filter((item) => PRIMARY_TAB_IDS.includes(item.id));
-// Profile lives in the avatar menu and the mobile bottom bar. Keeping it out of
-// the desktop tab strip leaves the header room for the live job tools.
+// Profile lives in the avatar menu. Keeping it out of the navigation bars leaves
+// the worker's primary navigation focused on daily job operations.
 const HEADER_TABS = TABS.filter((item) => item.id !== "profile");
 
 const PHASE_TOAST = {
@@ -131,7 +132,14 @@ export default function WorkerDashboard() {
     logout,
     refreshProfile,
   } = useAuth();
-  const { settings, promos, zones } = useCatalogue();
+  const {
+    settings: catalogueSettings,
+    promos: cataloguePromos,
+    zones: catalogueZones,
+  } = useCatalogue();
+  const settings = catalogueSettings || {};
+  const promos = Array.isArray(cataloguePromos) ? cataloguePromos : [];
+  const zones = Array.isArray(catalogueZones) ? catalogueZones : [];
   const toast = useToast();
   const [params, setParams] = useSearchParams();
   const requestedTab = params.get("tab") || "home";
@@ -140,19 +148,28 @@ export default function WorkerDashboard() {
 
   const [busy, setBusy] = useState("");
   const [onlineSaving, setOnlineSaving] = useState(false);
+  const [onlineOverride, setOnlineOverride] = useState(null);
   const [priceTarget, setPriceTarget] = useState(null);
   const [confirmTarget, setConfirmTarget] = useState(null);
-  const [completeTarget, setCompleteTarget] = useState(null);
   const [paymentTarget, setPaymentTarget] = useState(null);
   const [feeTarget, setFeeTarget] = useState(null);
   const [hiddenHistory, setHiddenHistory] = useState(() => new Set());
   const [optimisticActive, setOptimisticActive] = useState([]);
+  const [jobOverrides, setJobOverrides] = useState({});
   const [hiddenFeedIds, setHiddenFeedIds] = useState(() => new Set());
+  const isOnline = onlineOverride ?? Boolean(worker?.online);
+  const workerUi = worker ? { ...worker, online: isOnline } : worker;
+
+  useEffect(() => {
+    setOnlineOverride(null);
+  }, [worker?.online]);
 
   const earningsState = useAsync(() => api.get("/worker/earnings"), []);
   const commissionsState = useAsync(() => api.get("/worker/commission"), []);
-  const earnings = earningsState.data || EMPTY_EARNINGS;
-  const commissions = commissionsState.data?.commissions || [];
+  const earnings = { ...EMPTY_EARNINGS, ...(earningsState.data || {}) };
+  const commissions = Array.isArray(commissionsState.data?.commissions)
+    ? commissionsState.data.commissions
+    : [];
 
   const myQuery = useMemo(
     () => (user ? qBookingsForWorker(user.uid) : null),
@@ -196,14 +213,14 @@ export default function WorkerDashboard() {
   const activeJobs = useMemo(() => {
     const fromServer = myBookings.filter((job) =>
       ["accepted", "ongoing"].includes(job.status),
-    );
+    ).map((job) => ({ ...job, ...(jobOverrides[job.id] || {}) }));
     const serverIds = new Set(fromServer.map((job) => job.id));
     const optimistic = optimisticActive.filter((job) => !serverIds.has(job.id));
     return [...optimistic, ...fromServer].sort((a, b) => {
       if (a.status !== b.status) return a.status === "ongoing" ? -1 : 1;
       return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     });
-  }, [myBookings, optimisticActive]);
+  }, [myBookings, optimisticActive, jobOverrides]);
 
   // Drop optimistic entries once the server list has caught up.
   useEffect(() => {
@@ -249,7 +266,11 @@ export default function WorkerDashboard() {
       .map((job) => ({
         ...job,
         id: job.bookingId || job.id,
-        distance: distanceKm(worker, job),
+        sameServiceZone: Boolean(job.serviceZoneId && activeZoneIds.has(job.serviceZoneId)),
+        distance:
+          job.serviceZoneId && activeZoneIds.has(job.serviceZoneId)
+            ? null
+            : distanceKm(worker, job),
       }))
       .sort((a, b) => {
         if (a.priority !== b.priority) return a.priority === "pro" ? -1 : 1;
@@ -260,12 +281,12 @@ export default function WorkerDashboard() {
   }, [feed, worker, activeZoneIds]);
 
   const canAccept =
-    Boolean(worker?.online) &&
+    isOnline &&
     (isPremium || (Number(worker?.dues) || 0) <= 0) &&
     activeJobs.length === 0;
 
   useEffect(() => {
-    if (!worker?.online || !navigator.geolocation) return undefined;
+    if (!isOnline || !navigator.geolocation) return undefined;
     let active = true;
     const syncLocation = () => {
       navigator.geolocation.getCurrentPosition(
@@ -287,7 +308,7 @@ export default function WorkerDashboard() {
       active = false;
       window.clearInterval(timer);
     };
-  }, [worker?.online]);
+  }, [isOnline]);
 
   const setTab = (next) => {
     const search = new URLSearchParams(params);
@@ -299,32 +320,31 @@ export default function WorkerDashboard() {
 
   const toggleOnline = async () => {
     if (onlineSaving) return;
-    const next = !worker?.online;
+    const next = !isOnline;
     setOnlineSaving(true);
+    setOnlineOverride(next);
     try {
-      const location = {};
+      await api.patch("/worker/availability", { online: next });
       if (next && navigator.geolocation) {
-        try {
-          const position = await new Promise((resolve, reject) =>
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              maximumAge: 30_000,
-              timeout: 8_000,
-            }),
-          );
-          location.lat = position.coords.latitude;
-          location.lng = position.coords.longitude;
-        } catch {
-          // The worker can still go online; the server will use the saved area.
-        }
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            api.patch("/worker/availability", {
+              online: true,
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            }).catch(() => {});
+          },
+          () => {},
+          { enableHighAccuracy: true, maximumAge: 30_000, timeout: 8_000 },
+        );
       }
-      await api.patch("/worker/availability", { online: next, ...location });
       toast.success(
         next
           ? "You are online. New jobs in your trade will appear here."
           : "You are offline. You will not receive new jobs.",
       );
     } catch (error) {
+      setOnlineOverride(null);
       toast.error(error.message);
     } finally {
       setOnlineSaving(false);
@@ -409,8 +429,55 @@ export default function WorkerDashboard() {
   const submitPhase = async (job, phase) => {
     setBusy(`phase:${job.id}:${phase}`);
     try {
-      await api.patch(`/worker/jobs/${job.id}/phase`, { phase });
+      const endpoint = phase === TRACKING_PHASES.WORKING
+        ? `/worker/jobs/${job.id}/start`
+        : `/worker/jobs/${job.id}/phase`;
+      await api.patch(endpoint, { phase });
       toast.success(PHASE_TOAST[phase] || "Job status updated.");
+    } catch (error) {
+      toast.error(error.message);
+      throw error;
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const startJob = async (job) => {
+    setBusy(`start:${job.id}`);
+    try {
+      await api.patch(`/worker/jobs/${job.id}/start`, {});
+      setJobOverrides((previous) => ({
+        ...previous,
+        [job.id]: {
+          status: "ongoing",
+          trackingPhase: TRACKING_PHASES.WORKING,
+          startedAt: new Date().toISOString(),
+        },
+      }));
+      toast.success("Job started. Timer is running.");
+    } catch (error) {
+      toast.error(error.message);
+      throw error;
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const manuallyUpdateJob = async (job) => {
+    const phase = job.trackingPhase ||
+      (job.status === "ongoing" ? TRACKING_PHASES.WORKING : TRACKING_PHASES.ASSIGNED);
+    if (phase !== TRACKING_PHASES.WORKING) {
+      await startJob(job);
+      return;
+    }
+    setBusy(`update:${job.id}`);
+    try {
+      await api.patch(`/worker/jobs/${job.id}/phase`, { phase: TRACKING_PHASES.WORKING });
+      setJobOverrides((previous) => ({
+        ...previous,
+        [job.id]: { status: "ongoing", trackingPhase: TRACKING_PHASES.WORKING },
+      }));
+      toast.success("Job status updated. Work is still in progress.");
     } catch (error) {
       toast.error(error.message);
       throw error;
@@ -421,7 +488,7 @@ export default function WorkerDashboard() {
 
   const advanceJob = (job, phase) => {
     if (phase === TRACKING_PHASES.COMPLETED) {
-      setCompleteTarget(job);
+      submitComplete(job).catch(() => {});
       return;
     }
     submitPhase(job, phase).catch(() => {});
@@ -431,8 +498,12 @@ export default function WorkerDashboard() {
     setBusy(`complete:${job.id}`);
     try {
       await api.patch(`/worker/jobs/${job.id}/complete`);
-      setCompleteTarget(null);
-      setPaymentTarget(job);
+      setJobOverrides((previous) => {
+        const next = { ...previous };
+        delete next[job.id];
+        return next;
+      });
+      setPaymentTarget({ ...job, status: "completed", trackingPhase: TRACKING_PHASES.COMPLETED });
       toast.success("Job completed. Choose how you will accept payment.");
       await refreshMoney();
     } catch (error) {
@@ -453,7 +524,17 @@ export default function WorkerDashboard() {
           : "Cash collection recorded. The customer can confirm payment.",
       );
       setPaymentTarget(null);
-      setTab("track");
+      await refreshMoney();
+      setTab("earnings");
+      const payable = commissions.find(
+        (item) => item.bookingId === job.id && ["pending", "rejected"].includes(item.status),
+      );
+      if (payable) {
+        setFeeTarget(payable);
+        toast.info("Job payment recorded. Clear the 10% platform fee to unlock new jobs.");
+      } else {
+        toast.success("Payment method saved. No platform fee is due for this job.");
+      }
     } catch (error) {
       toast.error(error.message);
       throw error;
@@ -513,17 +594,17 @@ export default function WorkerDashboard() {
           <div className="worker-top__right">
             <button
               type="button"
-              className={`wk-online-toggle${worker.online ? " is-on" : ""}`}
+              className={`wk-online-toggle${isOnline ? " is-on" : ""}`}
               onClick={toggleOnline}
               disabled={onlineSaving}
-              aria-pressed={Boolean(worker.online)}
+              aria-pressed={isOnline}
             >
               {onlineSaving ? (
                 <Spinner size={13} />
               ) : (
                 <Power size={14} />
               )}
-              <span>{worker.online ? "Online" : "Offline"}</span>
+              <span>{isOnline ? "Online" : "Offline"}</span>
             </button>
 
             <span className="wk-top-earning">
@@ -545,7 +626,7 @@ export default function WorkerDashboard() {
             </span>
 
             <WorkerProfileMenu
-              worker={worker}
+              worker={workerUi}
               profile={profile}
               isPremium={isPremium}
               dues={Number(worker.dues) || 0}
@@ -563,7 +644,7 @@ export default function WorkerDashboard() {
       <main className="worker-main">
         <EarningsStrip
           earnings={earnings}
-          worker={worker}
+          worker={workerUi}
           isPremium={isPremium}
           refreshing={earningsState.loading}
           onRefresh={refreshMoney}
@@ -572,7 +653,7 @@ export default function WorkerDashboard() {
 
         {tab === "home" ? <WorkerAdSlot promos={promos} /> : null}
 
-        {!worker.online ? (
+        {!isOnline ? (
           <div className="wk-banner wk-banner--offline">
             <span className="wk-banner__icon">
               <Power size={18} />
@@ -587,24 +668,9 @@ export default function WorkerDashboard() {
           </div>
         ) : null}
 
-        {!isPremium && Number(worker.dues) > 0 ? (
-          <div className="wk-banner wk-banner--dues">
-            <span className="wk-banner__icon">
-              <CircleAlert size={18} />
-            </span>
-            <div className="grow">
-              <strong>{inr(worker.dues)} fees due</strong>
-              <p>Clear dues or activate Pro to keep accepting new jobs.</p>
-            </div>
-            <button type="button" className="wk-link-btn" onClick={() => setTab("earnings")}>
-              Pay now
-            </button>
-          </div>
-        ) : null}
-
         {tab === "home" ? (
           <HomeTab
-            worker={worker}
+            worker={workerUi}
             earnings={earnings}
             activeJobs={activeJobs}
             available={available}
@@ -617,7 +683,9 @@ export default function WorkerDashboard() {
             onQuote={setPriceTarget}
             onConfirm={setConfirmTarget}
             onPhase={advanceJob}
-            onComplete={setCompleteTarget}
+            onStart={startJob}
+            onComplete={submitComplete}
+            onReceivePayment={setPaymentTarget}
             gps={gps}
             onAccept={acceptJob}
           />
@@ -625,7 +693,7 @@ export default function WorkerDashboard() {
 
         {tab === "jobs" ? (
           <JobsTab
-            worker={worker}
+            worker={workerUi}
             activeJobs={activeJobs}
             available={available}
             history={history}
@@ -637,7 +705,9 @@ export default function WorkerDashboard() {
             onQuote={setPriceTarget}
             onConfirm={setConfirmTarget}
             onPhase={advanceJob}
-            onComplete={setCompleteTarget}
+            onStart={startJob}
+            onComplete={submitComplete}
+            onReceivePayment={setPaymentTarget}
             gps={gps}
             onAccept={acceptJob}
             onGoOnline={toggleOnline}
@@ -647,7 +717,7 @@ export default function WorkerDashboard() {
 
         {tab === "track" ? (
           <TrackTab
-            worker={worker}
+            worker={workerUi}
             activeJobs={activeJobs}
             loading={myLoading}
             busy={busy}
@@ -657,7 +727,9 @@ export default function WorkerDashboard() {
             onQuote={setPriceTarget}
             onConfirm={setConfirmTarget}
             onPhase={advanceJob}
-            onComplete={setCompleteTarget}
+            onStart={startJob}
+            onComplete={submitComplete}
+            onReceivePayment={setPaymentTarget}
             gps={gps}
             onGoOnline={toggleOnline}
           />
@@ -665,7 +737,7 @@ export default function WorkerDashboard() {
 
         {tab === "earnings" ? (
           <EarningsTab
-            worker={worker}
+            worker={workerUi}
             earnings={earnings}
             commissions={commissions}
             loading={earningsState.loading || commissionsState.loading}
@@ -702,7 +774,7 @@ export default function WorkerDashboard() {
               worker.upiId,
               worker.photoPath,
             ])}
-            worker={worker}
+            worker={workerUi}
             onLogout={logout}
             onRefresh={refreshMoney}
           />
@@ -749,12 +821,6 @@ export default function WorkerDashboard() {
         onClose={() => setConfirmTarget(null)}
         onSubmit={(price) => submitConfirm(confirmTarget, price)}
       />
-      <CompleteModal
-        job={completeTarget}
-        busy={Boolean(busy)}
-        onClose={() => setCompleteTarget(null)}
-        onConfirm={() => submitComplete(completeTarget)}
-      />
       <PaymentModeModal
         job={paymentTarget}
         busy={Boolean(busy)}
@@ -771,12 +837,7 @@ export default function WorkerDashboard() {
         alert={trackingAlert}
         gps={gps}
         supportPhone={supportPhone}
-        onUpdate={(job) => {
-          const search = new URLSearchParams(params);
-          search.set("tab", "jobs");
-          search.set("job", job.id);
-          setParams(search, { replace: true });
-        }}
+        onUpdate={manuallyUpdateJob}
       />
     </div>
   );
@@ -809,13 +870,6 @@ function EarningsStrip({ earnings, worker, isPremium, refreshing, onRefresh, onE
         <span>This month</span>
         <strong>{inr(earnings.month)}</strong>
       </div>
-      <div className="wk-earnings-strip__metric">
-        <span>Fees due</span>
-        <strong className={Number(earnings.dues) > 0 ? "wk-text-red" : ""}>
-          {inr(earnings.dues)}
-        </strong>
-      </div>
-
       <div className="wk-earnings-strip__actions">
         <button
           type="button"
@@ -1087,11 +1141,15 @@ function HomeTab({
   onTab,
   onQuote,
   onConfirm,
+  onStart,
   onPhase,
   onComplete,
+  onReceivePayment,
   onAccept,
   gps,
 }) {
+  const feesDue = isPremium ? 0 : Number(worker.dues ?? earnings.dues ?? 0) || 0;
+
   return (
     <>
       <div className="wk-hero">
@@ -1122,8 +1180,8 @@ function HomeTab({
             <span>Rating</span>
           </div>
           <div>
-            <strong>{isPremium ? "0%" : "—"}</strong>
-            <span>Fees</span>
+            <strong className={feesDue > 0 ? "wk-text-red" : ""}>{inr(feesDue)}</strong>
+            <span>Fees due</span>
           </div>
         </div>
       </div>
@@ -1136,8 +1194,9 @@ function HomeTab({
         onQuote={onQuote}
         onConfirm={onConfirm}
         onPhase={onPhase}
+        onStart={onStart}
         onComplete={onComplete}
-            onReceivePayment={setPaymentTarget}
+        onReceivePayment={onReceivePayment}
         gps={gps}
         onSeeAll={() => onTab("jobs")}
       />
@@ -1572,8 +1631,10 @@ function JobsTab({
   focusJobId,
   onQuote,
   onConfirm,
+  onStart,
   onPhase,
   onComplete,
+  onReceivePayment,
   onAccept,
   onGoOnline,
   gps,
@@ -1602,20 +1663,14 @@ function JobsTab({
         </button>
       </div>
 
-      {!canAccept ? (
-        <div className={`wk-banner ${worker.online ? "wk-banner--dues" : "wk-banner--offline"}`}>
+      {!worker.online ? (
+        <div className="wk-banner wk-banner--offline">
           <span className="wk-banner__icon">
-            <CircleAlert size={18} />
+            <Power size={18} />
           </span>
           <div className="grow">
-            <strong>{worker.online ? "Fees dues are blocking new jobs" : "You are offline"}</strong>
-            <p>
-              {worker.online
-                ? isPremium
-                  ? "Refresh your account status."
-                  : "Pay your dues or activate Pro to accept new jobs."
-                : "Go online to receive real-time job requests in your trade."}
-            </p>
+            <strong>You are offline</strong>
+            <p>Go online to receive real-time job requests in your trade.</p>
           </div>
         </div>
       ) : null}
@@ -1628,8 +1683,9 @@ function JobsTab({
         onQuote={onQuote}
         onConfirm={onConfirm}
         onPhase={onPhase}
+        onStart={onStart}
         onComplete={onComplete}
-            onReceivePayment={setPaymentTarget}
+            onReceivePayment={onReceivePayment}
         gps={gps}
       />
 
@@ -1702,8 +1758,10 @@ function TrackTab({
   focusJobId,
   onQuote,
   onConfirm,
+  onStart,
   onPhase,
   onComplete,
+  onReceivePayment,
   gps,
 }) {
   const gpsLive = gps?.status === "sharing";
@@ -1746,8 +1804,9 @@ function TrackTab({
           onQuote={onQuote}
           onConfirm={onConfirm}
           onPhase={onPhase}
+        onStart={onStart}
           onComplete={onComplete}
-            onReceivePayment={setPaymentTarget}
+            onReceivePayment={onReceivePayment}
           gps={gps}
         />
       )}
@@ -1764,6 +1823,7 @@ function ActiveJobsSection({
   focusJobId,
   onQuote,
   onConfirm,
+  onStart,
   onPhase,
   onComplete,
   onReceivePayment,
@@ -1794,6 +1854,7 @@ function ActiveJobsSection({
               highlight={focusJobId === job.id}
               onQuote={() => onQuote(job)}
               onConfirm={() => onConfirm(job)}
+              onStart={() => onStart(job)}
               onPhase={(phase) => onPhase(job, phase)}
                onComplete={() => onComplete(job)}
                onReceivePayment={() => onReceivePayment?.(job)}
@@ -1875,6 +1936,8 @@ function AvailableJobsSection({
 }
 
 function AvailableJobCard({ job, busy, canAccept, onAccept }) {
+  const photo = mediaUrl(job.imagePath);
+  const address = job.addressLabel || job.location?.label || job.area || "Service location shared";
   return (
     <article className={`wk-job${job.urgency === "urgent" ? " wk-job--urgent" : ""}`}>
       <div className="wk-job__top">
@@ -1901,7 +1964,9 @@ function AvailableJobCard({ job, busy, canAccept, onAccept }) {
             <span>
               <MapPin size={12} /> {job.area}
             </span>
-            {job.distance !== null && job.distance !== undefined ? (
+            {job.sameServiceZone ? (
+              <span>In your service zone</span>
+            ) : job.distance !== null && job.distance !== undefined ? (
               <span>
                 <Navigation size={12} /> {distanceLabel(job.distance)}
               </span>
@@ -1917,11 +1982,22 @@ function AvailableJobCard({ job, busy, canAccept, onAccept }) {
         </div>
       </div>
 
+      {photo ? (
+        <a className="wk-job__photo-wrap" href={photo} target="_blank" rel="noreferrer">
+          <img className="wk-job__photo" src={photo} alt={`${job.service} customer reference`} />
+        </a>
+      ) : null}
+
+      <div className="wk-job__details">
+        <span><MapPin size={12} /> {address}</span>
+        {job.zoneName || job.cityName ? <span>{[job.zoneName, job.cityName].filter(Boolean).join(" · ")}</span> : null}
+      </div>
+
       {job.description ? <p className="wk-job__desc">{job.description}</p> : null}
 
       <div className="wk-job__actions">
         <span className="wk-job__note">
-          {canAccept ? "One tap accepts this job." : "Tap accept to clear dues or go online."}
+          {canAccept ? "One tap accepts this job." : "Account checks are required before accepting."}
         </span>
         <button
           type="button"
@@ -1943,6 +2019,7 @@ function ActiveJobCard({
   highlight,
   onQuote,
   onConfirm,
+  onStart,
   onPhase,
   onComplete,
   onReceivePayment,
@@ -1956,9 +2033,23 @@ function ActiveJobCard({
     job.pricing?.finalPrice || job.pricing?.workerPrice || job.pricing?.customerOffer || job.budget;
   const lat = job.location?.lat;
   const lng = job.location?.lng;
-  const phase =
+  // The booking status is the source of truth. Older records can retain a
+  // completed trackingPhase while the booking is still active; those jobs
+  // must continue to show Complete job, never payment collection.
+  const isCompleted = job.status === "completed";
+  const rawPhase =
     job.trackingPhase ||
     (job.status === "ongoing" ? TRACKING_PHASES.WORKING : TRACKING_PHASES.ASSIGNED);
+  const started =
+    !isCompleted &&
+    (job.status === "ongoing" ||
+      Boolean(job.startedAt) ||
+      [TRACKING_PHASES.EN_ROUTE, TRACKING_PHASES.ARRIVED, TRACKING_PHASES.WORKING].includes(rawPhase));
+  const phase = isCompleted
+    ? TRACKING_PHASES.COMPLETED
+    : started
+      ? TRACKING_PHASES.WORKING
+      : TRACKING_PHASES.ASSIGNED;
   const meta = trackingMeta(phase, job.status);
   const milestoneIndex =
     phase === "completed"
@@ -2192,7 +2283,7 @@ function ActiveJobCard({
           </>
         ) : null}
 
-        {confirmed && phase !== TRACKING_PHASES.COMPLETED ? (
+        {confirmed && !isCompleted ? (
           phase === TRACKING_PHASES.WORKING ? (
             <button
               type="button"
@@ -2205,13 +2296,12 @@ function ActiveJobCard({
                 <strong>Complete job</strong>
                 <small>Finish the job and open payment collection</small>
               </span>
-              <ChevronRight size={18} />
             </button>
           ) : (
             <button
               type="button"
               className="wk-btn wk-btn--block wk-phase-btn"
-              onClick={() => onPhase(TRACKING_PHASES.WORKING)}
+              onClick={onStart}
               disabled={busy}
             >
               <Zap size={22} />
@@ -2224,7 +2314,7 @@ function ActiveJobCard({
           )
         ) : null}
 
-        {confirmed && phase === TRACKING_PHASES.COMPLETED ? (
+        {confirmed && isCompleted ? (
           <button
             type="button"
             className="wk-btn wk-btn--block wk-btn--primary"

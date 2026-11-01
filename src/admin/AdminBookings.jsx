@@ -421,6 +421,9 @@ export default function AdminBookings() {
                           <span className="adm-table__muted">
                             {booking.workerName || "Unassigned"}
                           </span>
+                          {booking.workerRegisteredNumber ? (
+                            <small className="adm-table__muted">{booking.workerRegisteredNumber}</small>
+                          ) : null}
                         </td>
                         <td>
                           <strong className="adm-money">
@@ -433,6 +436,8 @@ export default function AdminBookings() {
                         <td>
                           {booking.paidAt ? (
                             <StatusPill status="paid" label={booking.paymentMode || "Paid"} />
+                          ) : booking.workerPaymentMode ? (
+                            <StatusPill status="pending" label={`Awaiting ${booking.workerPaymentMode}`} />
                           ) : (
                             <span className="adm-table__muted">Unpaid</span>
                           )}
@@ -574,6 +579,10 @@ export default function AdminBookings() {
               <KeyValue label="Booking ID" value={<span className="adm-mono">{selected.id}</span>} />
               <KeyValue label="Customer" value={selected.customerName || "Customer"} />
               <KeyValue label="Worker" value={selected.workerName || "Unassigned"} />
+              <KeyValue
+                label="Worker registered number"
+                value={selected.workerRegisteredNumber || "Not available"}
+              />
               <KeyValue label="Area" value={selected.area} />
               <KeyValue label="Budget" value={inr(selected.budget)} />
               <KeyValue
@@ -591,6 +600,20 @@ export default function AdminBookings() {
                     ? inr(selected.pricing.workerReceives)
                     : "—"
                 }
+              />
+              <KeyValue
+                label="Payment collection"
+                value={
+                  selected.paidAt
+                    ? `${selected.paymentMode || "paid"} · confirmed`
+                    : selected.workerPaymentMode
+                      ? `${selected.workerPaymentMode} · awaiting customer`
+                      : "Not selected"
+                }
+              />
+              <KeyValue
+                label="Worker fees due"
+                value={selected.workerFeesDue ? inr(selected.workerFeesDue) : "No dues"}
               />
               <KeyValue label="Created" value={formatDateTime(selected.createdAt)} />
               <KeyValue

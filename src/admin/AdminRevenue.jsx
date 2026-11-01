@@ -443,6 +443,11 @@ export default function AdminRevenue() {
                           {commission.service || "Job"} · {timeAgo(commission.createdAt)} ·{" "}
                           <span className="adm-mono">{commission.bookingId?.slice(0, 12)}…</span>
                         </p>
+                        {commission.workerRegisteredNumber ? (
+                          <small className="adm-note-inline">
+                            Worker registered number: {commission.workerRegisteredNumber}
+                          </small>
+                        ) : null}
                         {paymentReference(commission) ? (
                           <div className="adm-utr">
                             <span>{commission.paymentId ? "Payment ID" : "Legacy ref"}</span>
