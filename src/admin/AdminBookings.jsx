@@ -60,6 +60,9 @@ export default function AdminBookings() {
   const [selected, setSelected] = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
+  const [reassignTarget, setReassignTarget] = useState(null);
+  const [reassignWorkerId, setReassignWorkerId] = useState("");
+  const [reassignReason, setReassignReason] = useState("");
   const [payTarget, setPayTarget] = useState(null);
   const [payMode, setPayMode] = useState("cash");
   const [busy, setBusy] = useState("");
@@ -85,6 +88,23 @@ export default function AdminBookings() {
     [status],
   );
   const bookings = bookingsState.data?.bookings || [];
+
+  const workersState = useAsync(
+    () => api.get("/admin/workers?status=approved&limit=200"),
+    [],
+  );
+  const approvedWorkers = workersState.data?.workers || [];
+  const reassignCandidates = useMemo(() => {
+    if (!reassignTarget) return [];
+    return approvedWorkers.filter((worker) => {
+      if (worker.id === reassignTarget.workerId) return false;
+      const trades = Array.isArray(worker.trades) ? worker.trades : [];
+      return (
+        worker.serviceKey === reassignTarget.serviceKey ||
+        trades.includes(reassignTarget.serviceKey)
+      );
+    });
+  }, [approvedWorkers, reassignTarget]);
 
   const queryBooking = params.get("booking") || "";
 
@@ -188,6 +208,35 @@ export default function AdminBookings() {
       toast.success("Booking cancelled and both parties notified.");
       setCancelTarget(null);
       setCancelReason("");
+      setSelected(null);
+      await Promise.allSettled([bookingsState.run(), refreshShell()]);
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const reassignBooking = async () => {
+    if (!reassignTarget) return;
+    if (!reassignWorkerId) {
+      toast.error("Choose a professional to assign.");
+      return;
+    }
+    if (reassignReason.trim().length < 3) {
+      toast.error("Add a short reassignment reason.");
+      return;
+    }
+    setBusy(reassignTarget.id);
+    try {
+      await api.patch(`/admin/bookings/${reassignTarget.id}/reassign`, {
+        workerId: reassignWorkerId,
+        reason: reassignReason.trim(),
+      });
+      toast.success("Booking reassigned and everyone notified.");
+      setReassignTarget(null);
+      setReassignWorkerId("");
+      setReassignReason("");
       setSelected(null);
       await Promise.allSettled([bookingsState.run(), refreshShell()]);
     } catch (error) {
@@ -526,6 +575,19 @@ export default function AdminBookings() {
               {selected.status !== "cancelled" && selected.status !== "completed" ? (
                 <Button
                   variant="outline"
+                  icon={Users}
+                  onClick={() => {
+                    setReassignWorkerId("");
+                    setReassignReason("");
+                    setReassignTarget(selected);
+                  }}
+                >
+                  Reassign
+                </Button>
+              ) : null}
+              {selected.status !== "cancelled" && selected.status !== "completed" ? (
+                <Button
+                  variant="outline"
                   onClick={() => {
                     setCancelReason("");
                     setCancelTarget(selected);
@@ -642,6 +704,13 @@ export default function AdminBookings() {
               </div>
             ) : null}
 
+            {selected.reassignReason ? (
+              <div className="adm-note-block">
+                <span>Reassignment reason</span>
+                <p>{selected.reassignReason}</p>
+              </div>
+            ) : null}
+
             {selected.pricing?.customerOffer ? (
               <div className="adm-note-block">
                 <span>Customer counter-offer</span>
@@ -650,6 +719,79 @@ export default function AdminBookings() {
             ) : null}
           </div>
         ) : null}
+      </Modal>
+
+      <Modal
+        open={Boolean(reassignTarget)}
+        onClose={() => setReassignTarget(null)}
+        title="Reassign this booking?"
+        subtitle={reassignTarget ? `${reassignTarget.service} · ${reassignTarget.area}` : ""}
+        size="sm"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => setReassignTarget(null)}
+              disabled={busy === reassignTarget?.id}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={reassignBooking}
+              loading={busy === reassignTarget?.id}
+            >
+              Reassign booking
+            </Button>
+          </>
+        }
+      >
+        <div className="stack">
+          <label className="field">
+            <span className="field__label">
+              Assign to<em>*</em>
+            </span>
+            <select
+              className="input"
+              value={reassignWorkerId}
+              onChange={(event) => setReassignWorkerId(event.target.value)}
+              disabled={workersState.loading}
+            >
+              <option value="">
+                {workersState.loading
+                  ? "Loading professionals…"
+                  : "Choose an approved professional"}
+              </option>
+              {reassignCandidates.map((worker) => (
+                <option key={worker.id} value={worker.id}>
+                  {worker.name} · {worker.serviceKey || worker.service} ·{" "}
+                  {worker.areaName || worker.area || worker.city || "Any area"}
+                </option>
+              ))}
+            </select>
+            {!workersState.loading && !reassignCandidates.length ? (
+              <span className="field__hint">
+                No other approved professional offers this service yet.
+              </span>
+            ) : null}
+          </label>
+          <label className="field">
+            <span className="field__label">
+              Reason<em>*</em>
+            </span>
+            <textarea
+              className="input"
+              rows={3}
+              maxLength={300}
+              value={reassignReason}
+              placeholder="Both the customer and the professionals will see this reason."
+              onChange={(event) => setReassignReason(event.target.value)}
+            />
+          </label>
+          <p className="tiny muted">
+            The previous professional is released and notified. The new
+            professional receives the job immediately.
+          </p>
+        </div>
       </Modal>
 
       <ReasonModal
