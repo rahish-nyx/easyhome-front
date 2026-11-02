@@ -1,4 +1,8 @@
 import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import L from "leaflet";
+import { Circle, MapContainer, Marker, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -296,32 +300,147 @@ export function MiniBars({ values = [], tone = "yellow" }) {
 
 /* ---------------------------------- Map ---------------------------------- */
 
-export function CoverageMap({ center, radiusKm = 10, jobs = [], className = "" }) {
+const MAP_TILES = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+
+function pinIcon(tone, label) {
+  return L.divIcon({
+    className: "adm-pin",
+    html: `<span class="adm-pin__dot is-${tone}"></span><span class="adm-pin__label">${label}</span>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    popupAnchor: [0, -10],
+  });
+}
+
+const PIN_CENTER = pinIcon("center", "Area centre");
+const PIN_SECONDARY = pinIcon("secondary", "Customer");
+const JOB_PINS = {
+  pending: pinIcon("pending", "Pending"),
+  active: pinIcon("active", "Active"),
+  done: pinIcon("done", "Completed"),
+  cancelled: pinIcon("cancelled", "Cancelled"),
+};
+
+function jobTone(status) {
+  if (status === "accepted" || status === "ongoing") return "active";
+  if (status === "completed") return "done";
+  if (status === "cancelled") return "cancelled";
+  return "pending";
+}
+
+function normalizePoint(source) {
+  if (!source) return null;
+  const lat = Number(source.location?.lat ?? source.lat);
+  const lng = Number(source.location?.lng ?? source.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
+    return null;
+  }
+  return { ...source, lat, lng };
+}
+
+function FitView({ signature, center, radiusKm, points }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!center) return;
+    const lat = Number(center.lat);
+    const lng = Number(center.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const bounds = L.latLng(lat, lng).toBounds(
+      Math.max(1200, Number(radiusKm || 10) * 2000),
+    );
+    points.forEach((point) => bounds.extend([point.lat, point.lng]));
+    map.fitBounds(bounds, { padding: [26, 26], maxZoom: 15 });
+    // signature captures the exact points/radius so polling re-renders cannot
+    // re-centre the map while an admin is panning around.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature, map]);
+
+  return null;
+}
+
+export function CoverageMap({
+  center,
+  radiusKm = 10,
+  jobs = [],
+  secondary = null,
+  onSelectJob,
+  className = "",
+}) {
   const lat = Number(center?.lat);
   const lng = Number(center?.lng);
-  const hasCenter = Number.isFinite(lat) && Number.isFinite(lng);
-
-  const latDelta = Math.max(0.03, Number(radiusKm) / 111.32);
-  const cos = Math.max(0.1, Math.cos((lat * Math.PI) / 180));
-  const lngDelta = Math.max(0.03, Number(radiusKm) / (111.32 * cos));
-
-  const src = hasCenter
-    ? `https://www.openstreetmap.org/export/embed.html?bbox=${(lng - lngDelta).toFixed(
-        4,
-      )},${(lat - latDelta).toFixed(4)},${(lng + lngDelta).toFixed(4)},${(
-        lat + latDelta
-      ).toFixed(4)}&layer=mapnik&marker=${lat.toFixed(4)},${lng.toFixed(4)}`
-    : "";
+  const hasCenter = Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
+  const points = jobs.map(normalizePoint).filter(Boolean);
+  const secondPoint = normalizePoint(secondary);
+  const signature = JSON.stringify({
+    c: hasCenter ? [lat, lng] : null,
+    r: radiusKm,
+    p: points.map((point) => [point.id, point.lat, point.lng]),
+    s: secondPoint ? [secondPoint.lat, secondPoint.lng] : null,
+  });
 
   return (
     <div className={cx("adm-map", className)}>
-      {src ? (
-        <iframe
-          title={`Coverage map for ${center.name || "selected city"}`}
-          src={src}
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-        />
+      {hasCenter ? (
+        <MapContainer
+          key="coverage"
+          center={[lat, lng]}
+          zoom={13}
+          minZoom={4}
+          maxZoom={18}
+          scrollWheelZoom={false}
+          className="adm-map__canvas"
+        >
+          <TileLayer url={MAP_TILES} attribution="&copy; OpenStreetMap contributors" />
+          <Circle
+            center={[lat, lng]}
+            radius={Math.max(200, Number(radiusKm) * 1000)}
+            pathOptions={{
+              color: "#ffd60a",
+              weight: 1.5,
+              opacity: 0.75,
+              fillColor: "#ffd60a",
+              fillOpacity: 0.06,
+            }}
+          />
+          <Marker position={[lat, lng]} icon={PIN_CENTER}>
+            <Tooltip direction="top" offset={[0, -8]}>
+              {center?.name || "Area centre"}
+            </Tooltip>
+          </Marker>
+          {secondPoint ? (
+            <Marker position={[secondPoint.lat, secondPoint.lng]} icon={PIN_SECONDARY}>
+              <Tooltip direction="top" offset={[0, -8]}>
+                {secondPoint.name || "Customer location"}
+              </Tooltip>
+            </Marker>
+          ) : null}
+          {points.map((job) => (
+            <Marker
+              key={job.id}
+              position={[job.lat, job.lng]}
+              icon={JOB_PINS[jobTone(job.status)] || JOB_PINS.pending}
+              eventHandlers={
+                onSelectJob ? { click: () => onSelectJob(job) } : undefined
+              }
+            >
+              <Popup>
+                <strong>{job.service || "Booking"}</strong>
+                <br />
+                {job.area || job.location?.area || "—"}
+                <br />
+                <span style={{ textTransform: "capitalize" }}>{job.status || "pending"}</span>
+                {onSelectJob ? <div className="adm-pin__hint">Open booking details</div> : null}
+              </Popup>
+            </Marker>
+          ))}
+          <FitView
+            signature={signature}
+            center={hasCenter ? { lat, lng } : null}
+            radiusKm={radiusKm}
+            points={[secondPoint, ...points].filter(Boolean)}
+          />
+        </MapContainer>
       ) : (
         <div className="adm-map__empty">
           <Compass size={26} />

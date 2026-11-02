@@ -52,7 +52,7 @@ const STATUS_TABS = [
 
 export default function AdminBookings() {
   const { stats, refreshShell } = useOutletContext();
-  const { cities } = useCatalogue();
+  const { cities, zones } = useCatalogue();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
   const [status, setStatus] = useState(params.get("status") || "");
@@ -115,12 +115,53 @@ export default function AdminBookings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryBooking, bookingsState.data]);
 
+  // Service zones are authoritative in this build; the legacy `cities`
+  // collection can be empty while zones are live. Derive map centres from
+  // zones so the coverage map always has a city to show.
+  const mapCities = useMemo(() => {
+    if (cities.length) return cities;
+    const byName = new Map();
+    for (const zone of zones) {
+      if (zone?.isActive === false) continue;
+      const name = zone?.cityName;
+      const lat = Number(zone?.latitude);
+      const lng = Number(zone?.longitude);
+      if (!name || !Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+      const radiusKm = Number(zone.radiusKm) || 10;
+      const current = byName.get(name);
+      if (current) {
+        current.latSum += lat;
+        current.lngSum += lng;
+        current.count += 1;
+        current.radiusKm = Math.max(current.radiusKm, radiusKm);
+      } else {
+        byName.set(name, {
+          id: `zone-city:${name}`,
+          name,
+          state: zone.state || "",
+          latSum: lat,
+          lngSum: lng,
+          count: 1,
+          radiusKm,
+        });
+      }
+    }
+    return [...byName.values()].map((cityDoc) => ({
+      id: cityDoc.id,
+      name: cityDoc.name,
+      state: cityDoc.state,
+      lat: cityDoc.latSum / cityDoc.count,
+      lng: cityDoc.lngSum / cityDoc.count,
+      radiusKm: cityDoc.radiusKm,
+    }));
+  }, [cities, zones]);
+
   useEffect(() => {
-    if (cityId || !cities.length) return;
-    const first = cities[0];
+    if (cityId || !mapCities.length) return;
+    const first = mapCities[0];
     setCityId(first.id);
     setRadius(Number(first.radiusKm) || 15);
-  }, [cities, cityId]);
+  }, [mapCities, cityId]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -137,7 +178,7 @@ export default function AdminBookings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingsState.data]);
 
-  const city = cities.find((item) => item.id === cityId) || null;
+  const city = mapCities.find((item) => item.id === cityId) || null;
 
   const activeJobs = useMemo(
     () =>
@@ -333,12 +374,12 @@ export default function AdminBookings() {
                 value={cityId}
                 onChange={(event) => {
                   setCityId(event.target.value);
-                  const next = cities.find((item) => item.id === event.target.value);
+                  const next = mapCities.find((item) => item.id === event.target.value);
                   setRadius(Number(next?.radiusKm) || 15);
                 }}
               >
-                {cities.length ? (
-                  cities.map((item) => (
+                {mapCities.length ? (
+                  mapCities.map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.name}
                     </option>
@@ -364,7 +405,12 @@ export default function AdminBookings() {
         }
       >
         <div className="adm-map-grid">
-          <CoverageMap center={city} radiusKm={radius} jobs={mapJobs} />
+          <CoverageMap
+            center={city}
+            radiusKm={radius}
+            jobs={mapJobs}
+            onSelectJob={openBooking}
+          />
           <div className="adm-map-side">
             <div className="adm-map-side__head">
               <div>

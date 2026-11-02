@@ -558,6 +558,11 @@ export default function AdminTracking() {
                       ? trackerPoint
                       : customerPoint
                   }
+                  secondary={
+                    trackerPoint && Number.isFinite(Number(trackerPoint.lat))
+                      ? customerPoint
+                      : null
+                  }
                   radiusKm={2}
                   jobs={[]}
                 />

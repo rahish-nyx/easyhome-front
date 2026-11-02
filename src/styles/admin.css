@@ -2331,6 +2331,112 @@ button.adm-stat:hover {
   filter: grayscale(0.25) contrast(1.05) brightness(0.9);
 }
 
+.adm-map__canvas {
+  position: absolute !important;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  background: #0b1017;
+  font-family: inherit;
+}
+
+.adm-map__canvas .leaflet-tile-pane {
+  filter: grayscale(0.35) contrast(1.05) brightness(0.82);
+}
+
+.adm-map__canvas .leaflet-control-attribution {
+  background: rgba(11, 16, 23, 0.78);
+  color: var(--adm-muted);
+  font-size: 9px;
+}
+
+.adm-map__canvas .leaflet-control-attribution a {
+  color: var(--adm-text-2);
+}
+
+.adm-map__canvas .leaflet-bar a {
+  background: #0f1620;
+  color: var(--adm-text);
+  border-bottom-color: var(--adm-line);
+}
+
+.adm-map__canvas .leaflet-bar a:hover {
+  background: #17202c;
+}
+
+.adm-map__canvas .leaflet-popup-content-wrapper,
+.adm-map__canvas .leaflet-popup-tip {
+  background: #101823;
+  color: var(--adm-text);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+.adm-map__canvas .leaflet-popup-content {
+  margin: 10px 12px;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.adm-map__canvas .leaflet-tooltip {
+  background: #101823;
+  color: var(--adm-text);
+  border-color: var(--adm-line);
+  font-size: 11px;
+}
+
+.adm-pin {
+  background: transparent;
+  border: 0;
+}
+
+.adm-pin__dot {
+  display: block;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--adm-yellow);
+  border: 2px solid #0b1017;
+  box-shadow: 0 0 0 4px rgba(255, 214, 10, 0.22);
+}
+
+.adm-pin__dot.is-active {
+  background: var(--adm-blue);
+  box-shadow: 0 0 0 4px rgba(108, 148, 255, 0.22);
+}
+
+.adm-pin__dot.is-done {
+  background: #57c98a;
+  box-shadow: 0 0 0 4px rgba(87, 201, 138, 0.2);
+}
+
+.adm-pin__dot.is-cancelled {
+  background: #ff8080;
+  box-shadow: 0 0 0 4px rgba(255, 128, 128, 0.18);
+}
+
+.adm-pin__dot.is-center {
+  width: 17px;
+  height: 17px;
+  background: #ffffff;
+  border-color: var(--adm-yellow);
+  box-shadow: 0 0 0 5px rgba(255, 214, 10, 0.26);
+}
+
+.adm-pin__dot.is-secondary {
+  width: 13px;
+  height: 13px;
+  background: #c9d6ff;
+  box-shadow: 0 0 0 4px rgba(201, 214, 255, 0.22);
+}
+
+.adm-pin__hint {
+  margin-top: 4px;
+  color: var(--adm-yellow);
+  font-size: 10px;
+  font-weight: 700;
+}
+
 .adm-map__empty {
   position: absolute;
   inset: 0;
@@ -2342,6 +2448,7 @@ button.adm-stat:hover {
   color: var(--adm-muted);
   text-align: center;
   padding: 20px;
+  z-index: 800;
 }
 
 .adm-map__empty strong {
@@ -2358,6 +2465,7 @@ button.adm-stat:hover {
   top: 10px;
   left: 10px;
   right: 10px;
+  z-index: 800;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2389,6 +2497,7 @@ button.adm-stat:hover {
   position: absolute;
   left: 10px;
   bottom: 10px;
+  z-index: 800;
   pointer-events: none;
 }
 
