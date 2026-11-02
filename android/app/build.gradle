@@ -21,7 +21,17 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfig.release
         }
+    }
+}
+
+signingConfigs {
+    release {
+        storeFile file("easyhome-release.keystore")
+        storePassword "easyhomeRelease2026"
+        keyAlias "easyhome"
+        keyPassword "easyhomeRelease2026"
     }
 }
 
