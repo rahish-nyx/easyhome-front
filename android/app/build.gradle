@@ -9,7 +9,6 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
-        outputFileName "easyhome.apk"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -17,21 +16,25 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            output.outputFileName = "easyhome.apk"
+        }
+    }
+    signingConfigs {
+        release {
+            storeFile file("easyhome-release.keystore")
+            storePassword "easyhomeRelease2026"
+            keyAlias "easyhome"
+            keyPassword "easyhomeRelease2026"
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            signingConfig signingConfig.release
+            signingConfig signingConfigs.release
         }
-    }
-}
-
-signingConfigs {
-    release {
-        storeFile file("easyhome-release.keystore")
-        storePassword "easyhomeRelease2026"
-        keyAlias "easyhome"
-        keyPassword "easyhomeRelease2026"
     }
 }
 
