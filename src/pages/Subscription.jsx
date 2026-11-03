@@ -175,6 +175,37 @@ export default function Subscription() {
               <small>{isWorker ? "Fees" : "Support"}</small>
             </div>
           </div>
+
+          <div
+            className="row row--between row--wrap"
+            style={{ gap: 12, marginTop: 14, alignItems: "flex-start" }}
+          >
+            <div>
+              <p className="eyebrow" style={{ color: "rgba(255,255,255,.55)" }}>
+                Exclusive renewal reward
+              </p>
+              <h3>3% off your next Pro purchase</h3>
+              <p className="tiny muted" style={{ marginTop: 4 }}>
+                {Number(profile?.subscription?.renewalStreak || 0) > 0
+                  ? "Renew uninterrupted to keep the exclusive 3% continuous renewal reward on your next membership purchase."
+                  : "Complete your first renewal to unlock the exclusive 3% continuous renewal reward."}
+              </p>
+              {profile?.subscription?.endAt ? (
+                <p className="tiny muted" style={{ marginTop: 4 }}>
+                  Grace period until {formatDate(new Date(new Date(profile.subscription.endAt).getTime() + (settings.renewalGraceDays || 5) * 86400000))}
+                </p>
+              ) : null}
+            </div>
+            <span
+              className="badge"
+              style={{ background: "var(--yellow)", color: "var(--ink)", alignSelf: "flex-start" }}
+            >
+              <CheckCircle2 size={12} />{" "}
+              {Number(profile?.subscription?.renewalStreak || 0) > 0
+                ? "Reward eligible"
+                : "Reward pending renewal"}
+            </span>
+          </div>
         </div>
       ) : null}
 
