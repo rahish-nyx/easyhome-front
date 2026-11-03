@@ -5032,3 +5032,542 @@
 
 /* Toasts and banners keep the shared utility classes; this refresh layer closes
    the professional look for the worker console without touching the customer UI. */
+
+/* ==========================================================================
+   Worker console — Premium Light Refresh v3
+   Final premium light design system for the worker portal:
+   Light Blue background #EFF6FF, Baby Blue borders/highlights #DBEAFE,
+   Pure White cards, Midnight Black headings #0F172A, Royal Blue primary
+   actions #2563EB, Slate Grey secondary text #64748B.
+   Green = verified/online/success, Orange = pending, Red = warnings.
+   ========================================================================== */
+
+.worker-app {
+  --wk-bg: #eff6ff;
+  --wk-panel: #ffffff;
+  --wk-panel-2: #f8fbff;
+  --wk-line: #dbeafe;
+  --wk-line-strong: #bfdbfe;
+  --wk-blue: #2563eb;
+  --wk-blue-2: #1d4ed8;
+  --wk-blue-soft: #eff6ff;
+  --wk-yellow: #b45309;
+  --wk-green: #067a55;
+  --wk-red: #dc2626;
+  --wk-amber: #b45309;
+  --wk-text: #0f172a;
+  --wk-muted: #64748b;
+  --wk-muted-2: #94a3b8;
+  min-height: 100dvh;
+  background:
+    radial-gradient(900px 380px at 90% -10%, rgba(219, 234, 254, 0.6), transparent 60%),
+    radial-gradient(720px 340px at -8% -6%, rgba(239, 246, 255, 0.9), transparent 55%),
+    var(--wk-bg);
+  background-attachment: fixed;
+}
+
+.worker-app,
+.worker-app *,
+.worker-app *::before,
+.worker-app *::after {
+  box-sizing: border-box;
+}
+
+.worker-app .worker-top {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #dbeafe;
+  box-shadow: 0 6px 22px rgba(15, 23, 42, 0.05);
+}
+
+.worker-app .worker-top__inner {
+  max-width: 1320px;
+  min-height: 68px;
+}
+
+.worker-app .worker-main {
+  max-width: 1320px;
+  padding: 24px 28px 44px;
+}
+
+.worker-app .worker-main {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* Buttons — Royal Blue #2563EB */
+.worker-app .wk-btn,
+.worker-app .btn,
+.worker-app button.btn {
+  --wk-btn-bg: #2563eb;
+  --wk-btn-radius: 14px;
+  min-height: 48px;
+  border-radius: var(--wk-btn-radius);
+  border: 1px solid var(--wk-btn-bg);
+  background: var(--wk-btn-bg);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease, color 160ms ease, opacity 160ms ease;
+}
+
+.worker-app .wk-btn:hover:not(:disabled),
+.worker-app .btn:hover:not(:disabled),
+.worker-app button.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #1d4ed8;
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.24);
+}
+
+.worker-app .wk-btn:active:not(:disabled),
+.worker-app .btn:active:not(:disabled),
+.worker-app button.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.worker-app .wk-btn--ghost,
+.worker-app .wk-btn--outline,
+.worker-app .worker-app .btn--ghost,
+.worker-app .worker-app .btn--outline {
+  --wk-btn-bg: transparent;
+  background: transparent;
+  border-color: #bfdbfe;
+  color: #0f172a;
+  box-shadow: none;
+}
+
+.worker-app .wk-btn--ghost:hover:not(:disabled),
+.worker-app .wk-btn--outline:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #2563eb;
+  box-shadow: none;
+}
+
+.worker-app .wk-btn--danger {
+  --wk-btn-bg: #dc2626;
+  border-color: #dc2626;
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.worker-app .wk-btn:disabled {
+  opacity: 0.55;
+  transform: none;
+}
+
+/* Cards — Pure White with Baby Blue borders */
+.worker-app .wk-hero,
+.worker-app .wk-earnings-strip,
+.worker-app .wk-panel,
+.worker-app .wk-panel-card,
+.worker-app .wk-job,
+.worker-app .wk-active,
+.worker-app .wk-money-card,
+.worker-app .wk-commission,
+.worker-app .wk-history__row,
+.worker-app .wk-refer-card,
+.worker-app .wk-refer-list,
+.worker-app .wk-profile-card,
+.worker-app .wk-profile-stats > div,
+.worker-app .wk-membership-card,
+.worker-app .wk-support-head,
+.worker-app .wk-active-list,
+.worker-app .wk-job-list {
+  border-radius: 18px;
+  border: 1px solid #dbeafe;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+/* Headings — Midnight Black */
+.worker-app h1,
+.worker-app h2,
+.worker-app h3,
+.worker-app h4,
+.worker-app strong {
+  color: #0f172a;
+}
+
+.worker-app h1 {
+  font-size: clamp(26px, 3.4vw, 34px);
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+}
+
+.worker-app h2 {
+  font-size: clamp(21px, 2.6vw, 26px);
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+
+.worker-app h3 {
+  font-size: 16px;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.worker-app p,
+.worker-app li {
+  line-height: 1.55;
+}
+
+/* Status pills — Green success / Orange pending / Red warning + Blue info */
+.worker-app .wk-badge,
+.worker-app .wk-badge--yellow,
+.worker-app .wk-badge--blue,
+.worker-app .wk-badge--red,
+.worker-app .wk-badge--green,
+.worker-app .wk-badge--amber,
+.worker-app .wk-badge--pending,
+.worker-app .wk-badge--approved,
+.worker-app .wk-badge--verified,
+.worker-app .wk-badge--rejected,
+.worker-app .wk-badge--suspended {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: #eef4fa;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.worker-app .wk-badge--green,
+.worker-app .wk-badge--approved,
+.worker-app .wk-badge--verified,
+.wk-online-toggle.is-on {
+  background: #e7f6ef;
+  border-color: #b9e3d0;
+  color: #067a55;
+}
+
+.worker-app .wk-badge--blue,
+.worker-app .wk-badge--pending,
+.worker-app .worker-nav button.is-active,
+.worker-top__links button.is-active,
+.wk-btn--primary,
+.worker-app .btn--primary,
+.worker-app .wk-btn--primary,
+.worker-app .wk-btn--complete,
+.wk-btn--complete {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.worker-app .wk-badge--blue,
+.worker-app .wk-badge--pending,
+.wk-plan-option.is-active {
+  background: #dbeafe;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.worker-app .wk-badge--red,
+.worker-app .wk-badge--rejected,
+.worker-app .wk-badge--suspended,
+.wk-banner--dues,
+.wk-btn--danger {
+  background: #fdecec;
+  border-color: #f5c6c6;
+  color: #dc2626;
+}
+
+.worker-app .wk-badge--yellow,
+.worker-app .wk-badge--amber,
+.wk-banner--offline,
+.wk-banner--pro {
+  background: #fff4e5;
+  border-color: #f5ddb8;
+  color: #b45309;
+}
+
+/* Stats — white premium cards on baby blue canvas */
+.worker-app .wk-stats,
+.worker-app .wk-hero__stats > div,
+.worker-app .wk-mini-stats > div,
+.worker-app .wk-profile-stats > div,
+.worker-app .wk-refer-stats .wk-refer-stat,
+.worker-app .wk-money-grid .wk-money-card,
+.worker-app .wk-stats-grid > div {
+  background: #ffffff;
+  border: 1px solid #dbeafe;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+/* Forms — Baby Blue borders, white surfaces */
+.worker-app .input,
+.worker-app .textarea,
+.worker-app .select,
+.worker-app input:not([type="checkbox"]):not([type="radio"]),
+.worker-app textarea,
+.worker-app select {
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  color: #0f172a;
+  box-shadow: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.worker-app .input:focus,
+.worker-app .textarea:focus,
+.worker-app .select:focus,
+.worker-app input:focus,
+.worker-app textarea:focus,
+.worker-app select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.worker-app .input::placeholder,
+.worker-app .textarea::placeholder {
+  color: #94a3b8;
+}
+
+/* Progress — Baby Blue track, Royal Blue fill */
+.worker-app .wk-progress {
+  background: #dbeafe;
+}
+
+.worker-app .wk-progress__fill,
+.worker-app .wk-progress > span {
+  background: #2563eb;
+}
+
+/* Bottom nav — white with soft blue active state */
+.worker-app .worker-nav {
+  border-radius: 20px 20px 0 0;
+  border: 1px solid #dbeafe;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 12px 34px rgba(28, 43, 67, 0.15);
+}
+
+.worker-app .worker-nav button {
+  border-radius: 12px;
+  color: #64748b;
+}
+
+.worker-app .worker-nav button.is-active {
+  background: #dbeafe;
+  color: #1d4ed8;
+  box-shadow: none;
+}
+
+/* Hero — premium light banner: baby blue canvas, white card, royal accent */
+.worker-app .wk-hero {
+  margin: 24px 0 18px;
+  padding: clamp(20px, 3vw, 30px);
+  border: 1px solid #dbeafe;
+  border-radius: 22px;
+  background: linear-gradient(120deg, #eff6ff 0%, #ffffff 74%);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
+}
+
+.worker-app .wk-hero h1,
+.worker-app .wk-hero h2,
+.worker-app .wk-hero h3 {
+  color: #0f172a;
+}
+
+.worker-app .wk-hero p,
+.worker-app .wk-hero li,
+.worker-app .wk-hero .wk-muted {
+  color: #64748b;
+}
+
+.worker-app .wk-hero .wk-btn {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.worker-app .wk-hero .wk-btn--ghost,
+.worker-app .wk-hero .btn--ghost {
+  background: #ffffff;
+  border-color: #bfdbfe;
+  color: #0f172a;
+}
+
+.worker-app .wk-hero .wk-btn--ghost:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.worker-app .wk-hero__stats > div {
+  background: #ffffff;
+  border: 1px solid #dbeafe;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.worker-app .wk-hero__stats strong,
+.worker-app .wk-hero__stats span {
+  color: #0f172a;
+}
+
+/* Membership — premium light pricing card */
+.worker-app .wk-premium-card {
+  background: #ffffff;
+  border-color: #dbeafe;
+}
+
+.worker-app .wk-premium-card strong,
+.worker-app .wk-premium-card em,
+.worker-app .wk-premium-card span,
+.worker-app .wk-premium-card b {
+  color: #0f172a;
+}
+
+.worker-app .wk-premium-card--muted {
+  background: #f8fbff;
+  border-color: #dbeafe;
+}
+
+/* Offline / dues banners — light tints */
+.worker-app .wk-banner--offline {
+  background: #fff8e9;
+  border-color: #f5ddb8;
+}
+
+.worker-app .wk-banner--dues {
+  background: #fff3f2;
+  border-color: #f5c6c6;
+}
+
+.worker-app .wk-banner {
+  background: #ffffff;
+  border-color: #dbeafe;
+}
+
+/* Referral card — light premium card */
+.worker-app .wk-refer-card {
+  background: linear-gradient(130deg, #eff6ff, #ffffff 68%);
+  border-color: #dbeafe;
+}
+
+/* Active job / job cards — hover polish */
+.worker-app .wk-active,
+.worker-app .wk-job {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.worker-app .wk-active:hover,
+.worker-app .wk-job:hover {
+  transform: translateY(-2px);
+  border-color: #bfdbfe;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.09);
+}
+
+/* Save / prominent action buttons */
+.worker-app .wk-btn--save,
+.worker-app .wk-btn--primary,
+.worker-app .wk-btn--complete,
+.worker-app .btn--primary,
+.worker-app .btn--save,
+.worker-app button.wk-btn--save,
+.worker-app button.wk-btn--complete {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.worker-app .wk-btn--save:hover:not(:disabled),
+.worker-app .btn--save:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.worker-app .wk-btn--complete:hover:not(:disabled),
+.worker-app .btn--complete:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+/* ==========================================================================
+   Worker console — Premium Light final overrides
+   Light premium theme: baby blue canvas, white cards, royal blue actions.
+   ========================================================================== */
+
+@media (max-width: 720px) {
+  .worker-app .worker-main {
+    padding: 16px 14px 30px;
+  }
+
+  .worker-app .wk-hero {
+    margin-top: 16px;
+    padding: 20px 18px;
+    border-radius: 18px;
+  }
+
+  .worker-app .wk-hero h1 {
+    font-size: 25px;
+  }
+
+  .worker-app .wk-hero__stats {
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .worker-app .wk-hero__stats > div {
+    padding: 10px 8px;
+  }
+
+  .worker-app .wk-hero__stats strong {
+    font-size: 18px;
+  }
+
+  .worker-app .wk-earnings-strip {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .worker-app .wk-earnings-strip__lead {
+    grid-column: 1 / -1;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #dbeafe;
+  }
+
+  .worker-app .wk-earnings-strip__metric {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .worker-app .wk-earnings-strip__actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  .worker-app .wk-earnings-strip,
+  .worker-app .wk-earnings-strip__lead > strong,
+  .worker-app .wk-earnings-strip__metric strong,
+  .worker-app .wk-earnings-strip__actions {
+    border-color: #dbeafe;
+  }
+
+  .worker-app .wk-earnings-strip__actions .wk-btn {
+    min-height: 44px;
+    border-radius: 12px;
+  }
+
+  .worker-app .wk-earnings-strip__actions .wk-btn--ghost {
+    min-height: 44px;
+    border-radius: 12px;
+  }
+}
