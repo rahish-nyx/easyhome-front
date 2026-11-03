@@ -4724,3 +4724,311 @@
 .wk-zone-state--error {
   color: var(--wk-red);
 }
+
+/* ==========================================================================
+   Worker console — Professional Refresh v2
+   Cohesive redesign layer for the worker side: refined surfaces, radii,
+   shadows, type scale, interactive states and status treatment. Scoped
+   under .worker-app so the customer theme stays untouched.
+   ========================================================================== */
+
+.worker-app {
+  --wk-bg: #f4f7fb;
+  --wk-panel: #ffffff;
+  --wk-panel-2: #f8fafc;
+  --wk-line: #e4eaf2;
+  --wk-line-strong: #d2dce9;
+  --wk-blue: #155eef;
+  --wk-blue-2: #175cd3;
+  --wk-blue-soft: #eef4ff;
+  --wk-yellow: #b45309;
+  --wk-green: #067a55;
+  --wk-red: #c62828;
+  --wk-amber: #9a5b00;
+  --wk-text: #172033;
+  --wk-muted: #526071;
+  --wk-muted-2: #8490a2;
+  min-height: 100dvh;
+  background:
+    radial-gradient(1100px 480px at 88% -8%, rgba(21, 94, 239, 0.09), transparent 60%),
+    radial-gradient(900px 420px at -10% -4%, rgba(255, 214, 10, 0.07), transparent 55%),
+    var(--wk-bg);
+  background-attachment: fixed;
+}
+
+.worker-app,
+.worker-app *,
+.worker-app *::before,
+.worker-app *::after {
+  box-sizing: border-box;
+}
+
+.worker-top {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--wk-line);
+  box-shadow: 0 6px 22px rgba(28, 43, 67, 0.06);
+}
+
+.worker-top__inner {
+  max-width: 1320px;
+  min-height: 68px;
+}
+
+.worker-main {
+  max-width: 1320px;
+  padding: 24px 28px 44px;
+}
+
+.worker-app .worker-main {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* Buttons */
+.worker-app .wk-btn,
+.worker-app .btn,
+.worker-app button.btn {
+  --wk-btn-bg: var(--wk-blue);
+  --wk-btn-radius: 12px;
+  min-height: 46px;
+  border-radius: var(--wk-btn-radius);
+  border: 1px solid var(--wk-btn-bg);
+  background: var(--wk-btn-bg);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 18px rgba(21, 94, 239, 0.16);
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.worker-app .wk-btn:hover:not(:disabled),
+.worker-app .btn:hover:not(:disabled),
+.worker-app button.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(21, 94, 239, 0.2);
+}
+
+.worker-app .wk-btn:active:not(:disabled),
+.worker-app .btn:active:not(:disabled),
+.worker-app button.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.worker-app .wk-btn--ghost,
+.worker-app .wk-btn--outline,
+.worker-app .worker-app .btn--ghost,
+.worker-app .worker-app .btn--outline {
+  --wk-btn-bg: transparent;
+  background: transparent;
+  border-color: var(--wk-line-strong);
+  color: var(--wk-text);
+  box-shadow: none;
+}
+
+.worker-app .wk-btn--ghost:hover:not(:disabled),
+.worker-app .wk-btn--outline:hover:not(:disabled) {
+  background: var(--wk-blue-soft);
+  border-color: var(--wk-blue);
+  color: var(--wk-blue);
+  box-shadow: none;
+}
+
+.worker-app .wk-btn--danger {
+  --wk-btn-bg: var(--wk-red);
+  border-color: var(--wk-red);
+  background: var(--wk-red);
+  color: #ffffff;
+}
+
+.worker-app .wk-btn:disabled {
+  opacity: 0.55;
+  transform: none;
+}
+
+/* Cards */
+.worker-app .wk-hero,
+.worker-app .wk-earnings-strip,
+.worker-app .wk-panel,
+.worker-app .wk-panel-card,
+.worker-app .wk-job,
+.worker-app .wk-active,
+.worker-app .wk-money-card,
+.worker-app .wk-commission,
+.worker-app .wk-history__row,
+.worker-app .wk-refer-card,
+.worker-app .wk-refer-list,
+.worker-app .wk-profile-card,
+.worker-app .wk-profile-stats > div,
+.worker-app .wk-membership-card,
+.worker-app .wk-support-head,
+.worker-app .wk-active-list,
+.worker-app .wk-job-list {
+  border-radius: 18px;
+  border: 1px solid #e1e8f2;
+  background: var(--wk-panel);
+  box-shadow: 0 12px 30px rgba(35, 57, 88, 0.055);
+}
+
+/* Headings */
+.worker-app h1,
+.worker-app h2,
+.worker-app h3,
+.worker-app h4,
+.worker-app strong {
+  color: var(--wk-text);
+}
+
+.worker-app h1 {
+  font-size: clamp(26px, 3.4vw, 34px);
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+}
+
+.worker-app h2 {
+  font-size: clamp(21px, 2.6vw, 26px);
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+
+.worker-app h3 {
+  font-size: 16px;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.worker-app p,
+.worker-app li {
+  line-height: 1.55;
+}
+
+/* Status pills */
+.worker-app .wk-badge,
+.worker-app .wk-badge--yellow,
+.worker-app .wk-badge--blue,
+.worker-app .wk-badge--red,
+.worker-app .wk-badge--green,
+.worker-app .wk-badge--amber,
+.worker-app .wk-badge--pending,
+.worker-app .wk-badge--approved,
+.worker-app .wk-badge--verified,
+.worker-app .wk-badge--rejected,
+.worker-app .wk-badge--suspended {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: #eef2f7;
+  color: var(--wk-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.worker-app .wk-badge--green,
+.worker-app .wk-badge--approved,
+.worker-app .wk-badge--verified {
+  background: #e7f6ef;
+  border-color: #c8e8d6;
+  color: #0a7a50;
+}
+
+.worker-app .wk-badge--blue,
+.worker-app .wk-badge--pending {
+  background: #e8effd;
+  border-color: #cfddfb;
+  color: #1d54e0;
+}
+
+.worker-app .wk-badge--red,
+.worker-app .wk-badge--rejected,
+.worker-app .wk-badge--suspended {
+  background: #fdecec;
+  border-color: #f3cfcf;
+  color: #c62828;
+}
+
+.worker-app .wk-badge--yellow,
+.worker-app .wk-badge--amber {
+  background: #fdf3e3;
+  border-color: #f0dcb8;
+  color: #9a5b00;
+}
+
+/* Stats */
+.worker-app .wk-stats,
+.worker-app .wk-hero__stats > div,
+.worker-app .wk-mini-stats > div,
+.worker-app .wk-profile-stats > div,
+.worker-app .wk-refer-stats .wk-refer-stat,
+.worker-app .wk-money-grid .wk-money-card,
+.worker-app .wk-stats-grid > div {
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  border: 1px solid #e1e8f2;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(35, 57, 88, 0.05);
+}
+
+/* Forms */
+.worker-app .input,
+.worker-app .textarea,
+.worker-app .select,
+.worker-app input:not([type="checkbox"]):not([type="radio"]),
+.worker-app textarea,
+.worker-app select {
+  background: #ffffff;
+  border: 1px solid #d2dce9;
+  border-radius: 12px;
+  color: var(--wk-text);
+  box-shadow: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.worker-app .input:focus,
+.worker-app .textarea:focus,
+.worker-app .select:focus,
+.worker-app input:focus,
+.worker-app textarea:focus,
+.worker-app select:focus {
+  border-color: var(--wk-blue);
+  box-shadow: 0 0 0 3px rgba(21, 94, 239, 0.14);
+}
+
+/* Progress */
+.worker-app .wk-progress {
+  background: #e8edf4;
+}
+
+.worker-app .wk-progress__fill,
+.worker-app .wk-progress > span {
+  background: linear-gradient(90deg, var(--wk-blue), #4c8dff);
+}
+
+/* Bottom nav */
+.worker-nav {
+  border-radius: 20px 20px 0 0;
+  border: 1px solid #dce4ee;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 12px 34px rgba(28, 43, 67, 0.15);
+}
+
+.worker-nav button {
+  border-radius: 12px;
+}
+
+.worker-nav button.is-active {
+  background: var(--wk-blue-soft);
+  border-radius: 12px;
+}
+
+/* Toasts and banners keep the shared utility classes; this refresh layer closes
+   the professional look for the worker console without touching the customer UI. */
