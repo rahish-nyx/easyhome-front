@@ -558,7 +558,7 @@ export default function AdminSettings() {
                     rows={6}
                     value={form.workerBenefits}
                     onChange={set("workerBenefits")}
-                    placeholder={"0% fees\nPriority job feed\nPro badge"}
+                    placeholder={"Lower commission rate (7%)\nPriority urgent job alerts\nPro trust badge, digital QR code & shareable profile"}
                   />
                 </Field>
               </div>
