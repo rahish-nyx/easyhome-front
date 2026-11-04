@@ -243,7 +243,8 @@ function ServicesList({
               Keep the whole home running for less.
             </h2>
             <p className="membership__sub">
-              Members get active priority matching, no 10% urgent-job extra charge and 24×7 priority support.
+              Members get accidental damage assistance, priority matching, no 10% urgent-job extra
+              charge, 15-day service warranty and exclusive Pro benefits.
             </p>
           </div>
           <Link to="/subscription" className="btn btn--dark btn--lg">

@@ -474,7 +474,7 @@ export default function Profile() {
                   <p className="tiny muted">
                     {isActiveUntil(profile?.subscription?.endAt)
                       ? `Ends ${formatDate(profile.subscription.endAt)}`
-                      : "Upgrade for active priority matching, no 10% urgent-job extra charge and 24×7 priority support."}
+                      : "Upgrade for accidental damage assistance, priority matching, no 10% urgent-job extra charge and exclusive Pro benefits."}
                   </p>
                 </div>
               </div>

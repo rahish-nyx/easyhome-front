@@ -557,7 +557,7 @@ export default function Booking() {
                   id: "urgent",
                   title: "Urgent",
                   sub: isPremium
-                    ? "ASAP · no urgent fee for Pro members"
+                    ? "ASAP · priority dispatch · no urgent fee"
                     : "ASAP · priority dispatch + 10% fee",
                 },
               ].map((option) => (

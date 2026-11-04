@@ -1080,7 +1080,7 @@ function MembershipTab({ worker, isPremium, settings }) {
         <div>
           <p className="wk-eyebrow">EasyHome Pro</p>
           <h1>Membership</h1>
-          <p>Choose a plan for zero fees and priority access to jobs.</p>
+          <p>Choose a plan for lower commission and priority access to jobs.</p>
         </div>
         {isPremium ? <span className="wk-badge wk-badge--green">Membership active</span> : null}
       </div>
@@ -1091,7 +1091,7 @@ function MembershipTab({ worker, isPremium, settings }) {
           <p>
             {isPremium
               ? `Your current membership is active until ${formatDateTime(worker.premiumUntil)}.`
-              : "Pro includes 0% fees, priority job placement and a verified Pro badge."}
+              : "Pro includes a lower 7% commission rate, priority job placement and a verified Pro badge."}
           </p>
           <ul>
             {(settings.workerBenefits || []).map((benefit) => (
@@ -1290,8 +1290,8 @@ function WorkerPromos({ worker, isPremium, onTab }) {
             <strong>{isPremium ? "Pro membership is active" : "Upgrade to EasyHome Pro"}</strong>
             <small>
               {isPremium
-                ? "0% fees, priority placement and urgent-job priority."
-                : "Keep 100% of your earnings with 0% fees on Pro."}
+                ? "7% commission rate, priority placement and urgent-job priority."
+                : "Keep a larger share of your earnings with the discounted 7% Pro commission rate."}
             </small>
           </span>
           <ChevronRight size={17} />
@@ -2403,7 +2403,7 @@ function EarningsTab({
         <div className={`wk-money-card${Number(earnings.dues) > 0 ? " wk-money-card--warn" : ""}`}>
           <span>Fees due</span>
           <strong>{inr(earnings.dues)}</strong>
-          <small>{isPremium ? "Pro — zero fees" : "Clear to keep accepting jobs"}</small>
+          <small>{isPremium ? "Pro — 7% commission" : "Clear to keep accepting jobs"}</small>
         </div>
       </div>
 
@@ -2442,13 +2442,13 @@ function EarningsTab({
           {isPremium ? (
             <div className="wk-premium-card">
               <strong>EasyHome Pro is active</strong>
-              <p>You keep 100% of every job and get priority placement in search.</p>
+              <p>You keep a larger share of every job with the discounted 7% Pro commission rate and get priority placement in search.</p>
               <span>Until {formatDateTime(worker.premiumUntil)}</span>
             </div>
           ) : (
             <div className="wk-premium-card wk-premium-card--muted">
-              <strong>Zero fees with Pro</strong>
-              <p>Keep every rupee, get priority job placement and a verified Pro badge.</p>
+              <strong>Lower commission with Pro</strong>
+              <p>Keep a larger share of every job with the discounted 7% Pro commission rate and a verified Pro badge.</p>
               <button
                 type="button"
                 className="wk-btn wk-btn--primary"

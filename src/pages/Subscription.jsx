@@ -6,10 +6,17 @@ import {
   CheckCircle2,
   ExternalLink,
   Headphones,
+  Layers,
+  LayoutDashboard,
+  RefreshCw,
+  Search,
+  ShieldCheck,
   Sparkles,
+  Ticket,
   Timer,
   Wallet,
   Zap,
+  QrCode,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCatalogue } from "../context/CatalogueContext";
@@ -34,7 +41,7 @@ import RazorpayPayment from "../components/RazorpayPayment";
 export default function Subscription() {
   usePageMeta(
     "EasyHome Pro membership",
-    "Active priority worker matching, no urgent-job extra charge, 24×7 priority support and a 20-minute free cancellation window with EasyHome Pro.",
+    "Accidental damage assistance up to ₹500, priority worker matching, no urgent-job extra charge, exclusive Pro badge, 15-day service warranty, monthly Pro promo codes and priority re-assignment with EasyHome Pro.",
   );
 
   const { profile, isWorker, premiumUntil, refreshProfile } = useAuth();
@@ -61,51 +68,76 @@ export default function Subscription() {
   const reasons = isWorker
     ? [
         {
-          icon: Zap,
-          title: "Priority job placement",
-          body: "Your profile is shown to nearby customers before non-Pro professionals.",
+          icon: ShieldCheck,
+          title: "Zero dues penalty & uninterrupted work guarantee",
+          body: "No platform dues or account locks interrupt your workflow under the standard clearance cycle.",
         },
         {
           icon: Wallet,
-          title: "0% service fees",
-          body: "You keep the full agreed service amount while Pro is active. Urgent fees are always yours.",
+          title: "Lower commission rate (7%)",
+          body: "Keep a larger share of every job — the discounted 7% Pro commission rate instead of the standard 10%.",
         },
         {
-          icon: Headphones,
-          title: "24×7 priority support",
-          body: "Pro queries are flagged and answered first by the worker support desk.",
+          icon: Search,
+          title: "Local search visibility boost",
+          body: "Your profile gets prioritized ranking and higher placement in local customer search results.",
         },
         {
-          icon: BadgeCheck,
-          title: "Verified Pro badge",
-          body: "Your active Pro badge appears on your worker profile and job offers.",
+          icon: Zap,
+          title: "Priority urgent job alerts",
+          body: "You get instant, first-access notifications for high-value urgent service requests in your zone.",
+        },
+        {
+          icon: QrCode,
+          title: "Pro trust badge, digital QR code & shareable profile",
+          body: "Build instant customer trust with the exclusive Pro badge, professional digital QR code and shareable profile.",
+        },
+        {
+          icon: Layers,
+          title: "Multi-service category unlock",
+          body: "Unlock 2 additional optional service categories for free and maximize the types of work you can take on.",
+        },
+        {
+          icon: LayoutDashboard,
+          title: "Top priority featured profile card visibility",
+          body: "Your profile card is showcased on the customer home feed for maximum local exposure and instant booking.",
         },
       ]
     : [
         {
+          icon: ShieldCheck,
+          title: "Accidental damage assistance up to ₹500",
+          body: "Eligible Pro customers receive accidental damage assistance of up to ₹500 subject to eligibility rules.",
+        },
+        {
           icon: Zap,
           title: "Active priority worker matching",
-          body: "Your requests are dispatched to top-rated pros first while Pro is active.",
+          body: "Your requests are dispatched to eligible, available professionals in your service area first.",
         },
         {
           icon: Wallet,
-          title: "No urgent-job extra charge",
-          body: "Urgent bookings cost the same as normal — we waive the extra fee.",
-        },
-        {
-          icon: Headphones,
-          title: "24×7 priority support",
-          body: "Pro support chats are flagged and answered first, day or night.",
-        },
-        {
-          icon: Timer,
-          title: "Free cancellation window",
-          body: `${settings.customerRules?.proCancellationMinutes || 20}-minute free cancellation. Free accounts get ${settings.customerRules?.cancellationMinutes || 7} minutes.`,
+          title: "No 10% urgent-job extra charge",
+          body: "Urgent bookings cost the same as normal — the extra fee is waived for Pro customers.",
         },
         {
           icon: BadgeCheck,
-          title: "Verified Pro badge",
-          body: "Your active Pro badge appears on your profile and bookings.",
+          title: "Exclusive EasyHome Pro badge",
+          body: "Your active Pro badge appears on your profile and relevant platform sections.",
+        },
+        {
+          icon: BadgeCheck,
+          title: "Extended 15-day service work warranty",
+          body: "All completed Pro jobs carry an extended 15-day service warranty for total peace of mind.",
+        },
+        {
+          icon: Ticket,
+          title: "Monthly Pro promo codes (up to 20% off)",
+          body: "Two exclusive discount promo codes every month offering up to 20% off on service bookings.",
+        },
+        {
+          icon: RefreshCw,
+          title: "Priority re-assignment & VIP dispatch",
+          body: "Instant priority re-matching and fast-tracked worker assignment if your professional is unavailable.",
         },
       ];
 
@@ -122,8 +154,8 @@ export default function Subscription() {
           <h1>{active ? "Your membership" : "A little more peace of mind."}</h1>
           <p>
             {isWorker
-              ? "Zero fees, priority job placement and a verified Pro badge."
-              : "Active priority matching, no urgent-job extra charge, 24×7 priority support and a 20-minute free cancellation window."}
+              ? "Zero dues penalty, lower 7% commission rate and priority access to jobs."
+              : "Accidental damage assistance, priority matching, no urgent-job extra charge and exclusive Pro benefits."}
           </p>
         </div>
         {active ? (
@@ -146,8 +178,8 @@ export default function Subscription() {
               <h3>{planLabel(profile?.subscription?.plan)}</h3>
               <p>
                 {isWorker
-                  ? "You keep 100% of every job payment while Pro is active."
-                  : "Active priority worker matching, no urgent-job extra charge and 24×7 priority support are live on your account."}
+                  ? "You keep a larger share of every job — the discounted 7% Pro commission rate — while Pro is active."
+                  : "Accidental damage assistance, priority worker matching, no urgent-job extra charge, exclusive Pro badge and VIP dispatch are live on your account."}
               </p>
             </div>
             <span
@@ -171,8 +203,8 @@ export default function Subscription() {
               <small>Ends</small>
             </div>
             <div>
-              <strong>{isWorker ? "0%" : "Priority"}</strong>
-              <small>{isWorker ? "Fees" : "Support"}</small>
+              <strong>{isWorker ? "7%" : "Priority"}</strong>
+              <small>{isWorker ? "Commission" : "Support"}</small>
             </div>
           </div>
 

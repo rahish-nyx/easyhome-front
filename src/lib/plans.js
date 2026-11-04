@@ -14,14 +14,14 @@ export const DEFAULT_WORKER_PLANS = {
 
 export const DEFAULT_CUSTOMER_RULES = {
   urgentFeePct: 10,
-  cancellationMinutes: 7,
-  proCancellationMinutes: 20,
+  cancellationMinutes: 5,
+  proCancellationMinutes: 5,
 };
 
 export const DEFAULT_WORKER_RULES = {
   feesPct: 10,
   urgentFeePct: 10,
-  cancellationMinutes: 7,
+  cancellationMinutes: 5,
 };
 
 function planPrice(value, fallback) {

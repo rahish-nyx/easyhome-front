@@ -591,11 +591,12 @@ export default function Home() {
                 <Crown size={12} /> EasyHome Pro
               </span>
               <h2 className="membership__title" style={{ marginTop: 12 }}>
-                Priority help. No urgent-job extra charge. Zero guesswork.
+                Priority help. No urgent-job extra charge. Stronger guarantees.
               </h2>
               <p className="membership__sub">
-                One membership for the whole home. Get active priority matching, no 10%
-                urgent-job extra charge and 24×7 priority support on every booking.
+                One membership for the whole home. Get accidental damage assistance, priority
+                matching, no 10% urgent-job extra charge, 15-day service warranty and exclusive Pro
+                benefits on every booking.
               </p>
               <div className="membership__perks">
                 {(settings.customerBenefits || []).slice(0, 4).map((benefit) => (

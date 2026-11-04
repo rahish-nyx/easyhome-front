@@ -71,7 +71,7 @@ const PAGES = {
       {
         heading: "Cancellations",
         body: [
-          "Customers may cancel free of charge within 20 minutes of creating a booking for active EasyHome Pro members, or within 7 minutes for all other customers. This window is enforced in the app. After it closes while the job is still pending or accepted, contact support so the professional's time can be handled fairly.",
+          "Customers may cancel free of charge within 5 minutes of creating a booking. This window is enforced in the app for all customers. After it closes while the job is still pending or accepted, contact support so the professional's time can be handled fairly.",
           "EasyHome may cancel a booking for safety, fraud, repeated abuse or if no professional can be matched.",
         ],
       },

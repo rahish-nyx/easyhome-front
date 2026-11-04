@@ -33,7 +33,7 @@ const GROUPS = [
       },
       {
         q: "What if I need help urgently?",
-        a: "Choose the Urgent option when booking. Urgent requests get priority dispatch and include a 10% urgent fee. Active EasyHome Pro customers pay no urgent fee, and their requests are matched first. Free cancellation is available for 20 minutes for Pro members and 7 minutes for everyone else, enforced from the time the booking is created.",
+        a: "Choose the Urgent option when booking. Urgent requests get priority dispatch and include a 10% urgent fee. Active EasyHome Pro customers pay no urgent fee, and their requests are matched first. Free cancellation is available for 5 minutes from the time the booking is created, enforced in the app for all customers.",
       },
     ],
   },
@@ -61,11 +61,11 @@ const GROUPS = [
     items: [
       {
         q: "How does EasyHome membership work?",
-        a: "Membership is an optional paid plan for customers. Active Pro members get priority worker matching, no 10% urgent fee, 24×7 priority support, a 20-minute free cancellation window instead of 7 minutes, and a Verified Pro badge. All benefits apply only while the membership is active.",
+        a: "Membership is an optional paid plan for customers. Active Pro members get accidental damage assistance, priority worker matching, no 10% urgent fee, an exclusive Pro badge, a 15-day service warranty, monthly Pro promo codes and priority re-assignment. All benefits apply only while the membership is active. Free cancellation is available for 5 minutes from booking creation for all customers.",
       },
       {
         q: "How do professionals pay fees?",
-        a: "Professionals pay a small fee on completed non-premium jobs. Pro members pay 0% fees. Fee payments are verified before new jobs unlock.",
+        a: "Professionals pay a discounted 7% fee on completed Pro jobs, while standard jobs use the 10% fee. Fee payments are verified before new jobs unlock.",
       },
       {
         q: "Is my payment information safe?",

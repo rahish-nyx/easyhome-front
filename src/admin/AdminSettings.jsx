@@ -45,9 +45,9 @@ const EMPTY_SETTINGS = {
   feesPct: 10,
   customerUrgentFeePct: 10,
   workerUrgentFeePct: 10,
-  cancellationMinutes: 7,
-  proCancellationMinutes: 20,
-  workerCancellationMinutes: 7,
+  cancellationMinutes: 5,
+  proCancellationMinutes: 5,
+  workerCancellationMinutes: 5,
   supportPhone: "",
   maintenanceMode: false,
   customerBenefits: "",
@@ -124,9 +124,9 @@ export default function AdminSettings() {
       feesPct: workerRulesData.feesPct ?? fresh.commissionPct ?? 10,
       customerUrgentFeePct: customerRules.urgentFeePct ?? 10,
       workerUrgentFeePct: workerRulesData.urgentFeePct ?? 10,
-      cancellationMinutes: customerRules.cancellationMinutes ?? 7,
-      proCancellationMinutes: customerRules.proCancellationMinutes ?? 20,
-      workerCancellationMinutes: workerRulesData.cancellationMinutes ?? 7,
+      cancellationMinutes: customerRules.cancellationMinutes ?? 5,
+      proCancellationMinutes: customerRules.proCancellationMinutes ?? 5,
+      workerCancellationMinutes: workerRulesData.cancellationMinutes ?? 5,
       supportPhone: fresh.supportPhone || "",
       maintenanceMode: Boolean(fresh.maintenanceMode),
       customerBenefits: (fresh.customerBenefits || []).join("\n"),
@@ -191,13 +191,13 @@ export default function AdminSettings() {
         },
         customerRules: {
           urgentFeePct: Number(form.customerUrgentFeePct) || 0,
-          cancellationMinutes: Number(form.cancellationMinutes) || 7,
-          proCancellationMinutes: Number(form.proCancellationMinutes) || 20,
+          cancellationMinutes: Number(form.cancellationMinutes) || 5,
+          proCancellationMinutes: Number(form.proCancellationMinutes) || 5,
         },
         workerRules: {
           feesPct: Number(form.feesPct) || 0,
           urgentFeePct: Number(form.workerUrgentFeePct) || 0,
-          cancellationMinutes: Number(form.workerCancellationMinutes) || 7,
+          cancellationMinutes: Number(form.workerCancellationMinutes) || 5,
         },
         supportPhone: form.supportPhone.trim(),
         maintenanceMode: Boolean(form.maintenanceMode),
@@ -592,8 +592,7 @@ export default function AdminSettings() {
                 </ul>
               </div>
               <div className="adm-fineprint">
-                <Wallet size={13} /> Professional fees are{" "}
-                {Number(form.feesPct || 0)}% unless they hold Pro.
+                <Wallet size={13} /> Professional fees are {Number(form.feesPct || 0)}% on standard jobs; Pro members get the discounted 7% rate. Fee payments are verified before new jobs unlock.
               </div>
             </Panel>
 

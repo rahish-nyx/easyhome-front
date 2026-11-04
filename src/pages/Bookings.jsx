@@ -313,7 +313,7 @@ function BookingCard({
     0,
     Number(booking.promoDiscount) || Number(booking.pricing?.promoDiscount) || 0,
   );
-  const windowMinutes = isPremium ? 20 : 7;
+  const windowMinutes = 5;
   const createdAt = toDate(booking.createdAt);
   const deadline = createdAt
     ? new Date(createdAt.getTime() + windowMinutes * 60_000)
@@ -657,7 +657,7 @@ function CancelModal({ booking, isPremium, onClose, onDone }) {
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const windowMinutes = isPremium ? 20 : 7;
+  const windowMinutes = 5;
   const createdAt = toDate(booking?.createdAt);
   const deadline = createdAt
     ? new Date(createdAt.getTime() + windowMinutes * 60_000)
@@ -685,9 +685,7 @@ function CancelModal({ booking, isPremium, onClose, onDone }) {
       title="Cancel this booking?"
       subtitle={
         booking
-          ? `Free cancellation is available for the first ${windowMinutes} minutes after booking (${
-              isPremium ? "Pro member" : "free account"
-            }). After that, support can help.`
+          ? `Free cancellation is available for the first ${windowMinutes} minutes after booking. After that, support can help.`
           : ""
       }
       size="sm"
