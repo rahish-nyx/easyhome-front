@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
   CalendarRange,
+  Copy,
   Eye,
   ImageOff,
   Megaphone,
   Pencil,
+  Percent,
   Plus,
   RefreshCw,
   Sparkles,
@@ -94,8 +96,11 @@ export default function AdminPromos() {
   const [file, setFile] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [busy, setBusy] = useState("");
+  const [gen, setGen] = useState({ code: "", percentage: 10, endsAt: "" });
+  const [generating, setGenerating] = useState(false);
 
   const promosState = useAsync(() => api.get("/admin/promos"), []);
+  const codesState = useAsync(() => api.get("/admin/promo-codes"), []);
   const promos = promosState.data?.promos || [];
   const optionsState = useAsync(async () => {
     const [folderData, serviceData] = await Promise.all([
@@ -132,6 +137,51 @@ export default function AdminPromos() {
   );
 
   const refresh = () => promosState.run().catch(() => {});
+
+  const codes = codesState.data?.codes || [];
+  const refreshCodes = () => codesState.run().catch(() => {});
+
+  const generateCode = async () => {
+    setGenerating(true);
+    try {
+      const data = await api.post("/admin/promo-codes", {
+        percentage: Number(gen.percentage) || 0,
+        code: gen.code.trim(),
+        endsAt: gen.endsAt ? new Date(gen.endsAt).toISOString() : "",
+      });
+      toast.success(`Promo code ${data.code?.couponCode || ""} generated.`);
+      setGen({ code: "", percentage: 10, endsAt: "" });
+      await Promise.all([refreshCodes(), refresh()]);
+      refreshPromos();
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const removeCode = async (code) => {
+    setBusy(`code:${code.id}`);
+    try {
+      await api.del(`/admin/promo-codes/${code.id}`);
+      toast.success(`Promo code ${code.couponCode} deleted.`);
+      await Promise.all([refreshCodes(), refresh()]);
+      refreshPromos();
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const copyCode = async (value) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${value} copied.`);
+    } catch {
+      toast.error("Could not copy automatically. Select the code manually.");
+    }
+  };
 
   const toggle = async (promo) => {
     setBusy(`toggle:${promo.id}`);
@@ -304,6 +354,106 @@ export default function AdminPromos() {
         />
       </section>
 
+      <Panel
+        title="Universal promo codes"
+        subtitle="Generate a percentage-off code customers can apply to any service at checkout."
+      >
+        <div className="adm-codegen">
+          <div className="adm-codegen__fields">
+            <Field label="Custom code (optional)" htmlFor="gen-code">
+              <Input
+                id="gen-code"
+                value={gen.code}
+                maxLength={24}
+                placeholder="Leave blank to auto-generate"
+                onChange={(event) =>
+                  setGen((prev) => ({
+                    ...prev,
+                    code: event.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""),
+                  }))
+                }
+              />
+            </Field>
+            <Field label="Discount %" htmlFor="gen-percent">
+              <Input
+                id="gen-percent"
+                type="number"
+                min={1}
+                max={100}
+                value={gen.percentage}
+                onChange={(event) =>
+                  setGen((prev) => ({ ...prev, percentage: event.target.value }))
+                }
+              />
+            </Field>
+            <Field label="Expires (optional)" htmlFor="gen-expiry">
+              <Input
+                id="gen-expiry"
+                type="date"
+                value={gen.endsAt}
+                onChange={(event) =>
+                  setGen((prev) => ({ ...prev, endsAt: event.target.value }))
+                }
+              />
+            </Field>
+            <Button
+              icon={Percent}
+              loading={generating}
+              onClick={generateCode}
+              className="adm-codegen__submit"
+            >
+              Generate code
+            </Button>
+          </div>
+
+          {codes.length ? (
+            <div className="adm-codelist">
+              {codes.map((code) => {
+                const expired =
+                  code.endsAt && new Date(code.endsAt).getTime() < Date.now();
+                return (
+                  <div className="adm-coderow" key={code.id}>
+                    <span className="adm-coderow__code">{code.couponCode}</span>
+                    <span className="adm-coderow__value">
+                      {Number(code.discountValue) || 0}% off
+                    </span>
+                    <span className="adm-coderow__meta">
+                      {expired
+                        ? "Expired"
+                        : code.endsAt
+                          ? `Until ${formatDate(code.endsAt)}`
+                          : "No expiry"}
+                    </span>
+                    <button
+                      type="button"
+                      className="adm-icon-action"
+                      aria-label={`Copy ${code.couponCode}`}
+                      onClick={() => copyCode(code.couponCode)}
+                    >
+                      <Copy size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      className="adm-icon-action is-danger"
+                      aria-label={`Delete ${code.couponCode}`}
+                      disabled={busy === `code:${code.id}`}
+                      onClick={() => removeCode(code)}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="adm-note-inline">
+              No universal codes yet. Generated codes work on every service and are capped at
+              100% off.
+            </p>
+          )}
+        </div>
+      </Panel>
+
       {customerPromos.length ? (
         <Panel
           title="Customer home preview"
@@ -324,7 +474,7 @@ export default function AdminPromos() {
                     <strong>{promo.title}</strong>
                     <span>
                       {promo.subtitle || "Tap to book a service today."}
-                      {promo.couponCode ? ` · Code ${promo.couponCode}` : ""}
+                      {promo.couponCode ? ` Â· Code ${promo.couponCode}` : ""}
                     </span>
                     <em>{promo.ctaText || "Book now"}</em>
                   </div>
@@ -363,7 +513,7 @@ export default function AdminPromos() {
       <PageError error={promosState.error} onRetry={refresh} />
 
       {promosState.loading && !promosState.data ? (
-        <LoadingBlock label="Loading promo campaigns…" />
+        <LoadingBlock label="Loading promo campaignsâ€¦" />
       ) : (
         <Panel flush>
           {sorted.length ? (
@@ -387,25 +537,25 @@ export default function AdminPromos() {
                       />
                     </div>
                     <p>
-                      {promo.subtitle || "No subtitle"} · CTA “{promo.ctaText}” →{" "}
+                      {promo.subtitle || "No subtitle"} Â· CTA â€œ{promo.ctaText}â€ â†’{" "}
                       {promo.ctaLink}
-                      {promo.couponCode ? ` · Coupon ${promo.couponCode}` : ""}
+                      {promo.couponCode ? ` Â· Coupon ${promo.couponCode}` : ""}
                     </p>
                     <small className="adm-note-inline">
                       {promo.placement === "worker_dashboard"
-                        ? "Worker dashboard · "
-                        : "Customer home · "}
+                        ? "Worker dashboard Â· "
+                        : "Customer home Â· "}
                       {promo.startsAt || promo.endsAt
-                        ? `${promo.startsAt ? formatDate(promo.startsAt) : "Now"} – ${
+                        ? `${promo.startsAt ? formatDate(promo.startsAt) : "Now"} â€“ ${
                             promo.endsAt ? formatDate(promo.endsAt) : "No end"
                           }`
                         : "Always on"}
                       {promo.couponCode
-                        ? ` · ${
+                        ? ` Â· ${
                             promo.discountType === "percentage"
                               ? `${Number(promo.discountValue) || 0}% off`
                               : `${inr(Number(promo.discountValue) || 0)} off`
-                          } · ${promoScope(promo, folderById, serviceById)}`
+                          } Â· ${promoScope(promo, folderById, serviceById)}`
                         : ""}
                     </small>
                   </div>
@@ -528,7 +678,7 @@ export default function AdminPromos() {
         }
       >
         <p className="small muted">
-          The banner is removed immediately. This cannot be undone — hide it instead if you only
+          The banner is removed immediately. This cannot be undone â€” hide it instead if you only
           want to pause the campaign.
         </p>
       </Modal>
@@ -647,7 +797,7 @@ function PromoModal({ draft, file, folders, services, onFile, onClose, onSave, l
             value={form.title}
             maxLength={80}
             onChange={set("title")}
-            placeholder="Monsoon home refresh — 20% off"
+            placeholder="Monsoon home refresh â€” 20% off"
           />
         </Field>
         <Field
@@ -736,8 +886,8 @@ function PromoModal({ draft, file, folders, services, onFile, onClose, onSave, l
               htmlFor="promo-discount-value"
               hint={
                 form.discountType === "percentage"
-                  ? "1–100. Rounded to the nearest rupee."
-                  : "Flat amount in ₹. Never exceeds the base price."
+                  ? "1â€“100. Rounded to the nearest rupee."
+                  : "Flat amount in â‚¹. Never exceeds the base price."
               }
             >
               <Input
@@ -843,7 +993,7 @@ function PromoModal({ draft, file, folders, services, onFile, onClose, onSave, l
             onChange={onFile}
             existingUrl={draft.imagePath ? mediaUrl(draft.imagePath) : ""}
             label="Promo artwork (optional)"
-            hint="Wide image, at least 1200×600. JPG, PNG or WEBP up to 4 MB."
+            hint="Wide image, at least 1200Ã—600. JPG, PNG or WEBP up to 4 MB."
           />
         </div>
         <Field

@@ -6345,3 +6345,73 @@ body.adm-mode .modal .upload__copy small {
     grid-template-columns: 1fr;
   }
 }
+
+/* Universal promo code generator */
+.adm-codegen {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.adm-codegen__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(110px, 0.5fr) minmax(150px, 0.7fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.adm-codegen__submit {
+  margin-bottom: 2px;
+}
+
+.adm-codelist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.adm-coderow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid #e3eaf3;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.adm-coderow__code {
+  font-family: var(--font-display, monospace);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #0b1f3a;
+}
+
+.adm-coderow__value {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e8f1ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.adm-coderow__meta {
+  flex: 1;
+  color: #667085;
+  font-size: 11.5px;
+}
+
+@media (max-width: 760px) {
+  .adm-codegen__fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .adm-codegen__submit {
+    grid-column: 1 / -1;
+  }
+
+  .adm-coderow {
+    flex-wrap: wrap;
+  }
+}
