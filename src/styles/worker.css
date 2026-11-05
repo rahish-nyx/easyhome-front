@@ -1,5 +1,5 @@
-/* ==========================================================================
-   EasyHome worker console â€” Dark-Ops Professional (blue / black)
+﻿/* ==========================================================================
+   EasyHome worker console Ã¢â‚¬â€ Dark-Ops Professional (blue / black)
    Large touch targets, high contrast, mobile-first.
    ========================================================================== */
 
@@ -1787,7 +1787,7 @@
 
 /* ------------------------------- Navigation ------------------------------ */
 
-/* Desktop top navigation links â€” hidden on mobile, shown on wide screens */
+/* Desktop top navigation links Ã¢â‚¬â€ hidden on mobile, shown on wide screens */
 .worker-top__links {
   display: none;
   align-items: center;
@@ -1827,7 +1827,7 @@
   background: var(--wk-blue-2);
 }
 
-/* Mobile bottom nav â€” hidden on desktop viewports */
+/* Mobile bottom nav Ã¢â‚¬â€ hidden on desktop viewports */
 .worker-nav {
   position: fixed;
   left: 50%;
@@ -4271,7 +4271,7 @@
 
 /* ---------------------- Header responsiveness + support ------------------- */
 
-/* Desktop: brand · tabs · actions on one line. The tab strip owns the free
+/* Desktop: brand Â· tabs Â· actions on one line. The tab strip owns the free
    space and scrolls horizontally instead of pushing the profile off-screen. */
 @media (min-width: 900px) {
   .worker-top__inner {
@@ -4760,7 +4760,7 @@
 }
 
 /* ==========================================================================
-   Worker console — Professional Refresh v2
+   Worker console â€” Professional Refresh v2
    Cohesive redesign layer for the worker side: refined surfaces, radii,
    shadows, type scale, interactive states and status treatment. Scoped
    under .worker-app so the customer theme stays untouched.
@@ -5068,7 +5068,7 @@
    the professional look for the worker console without touching the customer UI. */
 
 /* ==========================================================================
-   Worker console — Premium Light Refresh v3
+   Worker console â€” Premium Light Refresh v3
    Final premium light design system for the worker portal:
    Light Blue background #EFF6FF, Baby Blue borders/highlights #DBEAFE,
    Pure White cards, Midnight Black headings #0F172A, Royal Blue primary
@@ -5133,7 +5133,7 @@
   gap: 22px;
 }
 
-/* Buttons — Royal Blue #2563EB */
+/* Buttons â€” Royal Blue #2563EB */
 .worker-app .wk-btn,
 .worker-app .btn,
 .worker-app button.btn {
@@ -5196,7 +5196,7 @@
   transform: none;
 }
 
-/* Cards — Pure White with Baby Blue borders */
+/* Cards â€” Pure White with Baby Blue borders */
 .worker-app .wk-hero,
 .worker-app .wk-earnings-strip,
 .worker-app .wk-panel,
@@ -5220,7 +5220,7 @@
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
 }
 
-/* Headings — Midnight Black */
+/* Headings â€” Midnight Black */
 .worker-app h1,
 .worker-app h2,
 .worker-app h3,
@@ -5252,7 +5252,7 @@
   line-height: 1.55;
 }
 
-/* Status pills — Green success / Orange pending / Red warning + Blue info */
+/* Status pills â€” Green success / Orange pending / Red warning + Blue info */
 .worker-app .wk-badge,
 .worker-app .wk-badge--yellow,
 .worker-app .wk-badge--blue,
@@ -5329,7 +5329,7 @@
   color: #b45309;
 }
 
-/* Stats — white premium cards on baby blue canvas */
+/* Stats â€” white premium cards on baby blue canvas */
 .worker-app .wk-stats,
 .worker-app .wk-hero__stats > div,
 .worker-app .wk-mini-stats > div,
@@ -5343,7 +5343,7 @@
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
 }
 
-/* Forms — Baby Blue borders, white surfaces */
+/* Forms â€” Baby Blue borders, white surfaces */
 .worker-app .input,
 .worker-app .textarea,
 .worker-app .select,
@@ -5373,7 +5373,7 @@
   color: #94a3b8;
 }
 
-/* Progress — Baby Blue track, Royal Blue fill */
+/* Progress â€” Baby Blue track, Royal Blue fill */
 .worker-app .wk-progress {
   background: #dbeafe;
 }
@@ -5383,7 +5383,7 @@
   background: #2563eb;
 }
 
-/* Bottom nav — white with soft blue active state */
+/* Bottom nav â€” white with soft blue active state */
 .worker-app .worker-nav {
   border-radius: 20px 20px 0 0;
   border: 1px solid #dbeafe;
@@ -5402,7 +5402,7 @@
   box-shadow: none;
 }
 
-/* Hero — premium light banner: baby blue canvas, white card, royal accent */
+/* Hero â€” premium light banner: baby blue canvas, white card, royal accent */
 .worker-app .wk-hero {
   margin: 24px 0 18px;
   padding: clamp(20px, 3vw, 30px);
@@ -5454,7 +5454,7 @@
   color: #0f172a;
 }
 
-/* Membership — premium light pricing card */
+/* Membership â€” premium light pricing card */
 .worker-app .wk-premium-card {
   background: #ffffff;
   border-color: #dbeafe;
@@ -5472,7 +5472,7 @@
   border-color: #dbeafe;
 }
 
-/* Offline / dues banners — light tints */
+/* Offline / dues banners â€” light tints */
 .worker-app .wk-banner--offline {
   background: #fff8e9;
   border-color: #f5ddb8;
@@ -5488,13 +5488,13 @@
   border-color: #dbeafe;
 }
 
-/* Referral card — light premium card */
+/* Referral card â€” light premium card */
 .worker-app .wk-refer-card {
   background: linear-gradient(130deg, #eff6ff, #ffffff 68%);
   border-color: #dbeafe;
 }
 
-/* Active job / job cards — hover polish */
+/* Active job / job cards â€” hover polish */
 .worker-app .wk-active,
 .worker-app .wk-job {
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
@@ -5533,7 +5533,7 @@
 }
 
 /* ==========================================================================
-   Worker console — Premium Light final overrides
+   Worker console â€” Premium Light final overrides
    Light premium theme: baby blue canvas, white cards, royal blue actions.
    ========================================================================== */
 
@@ -5607,8 +5607,8 @@
 }
 
 /* ==========================================================================
-   Design refresh — mobile job cards, new job leads, payment card, palette
-   EasyHome primary blue #2563eb · pastel blue fills · dark navy ink · white cards
+   Design refresh â€” mobile job cards, new job leads, payment card, palette
+   EasyHome primary blue #2563eb Â· pastel blue fills Â· dark navy ink Â· white cards
    ========================================================================== */
 
 /* --- Active job card (Card A) --- */
@@ -5670,7 +5670,7 @@
   letter-spacing: 0.07em;
 }
 
-/* Customer uploaded photos — object-fit cover, uniform rounded frames */
+/* Customer uploaded photos â€” object-fit cover, uniform rounded frames */
 .worker-app .wk-active__photos {
   margin-top: 12px;
   padding: 10px;
@@ -5721,7 +5721,7 @@
   border-color: #2563eb;
 }
 
-/* Live timer — pastel blue box */
+/* Live timer â€” pastel blue box */
 .worker-app .wk-job-timer {
   background: rgba(37, 99, 235, 0.07);
   border-color: rgba(37, 99, 235, 0.28);
@@ -5736,7 +5736,7 @@
   color: #0b1f3a;
 }
 
-/* Phase progress — pastel blue track, blue current node */
+/* Phase progress â€” pastel blue track, blue current node */
 .worker-app .wk-phase-track {
   background: #f4f8fc;
   border: 1px solid #e3eaf3;
@@ -5921,7 +5921,7 @@
 @media (min-width: 1100px) {
   .worker-app .wk-jobs-layout {
     display: grid;
-    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
     gap: 16px;
     align-items: start;
   }
@@ -5949,7 +5949,7 @@
   background: #1d4ed8;
 }
 
-/* --- Application status page (WorkerStatus) — design refresh --- */
+/* --- Application status page (WorkerStatus) â€” design refresh --- */
 .worker-app .wk-status-hero__icon,
 .worker-app .wk-status-hero__icon--pending {
   background: rgba(37, 99, 235, 0.1);
@@ -6031,4 +6031,599 @@
 
 .worker-app .wk-fineprint a {
   color: #2563eb;
+}
+
+/* ==========================================================================
+   Worker dashboard - pro job tickets (active workflow + incoming leads)
+   ========================================================================== */
+
+.wk-ticket {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #e3eaf3;
+  box-shadow: 0 18px 44px rgba(15, 42, 82, 0.08);
+}
+
+.wk-ticket--active {
+  position: relative;
+  overflow: hidden;
+}
+
+.wk-ticket--active::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, #3b82f6, #2563eb);
+}
+
+.wk-ticket.is-focus {
+  border-color: #93b8f8;
+  box-shadow: 0 22px 52px rgba(37, 99, 235, 0.18);
+}
+
+.wk-ticket--lead {
+  border-radius: 16px;
+}
+
+.wk-ticket--lead.is-urgent {
+  border-color: #f6b7b7;
+}
+
+.wk-ticket__topline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.wk-ticket__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: var(--radius-pill);
+  background: #e8f1ff;
+  color: #1d4ed8;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.wk-ticket__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.wk-ticket__icon {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #eef4ff;
+}
+
+.wk-ticket__icon--blue {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: #2563eb;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.32);
+}
+
+.wk-ticket__head h3 {
+  font-size: 19px;
+  line-height: 1.18;
+  color: #0b1f3a;
+}
+
+.wk-ticket--lead .wk-ticket__head h3 {
+  font-size: 15.5px;
+}
+
+.wk-ticket__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  color: #667085;
+  font-size: 11.5px;
+}
+
+.wk-ticket__meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wk-ticket__meta-sep {
+  color: #cbd8e8;
+}
+
+.wk-ticket__head-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.wk-ticket__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: var(--radius-pill);
+  background: #eef4ff;
+  color: #1d4ed8;
+  font-size: 10.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.wk-ticket__state.is-live {
+  background: #e8f1ff;
+  color: #1d4ed8;
+}
+
+.wk-ticket__state.is-done {
+  background: #e6f7f1;
+  color: #067a52;
+}
+
+.wk-ticket__live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2563eb;
+  animation: wk-ticket-pulse 1.4s ease infinite;
+}
+
+@keyframes wk-ticket-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.65); }
+}
+
+.wk-ticket__budget {
+  margin-left: auto;
+  min-width: 76px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #e8f1ff;
+  text-align: right;
+}
+
+.wk-ticket__budget strong {
+  display: block;
+  font-size: 17px;
+  font-weight: 800;
+  color: #0b1f3a;
+}
+
+.wk-ticket__budget span {
+  font-size: 10px;
+  font-weight: 700;
+  color: #475467;
+}
+
+.wk-ticket__details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.wk-ticket__details > div {
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: #f8fbff;
+  border: 1px solid #eef3f9;
+}
+
+.wk-ticket__details span {
+  display: block;
+  color: #667085;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.wk-ticket__details strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: #0b1f3a;
+}
+
+.wk-ticket__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 11px;
+  border-radius: 12px;
+  background: #f8fbff;
+  border: 1px solid #eef3f9;
+}
+
+.wk-ticket__message {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  color: #344054;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.wk-ticket__message svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #2563eb;
+}
+
+.wk-ticket__thumbs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.wk-ticket__thumb {
+  flex: 0 0 auto;
+  width: 74px;
+  aspect-ratio: 4 / 3;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e3eaf3;
+  background: #eef3f9;
+}
+
+.wk-ticket__thumb img,
+.wk-ticket__shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.wk-ticket__thumb:hover img,
+.wk-ticket__shot:hover img {
+  transform: scale(1.05);
+}
+
+.wk-ticket__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #eef3f9;
+}
+
+.wk-ticket__customer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.wk-ticket__customer strong {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #0b1f3a;
+}
+
+.wk-ticket__verified {
+  color: #2563eb;
+}
+
+.wk-ticket__customer small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #667085;
+  font-size: 11.5px;
+}
+
+.wk-ticket__customer small a {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.wk-ticket__wallet {
+  margin-left: auto;
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 0 5px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #e8f1ff;
+  color: #1d4ed8;
+  flex-shrink: 0;
+}
+
+.wk-ticket__wallet svg {
+  grid-row: 1 / span 2;
+}
+
+.wk-ticket__wallet strong {
+  font-size: 14px;
+  color: #0b1f3a;
+  line-height: 1.1;
+}
+
+.wk-ticket__wallet small {
+  font-size: 9px;
+  font-weight: 700;
+  color: #475467;
+  line-height: 1.1;
+}
+
+.wk-ticket__accept {
+  min-height: 46px;
+}
+
+.wk-ticket__flow {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wk-ticket__rail {
+  display: flex;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wk-ticket__rail li {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  color: #98a2b3;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.wk-ticket__rail li::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: 24px;
+  right: 4px;
+  height: 2px;
+  border-radius: 2px;
+  background: #e3eaf3;
+}
+
+.wk-ticket__rail li:last-child::after {
+  display: none;
+}
+
+.wk-ticket__node {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid #d9e4f0;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.wk-ticket__rail li.is-current {
+  color: #0b1f3a;
+}
+
+.wk-ticket__rail li.is-filled .wk-ticket__node {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+.wk-ticket__rail li.is-filled::after {
+  background: #2563eb;
+}
+
+.wk-ticket__rail li.is-final.is-filled .wk-ticket__node {
+  border-color: #067a52;
+  background: #067a52;
+}
+
+.wk-ticket__body {
+  display: grid;
+  gap: 12px;
+}
+
+.wk-ticket__main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.wk-ticket__timerbox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px;
+  border-radius: 14px;
+  background: #eef4ff;
+  border: 1px solid #dbe9ff;
+}
+
+.wk-ticket__timerbox.is-running {
+  background: #e8f1ff;
+  border-color: #bcd6ff;
+}
+
+.wk-ticket__timer-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #475467;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.wk-ticket__timerbox strong {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-display, "Plus Jakarta Sans", sans-serif);
+  font-size: 28px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: #0b1f3a;
+  line-height: 1.1;
+}
+
+.wk-ticket__cta {
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.wk-ticket__desc {
+  color: #475467;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.wk-ticket__gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px;
+  border-radius: 12px;
+  background: #f8fbff;
+  border: 1px solid #eef3f9;
+}
+
+.wk-ticket__gallery-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #475467;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.wk-ticket__gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+}
+
+.wk-ticket__shot {
+  display: block;
+  aspect-ratio: 1 / 1;
+  border-radius: 11px;
+  overflow: hidden;
+  border: 1px solid #e3eaf3;
+  background: #eef3f9;
+  box-shadow: 0 4px 12px rgba(15, 42, 82, 0.06);
+}
+
+.wk-ticket__gallery-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 74px;
+  border-radius: 11px;
+  border: 1px dashed #d9e4f0;
+  color: #98a2b3;
+  font-size: 11px;
+}
+
+.wk-ticket__gps {
+  width: 100%;
+}
+
+@media (min-width: 700px) {
+  .wk-ticket__footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .wk-ticket__accept {
+    width: auto;
+    min-width: 170px;
+  }
+}
+
+@media (min-width: 1100px) {
+  .wk-ticket--active {
+    padding: 20px;
+  }
+
+  .wk-ticket--active .wk-ticket__body {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    align-items: start;
+  }
+
+  .wk-ticket__gallery-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .wk-ticket__footer {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 480px) {
+  .wk-ticket {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .wk-ticket__head h3 {
+    font-size: 17px;
+  }
+
+  .wk-ticket__head-right {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .wk-ticket__timerbox strong {
+    font-size: 24px;
+  }
+
+  .wk-ticket__cta {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .wk-ticket__wallet {
+    display: none;
+  }
 }

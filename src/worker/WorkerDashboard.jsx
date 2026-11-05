@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowRight,
@@ -51,18 +51,15 @@ import { useStandalone } from "../hooks/useDevice";
 import { Capacitor } from "@capacitor/core";
 import { qBookingsForWorker, qJobFeed } from "../lib/queries";
 import { api } from "../lib/api";
+import { distanceKm, mapsUrl } from "../lib/geo";
 import {
-  distanceKm,
-  distanceLabel,
-  mapsUrl,
-} from "../lib/geo";
-import {
+  cx,
   formatDateTime,
   inr,
   timeAgo,
   toDate,
 } from "../lib/format";
-import { PLANS, SERVICE_META, TRACKING_PHASES, trackingMeta } from "../lib/constants";
+import { PLANS, SERVICE_META, TRACKING_PHASES } from "../lib/constants";
 import { rolePlans, workerFeePct } from "../lib/plans";
 import { usePageMeta } from "../lib/usePageMeta";
 import {
@@ -104,7 +101,7 @@ const PRIMARY_TABS = TABS.filter((item) => PRIMARY_TAB_IDS.includes(item.id));
 const HEADER_TABS = TABS.filter((item) => item.id !== "profile");
 
 const PHASE_TOAST = {
-  [TRACKING_PHASES.EN_ROUTE]: "Customer notified — you are on the way.",
+  [TRACKING_PHASES.EN_ROUTE]: "Customer notified â€” you are on the way.",
   [TRACKING_PHASES.ARRIVED]: "Arrival recorded. The customer can see you are on site.",
   [TRACKING_PHASES.WORKING]: "Work started. Keep your status and GPS fresh.",
 };
@@ -257,7 +254,7 @@ export default function WorkerDashboard() {
   const available = useMemo(() => {
     if (!worker) return [];
     // The backend already matches jobs to this worker's zones. Only apply the
-    // zone filter here when zone data is actually loaded — otherwise a slow or
+    // zone filter here when zone data is actually loaded â€” otherwise a slow or
     // failed bootstrap would hide every job in the feed.
     const zonesKnown = activeZoneIds.size > 0;
     const inZone = (job) =>
@@ -1038,7 +1035,7 @@ function MembershipTab({ worker, isPremium, settings }) {
       <section className="wk-membership-card">
         <div>
           <p className="wk-eyebrow">{isPremium ? "Your plan" : "Professional membership"}</p>
-          <h2>{isPremium ? "You’re on EasyHome Pro" : "Keep more of every job"}</h2>
+          <h2>{isPremium ? "Youâ€™re on EasyHome Pro" : "Keep more of every job"}</h2>
           <p>
             {isPremium
               ? `Your current membership is active until ${formatDateTime(worker.premiumUntil)}.`
@@ -1074,7 +1071,7 @@ function MembershipTab({ worker, isPremium, settings }) {
             </fieldset>
             <RazorpayPayment
               amount={selected.amount}
-              description={`EasyHome Pro · ${selected.label}`}
+              description={`EasyHome Pro Â· ${selected.label}`}
               orderEndpoint="/payment/subscription/order"
               verifyEndpoint="/payment/subscription/verify"
               orderBody={{ plan: selected.id }}
@@ -1369,7 +1366,7 @@ function WorkerReferTab({ worker, profile }) {
       try {
         await navigator.share({
           title: "Join EasyHome as a professional",
-          text: "Join EasyHome with my professional invite. We each unlock ₹51 after your first completed job and admin verification.",
+          text: "Join EasyHome with my professional invite. We each unlock â‚¹51 after your first completed job and admin verification.",
           url: shareUrl,
         });
         return;
@@ -1387,17 +1384,17 @@ function WorkerReferTab({ worker, profile }) {
           <p className="wk-eyebrow">Refer &amp; Earn</p>
           <h1>Grow the professional network</h1>
           <p>
-            Invite another verified professional. You both unlock ₹51 after
+            Invite another verified professional. You both unlock â‚¹51 after
             their first completed job and admin approval.
           </p>
         </div>
-        <span className="wk-badge wk-badge--green">₹51 each</span>
+        <span className="wk-badge wk-badge--green">â‚¹51 each</span>
       </div>
 
       <section className="wk-refer-card">
         <div className="wk-refer-card__main">
           <p className="wk-eyebrow">Your professional code</p>
-          <h2>{state.loading && !code ? "Loading your code…" : code || "Code unavailable"}</h2>
+          <h2>{state.loading && !code ? "Loading your codeâ€¦" : code || "Code unavailable"}</h2>
           <p>
             {worker?.name || profile?.name || "This professional"} invites another
             professional to join EasyHome. Same-role referrals only.
@@ -1455,7 +1452,7 @@ function WorkerReferTab({ worker, profile }) {
                 <div>
                   <strong>{item.referredName}</strong>
                   <small>
-                    Joined {formatDateTime(item.createdAt)} · {meta.hint}
+                    Joined {formatDateTime(item.createdAt)} Â· {meta.hint}
                   </small>
                 </div>
                 <span className={`wk-badge wk-badge--${meta.tone}`}>
@@ -1490,9 +1487,9 @@ function WorkerFooter() {
 
   // Mobile APK and installed PWAs already provide app navigation; a marketing footer only
   // adds noise and can collide with the fixed bottom navigation.
-  if (isMobile) return null;
-
   const { footerLinks } = useCatalogue();
+
+  if (isMobile) return null;
   const serviceLinks = footerLinks.filter((item) => item.group === "services");
   const legalLinks = footerLinks.filter((item) =>
     ["company", "legal", "support"].includes(item.group),
@@ -1570,8 +1567,8 @@ function WorkerFooter() {
       </div>
 
       <div className="wk-footer__bottom">
-        <span>© {new Date().getFullYear()} EasyHome. For independent professionals.</span>
-        <span>Made for local work across India 🇮🇳</span>
+        <span>Â© {new Date().getFullYear()} EasyHome. For independent professionals.</span>
+        <span>Made for local work across India ðŸ‡®ðŸ‡³</span>
       </div>
     </footer>
   );
@@ -1585,7 +1582,6 @@ function JobsTab({
   loading,
   busy,
   canAccept,
-  isPremium,
   focusJobId,
   onStart,
   onPhase,
@@ -1603,11 +1599,11 @@ function JobsTab({
           <p className="wk-eyebrow">Job desk</p>
           <h1>Active &amp; available jobs</h1>
           <p>
-            {worker.service} ·{" "}
+            {worker.service} Â·{" "}
             {[worker.areaName, worker.city].filter(Boolean).join(", ") ||
               worker.area ||
               "Your local area"}{" "}
-            · {worker.radiusKm || 25} km radius
+            Â· {worker.radiusKm || 25} km radius
           </p>
         </div>
         <button
@@ -1672,7 +1668,7 @@ function JobsTab({
                 <div className="grow">
                   <strong>{job.service}</strong>
                   <span>
-                    {job.area} · {formatDateTime(job.completedAt)}
+                    {job.area} Â· {formatDateTime(job.completedAt)}
                   </span>
                 </div>
                 <div className="wk-history__money">
@@ -1884,53 +1880,56 @@ function AvailableJobsSection({
 }
 
 function AvailableJobCard({ job, busy, canAccept, onAccept }) {
-  const photo = mediaUrl(job.imagePath);
-  const address = job.addressLabel || job.location?.label || job.area || "Service location shared";
+  const photos = (
+    Array.isArray(job.imagePaths) && job.imagePaths.length
+      ? job.imagePaths
+      : [job.imagePath]
+  )
+    .map(mediaUrl)
+    .filter(Boolean);
   const serviceDate = job.serviceDate || formatDateTime(job.createdAt);
   const preferredTime = job.preferredTime || "Anytime";
   const jobType = job.jobType || "Home Service";
   return (
-    <article className={`wk-lead${job.urgency === "urgent" ? " wk-lead--urgent" : ""}`}>
-      <div className="wk-lead__top">
-        <span className="wk-lead__tag">
+    <article className={cx("wk-ticket wk-ticket--lead", job.urgency === "urgent" && "is-urgent")}>
+      <div className="wk-ticket__topline">
+        <span className="wk-ticket__tag">
           <Sparkles size={11} /> New Booking
         </span>
-        <div className="wk-lead__head-row">
-          <span className="wk-job__icon">
-            <ServiceIcon service={{ key: job.serviceKey }} size={42} iconSize={20} />
+        {job.urgency === "urgent" ? (
+          <span className="wk-badge wk-badge--red">
+            <Timer size={11} /> Urgent
           </span>
-          <div className="grow">
-            <div className="wk-job__title-row">
-              <h3>{job.service}</h3>
-              {job.urgency === "urgent" ? (
-                <span className="wk-badge wk-badge--red">
-                  <Timer size={11} /> Urgent
-                </span>
-              ) : null}
-              {job.priority === "pro" ? (
-                <span className="wk-badge wk-badge--yellow">
-                  <Crown size={11} /> Pro priority
-                </span>
-              ) : null}
-            </div>
-            <p className="wk-job__meta">
-              <span>
-                <MapPin size={12} /> {job.area}
-              </span>
-              {job.sameServiceZone ? <span>In your service zone</span> : null}
-              <span>
-                <Clock3 size={12} /> {timeAgo(job.createdAt)}
-              </span>
-            </p>
-          </div>
-          <div className="wk-lead__budget">
-            <strong>{inr(job.budget)}</strong>
-            <span>Budget</span>
-          </div>
+        ) : null}
+        {job.priority === "pro" ? (
+          <span className="wk-badge wk-badge--yellow">
+            <Crown size={11} /> Pro priority
+          </span>
+        ) : null}
+      </div>
+
+      <div className="wk-ticket__head">
+        <span className="wk-ticket__icon">
+          <ServiceIcon service={{ key: job.serviceKey }} size={44} iconSize={21} />
+        </span>
+        <div className="grow">
+          <h3>{job.service}</h3>
+          <p className="wk-ticket__meta">
+            <span>
+              <MapPin size={12} /> {job.area}
+            </span>
+            <span>
+              <Clock3 size={12} /> {timeAgo(job.createdAt)}
+            </span>
+          </p>
+        </div>
+        <div className="wk-ticket__budget">
+          <strong>{inr(job.budget)}</strong>
+          <span>Budget</span>
         </div>
       </div>
 
-      <div className="wk-lead__grid">
+      <div className="wk-ticket__details">
         <div>
           <span>Service Date</span>
           <strong>{serviceDate}</strong>
@@ -1949,24 +1948,40 @@ function AvailableJobCard({ job, busy, canAccept, onAccept }) {
         </div>
       </div>
 
-      {job.description ? (
-        <div className="wk-lead__message">
-          <MessageCircle size={13} />
-          <p>{job.description}</p>
+      {job.description || photos.length ? (
+        <div className="wk-ticket__panel">
+          {job.description ? (
+            <p className="wk-ticket__message">
+              <MessageCircle size={13} />
+              <span>{job.description}</span>
+            </p>
+          ) : null}
+          {photos.length ? (
+            <div className="wk-ticket__thumbs">
+              {photos.map((src, index) => (
+                <a
+                  key={`${src}-${index}`}
+                  className="wk-ticket__thumb"
+                  href={src}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <img src={src} alt={`${job.service} customer reference ${index + 1}`} />
+                </a>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
-      {photo ? (
-        <a className="wk-job__photo-wrap" href={photo} target="_blank" rel="noreferrer">
-          <img className="wk-job__photo" src={photo} alt={`${job.service} customer reference`} />
-        </a>
-      ) : null}
-
-      <div className="wk-lead__footer">
-        <div className="wk-lead__customer">
+      <div className="wk-ticket__footer">
+        <div className="wk-ticket__customer">
           <Avatar name={job.customerName} path={job.customerPhotoPath} size={40} />
           <div className="grow">
-            <strong>{job.customerName || "EasyHome Member"}</strong>
+            <strong>
+              {job.customerName || "EasyHome Member"}
+              <BadgeCheck size={13} className="wk-ticket__verified" />
+            </strong>
             <small>
               <Phone size={11} /> {job.customerPhone || "Contact shared after accept"}
             </small>
@@ -1974,12 +1989,13 @@ function AvailableJobCard({ job, busy, canAccept, onAccept }) {
         </div>
         <button
           type="button"
-          className="wk-btn wk-btn--primary wk-btn--block"
+          className="wk-btn wk-btn--primary wk-btn--block wk-ticket__accept"
           onClick={onAccept}
           disabled={busy}
+          title={canAccept ? "" : "Fees due - tap to settle"}
         >
           {busy ? <Spinner size={16} /> : <Zap size={16} />}
-          {busy ? "Accepting…" : "Accept Job"}
+          {busy ? "Acceptingâ€¦" : "Accept Job"}
         </button>
       </div>
     </article>
@@ -1991,7 +2007,6 @@ function ActiveJobCard({
   busy,
   highlight,
   onStart,
-  onPhase,
   onComplete,
   onReceivePayment,
   gps,
@@ -2001,13 +2016,16 @@ function ActiveJobCard({
   const price =
     job.pricing?.finalPrice || job.pricing?.workerPrice || job.pricing?.customerOffer || job.budget;
   const hasFinalPrice = Boolean(price);
-  const photo = mediaUrl(job.imagePath);
+  const photos = (
+    Array.isArray(job.imagePaths) && job.imagePaths.length
+      ? job.imagePaths
+      : [job.imagePath]
+  )
+    .map(mediaUrl)
+    .filter(Boolean);
   const loadingPhone = hasFinalPrice && phoneLoadedFor !== job.id;
   const lat = job.location?.lat;
   const lng = job.location?.lng;
-  // The booking status is the source of truth. Older records can retain a
-  // completed trackingPhase while the booking is still active; those jobs
-  // must continue to show Complete job, never payment collection.
   const isCompleted = job.status === "completed";
   const rawPhase =
     job.trackingPhase ||
@@ -2022,35 +2040,13 @@ function ActiveJobCard({
     : started
       ? TRACKING_PHASES.WORKING
       : TRACKING_PHASES.ASSIGNED;
-  const meta = trackingMeta(phase, job.status);
   const milestoneIndex =
-    phase === "completed"
-      ? 4
-      : phase === "working"
-        ? 3
-        : phase === "arrived"
-          ? 2
-          : phase === "en_route" || phase === "assigned"
-            ? 1
-            : 0;
-  const nextAction =
-    phase === TRACKING_PHASES.ASSIGNED
-      ? { phase: TRACKING_PHASES.EN_ROUTE, label: "Start journey", hint: "Notify customer you are on the way", icon: Navigation }
-      : phase === TRACKING_PHASES.EN_ROUTE
-        ? { phase: TRACKING_PHASES.ARRIVED, label: "I've arrived", hint: "Confirm you reached the location", icon: MapPin }
-        : phase === TRACKING_PHASES.ARRIVED
-          ? { phase: TRACKING_PHASES.WORKING, label: "Start work", hint: "Begin the job and keep GPS on", icon: Zap }
-          : phase === TRACKING_PHASES.WORKING
-            ? { phase: TRACKING_PHASES.COMPLETED, label: "Mark job completed", hint: "Only after the customer inspects the work", icon: CheckCircle2 }
-            : null;
+    phase === "completed" ? 3 : phase === "working" ? 2 : phase === "arrived" ? 1 : 0;
   const gpsLive = gps?.status === "sharing";
-  const NextIcon = nextAction?.icon;
   const [clock, setClock] = useState(Date.now());
 
   useEffect(() => {
-    if (![TRACKING_PHASES.ARRIVED, TRACKING_PHASES.WORKING].includes(phase)) {
-      return undefined;
-    }
+    if (phase !== TRACKING_PHASES.WORKING) return undefined;
     const timer = setInterval(() => setClock(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [phase]);
@@ -2060,16 +2056,12 @@ function ActiveJobCard({
     (phase === TRACKING_PHASES.WORKING ? toDate(job.trackingStatusUpdatedAt) : null);
   const elapsedSeconds = startedAt
     ? Math.max(0, Math.floor((clock - startedAt.getTime()) / 1000))
-    : null;
-  const arrivedAt = toDate(job.arrivedAt);
-  const autoStartSeconds =
-    phase === TRACKING_PHASES.ARRIVED && arrivedAt
-      ? Math.max(0, Math.floor((arrivedAt.getTime() + 8 * 60_000 - clock) / 1000))
-      : null;
+    : 0;
+
   const formatClock = (seconds) =>
-    `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(
-      seconds % 60,
-    ).padStart(2, "0")}`;
+    `${String(Math.floor(seconds / 3600)).padStart(2, "0")}:${String(
+      Math.floor((seconds % 3600) / 60),
+    ).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 
   useEffect(() => {
     let active = true;
@@ -2090,134 +2082,179 @@ function ActiveJobCard({
     };
   }, [job.id, hasFinalPrice]);
 
+  const statusBadge = isCompleted ? (
+    <span className="wk-ticket__state is-done">
+      <CheckCircle2 size={12} /> Complete
+    </span>
+  ) : phase === TRACKING_PHASES.WORKING ? (
+    <span className="wk-ticket__state is-live">
+      <span className="wk-ticket__live-dot" /> Working
+    </span>
+  ) : (
+    <span className="wk-ticket__state">Assigned</span>
+  );
+
   return (
-    <article className={`wk-active${highlight ? " is-focus" : ""}`}>
-      <div className="wk-active__head">
-        <span className="wk-active__icon">
-          <ServiceIcon service={{ key: job.serviceKey }} size={26} iconSize={12} />
+    <article className={cx("wk-ticket wk-ticket--active", highlight && "is-focus")}>
+      <header className="wk-ticket__head">
+        <span className="wk-ticket__icon wk-ticket__icon--blue">
+          <ServiceIcon service={{ key: job.serviceKey }} size={52} iconSize={24} />
         </span>
-        <span className={`wk-status-dot wk-status-dot--${job.status}`} />
         <div className="grow">
-          <span className="wk-active__status">
-            {meta.label}
-            {!hasFinalPrice ? " · final price pending" : ""}
-          </span>
           <h3>{job.service}</h3>
-          <p className="wk-active__meta">
-            <MapPin size={12} /> {job.area}
-            {job.urgency === "urgent" ? (
-              <span className="wk-badge wk-badge--red">Urgent</span>
-            ) : null}
+          <p className="wk-ticket__meta">
+            <span>
+              <MapPin size={12} /> {job.area}
+            </span>
+            <span className="wk-ticket__meta-sep">â€¢</span>
+            <span>
+              <Clock3 size={12} /> Today â€¢ {formatDateTime(job.createdAt)}
+            </span>
           </p>
         </div>
-        {gps ? (
-          <span className={`wk-gps-pill${gpsLive ? " is-on" : ""}`}>
-            <Radio size={12} />
-            {gpsLive ? "GPS live" : gps.status === "denied" ? "GPS blocked" : "GPS waiting"}
-          </span>
-        ) : null}
-        <div className="wk-active__money">
-          <Wallet size={15} />
-          <strong>{inr(price)}</strong>
-          <span>{hasFinalPrice ? "Agreed price" : "Budget / quote"}</span>
+        <div className="wk-ticket__head-right">
+          {statusBadge}
+          {gps ? (
+            <span className={cx("wk-gps-pill", gpsLive && "is-on")}>
+              <Radio size={12} />
+              {gpsLive ? "GPS LIVE" : gps.status === "denied" ? "GPS blocked" : "GPS waiting"}
+            </span>
+          ) : null}
         </div>
-      </div>
+      </header>
 
-      <div className="wk-phase-track" aria-label={`Job phase: ${meta.label}`}>
-        {TRACKING_PHASES.map((item, index) => (
-          <span
-            key={item.id}
-            className={
-              index < milestoneIndex || phase === TRACKING_PHASES.COMPLETED
-                ? "is-done"
-                : index === milestoneIndex
-                  ? "is-current"
-                  : ""
-            }
-          >
-            <i>{index + 1}</i>
-            {item.short}
-          </span>
-        ))}
-      </div>
-
-      {job.trackingAlert ? (
-        <div className="wk-alert wk-alert--warn">
-          <Clock3 size={16} />
-          <span>
-            No update recorded recently. Customer tracking is waiting — update your phase or
-            refresh GPS.
-          </span>
-        </div>
-      ) : null}
-
-      {phase === TRACKING_PHASES.WORKING && elapsedSeconds !== null ? (
-        <div className="wk-job-timer" role="timer" aria-label="Job timer">
-          <span className="wk-job-timer__icon">
-            <Timer size={18} />
-          </span>
-          <div className="grow">
-            <strong>{formatClock(elapsedSeconds)}</strong>
-            <small>Job timer running · tap Complete when the work is done</small>
-          </div>
-          <span className="wk-badge wk-badge--green">Live</span>
-        </div>
-      ) : null}
-
-      {phase === TRACKING_PHASES.ARRIVED && autoStartSeconds !== null ? (
-        <div className="wk-alert wk-alert--warn">
-          <Timer size={16} />
-          <span>
-            {autoStartSeconds > 0
-              ? `Work starts automatically in ${formatClock(autoStartSeconds)}. Tap Start work now to begin.`
-              : "Arrival timer elapsed — work will start automatically on the next check."}
-          </span>
-        </div>
-      ) : null}
-
-      {job.imagePath ? (
-        <div className="wk-active__photos">
-          <div className="wk-active__photos-head">
-            <Camera size={14} />
-            <span>Customer Uploaded Photos</span>
-          </div>
-          <div className="wk-active__photos-row">
-            <a className="wk-active__photo-wrap" href={photo} target="_blank" rel="noreferrer">
-              <img
-                className="wk-active__photo"
-                src={photo}
-                alt={`${job.service} customer reference`}
-              />
-            </a>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="wk-active__customer">
-        <Avatar name={job.customerName} path={job.customerPhotoPath} size={44} />
-        <div className="grow">
-          <strong>
-            {job.customerName || "EasyHome customer"}
-            <BadgeCheck size={13} style={{ color: "var(--wk-blue-2)", verticalAlign: "-2px" }} />
-          </strong>
-          <p>
-            <MapPin size={12} /> {job.area}
-            {job.urgency === "urgent" ? (
-              <span className="wk-badge wk-badge--red" style={{ marginLeft: 8 }}>
-                Urgent
+      <div className="wk-ticket__flow">
+        <ol className="wk-ticket__rail" aria-label={`Job phase: ${phase}`}>
+          {["En Route", "Arrived", "Working", "Complete"].map((label, index) => (
+            <li
+              key={label}
+              className={cx(
+                index < milestoneIndex && "is-done",
+                index === milestoneIndex && "is-current",
+                index <= milestoneIndex && "is-filled",
+                index === 3 && index <= milestoneIndex && "is-final",
+              )}
+            >
+              <span className="wk-ticket__node">
+                {index < milestoneIndex || (index === 3 && isCompleted) ? (
+                  <CheckCircle2 size={13} />
+                ) : (
+                  index + 1
+                )}
               </span>
-            ) : null}
-          </p>
+              <span>{label}</span>
+            </li>
+          ))}
+        </ol>
+
+        {job.trackingAlert ? (
+          <div className="wk-alert wk-alert--warn">
+            <Clock3 size={16} />
+            <span>No recent update. Refresh GPS or advance the phase.</span>
+          </div>
+        ) : null}
+
+        <div className="wk-ticket__body">
+          <div className="wk-ticket__main">
+            <div className={cx("wk-ticket__timerbox", phase === TRACKING_PHASES.WORKING && "is-running")}>
+              <div className="wk-ticket__timer-copy">
+                <span className="wk-ticket__timer-label">
+                  <Timer size={14} /> {isCompleted ? "Completed in" : phase === TRACKING_PHASES.WORKING ? "Live job timer" : "Job timer"}
+                </span>
+                <strong>{formatClock(elapsedSeconds)}</strong>
+              </div>
+              {isCompleted ? (
+                <button type="button" className="wk-btn wk-btn--primary wk-ticket__cta" onClick={onReceivePayment} disabled={busy}>
+                  <Wallet size={17} /> Receive payment
+                </button>
+              ) : phase === TRACKING_PHASES.WORKING ? (
+                <button type="button" className="wk-btn wk-btn--primary wk-ticket__cta" onClick={onComplete} disabled={busy}>
+                  <CheckCircle2 size={17} /> Complete
+                </button>
+              ) : (
+                <button type="button" className="wk-btn wk-btn--primary wk-ticket__cta" onClick={onStart} disabled={busy}>
+                  <Zap size={17} /> Start
+                </button>
+              )}
+            </div>
+
+            {!hasFinalPrice ? (
+              <div className="wk-price-state">
+                <div>
+                  <span>Your quote</span>
+                  <strong>{job.pricing?.workerPrice ? inr(job.pricing.workerPrice) : "Not set"}</strong>
+                </div>
+                <div>
+                  <span>Customer budget</span>
+                  <strong>{inr(job.budget)}</strong>
+                </div>
+              </div>
+            ) : (
+              <div className="wk-confirmed">
+                <BadgeCheck size={16} />
+                <span>
+                  Final price set at <strong>{inr(job.pricing?.finalPrice || price)}</strong>.
+                </span>
+              </div>
+            )}
+
+            {job.description ? <p className="wk-ticket__desc">{job.description}</p> : null}
+          </div>
+
+          <aside className="wk-ticket__gallery">
+            <div className="wk-ticket__gallery-head">
+              <Camera size={14} />
+              <span>Customer Uploaded Photos</span>
+            </div>
+            {photos.length ? (
+              <div className="wk-ticket__gallery-grid">
+                {photos.map((src, index) => (
+                  <a
+                    key={`${src}-${index}`}
+                    className="wk-ticket__shot"
+                    href={src}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <img src={src} alt={`${job.service} customer reference ${index + 1}`} />
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <div className="wk-ticket__gallery-empty">
+                <Camera size={18} />
+                <span>No reference photos</span>
+              </div>
+            )}
+          </aside>
         </div>
-        {hasFinalPrice ? (
-          <div className="wk-contact-actions">
-            {loadingPhone ? (
-              <Spinner size={16} />
-            ) : phone ? (
-              <a href={`tel:${phone}`} className="wk-icon-btn" aria-label="Call customer">
-                <Phone size={17} />
-              </a>
-            ) : null}
+      </div>
+
+      <div className="wk-ticket__footer">
+        <div className="wk-ticket__customer">
+          <Avatar name={job.customerName} path={job.customerPhotoPath} size={44} />
+          <div className="grow">
+            <strong>
+              {job.customerName || "EasyHome Member"}
+              <BadgeCheck size={13} className="wk-ticket__verified" />
+            </strong>
+            <small>
+              <Phone size={11} />{" "}
+              {loadingPhone ? (
+                <Spinner size={12} />
+              ) : phone ? (
+                <a href={`tel:${phone}`}>{phone}</a>
+              ) : (
+                job.customerPhone || "Number locked until price is set"
+              )}
+            </small>
+          </div>
+          <span className="wk-ticket__wallet">
+            <Wallet size={13} />
+            <strong>{inr(price)}</strong>
+            <small>{hasFinalPrice ? "Agreed Price" : "Budget"}</small>
+          </span>
+          {lat !== undefined || lng !== undefined ? (
             <a
               href={mapsUrl(lat, lng, job.area)}
               target="_blank"
@@ -2227,91 +2264,11 @@ function ActiveJobCard({
             >
               <Navigation size={17} />
             </a>
-          </div>
-        ) : null}
-      </div>
-
-      <p className="wk-active__desc">{job.description}</p>
-
-      {hasFinalPrice ? (
-        <div className="wk-confirmed">
-          <BadgeCheck size={16} />
-          <span>
-            Final price set at <strong>{inr(job.pricing?.finalPrice || price)}</strong>. Contact
-            the customer before you leave.
-          </span>
-        </div>
-      ) : (
-        <div className="wk-price-state">
-          <div>
-            <span>Your quote</span>
-            <strong>{job.pricing?.workerPrice ? inr(job.pricing.workerPrice) : "Not set"}</strong>
-          </div>
-          <div>
-            <span>Customer budget</span>
-            <strong>{inr(job.budget)}</strong>
-          </div>
-          {job.pricing?.customerOffer ? (
-            <div className="wk-price-state__offer">
-              <span>Customer offer</span>
-              <strong>{inr(job.pricing.customerOffer)}</strong>
-            </div>
           ) : null}
         </div>
-      )}
-
-      <div className="wk-active__actions">
-        {isCompleted ? (
-          <button
-            type="button"
-            className="wk-btn wk-btn--block wk-btn--primary"
-            onClick={onReceivePayment}
-            disabled={busy}
-          >
-            <Wallet size={22} />
-            <span>
-              <strong>Receive payment</strong>
-              <small>Collect cash or request UPI payment</small>
-            </span>
-            <ChevronRight size={18} />
-          </button>
-        ) : phase === TRACKING_PHASES.WORKING ? (
-          <button
-            type="button"
-            className="wk-btn wk-btn--block wk-btn--complete"
-            onClick={onComplete}
-            disabled={busy}
-          >
-            <CheckCircle2 size={22} />
-            <span>
-              <strong>Complete job</strong>
-              <small>Finish the job and open payment collection</small>
-            </span>
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="wk-btn wk-btn--block wk-phase-btn"
-            onClick={onStart}
-            disabled={busy}
-          >
-            <Zap size={22} />
-            <span>
-              <strong>Start job</strong>
-              <small>Begin work and start the timer</small>
-            </span>
-            <ChevronRight size={18} />
-          </button>
-        )}
-
         {!isCompleted && gps && !gpsLive ? (
-          <button
-            type="button"
-            className="wk-btn wk-btn--outline"
-            onClick={gps.sendNow}
-            disabled={busy}
-          >
-            <Radio size={16} /> Refresh GPS
+          <button type="button" className="wk-btn wk-btn--outline wk-ticket__gps" onClick={gps.sendNow} disabled={busy}>
+            <Radio size={15} /> Refresh GPS
           </button>
         ) : null}
       </div>
@@ -2363,12 +2320,12 @@ function EarningsTab({
         <div className="wk-money-card">
           <span>This week</span>
           <strong>{inr(earnings.week)}</strong>
-          <small>Mon–Sun</small>
+          <small>Monâ€“Sun</small>
         </div>
         <div className={`wk-money-card${Number(earnings.dues) > 0 ? " wk-money-card--warn" : ""}`}>
           <span>Fees due</span>
           <strong>{inr(earnings.dues)}</strong>
-          <small>{isPremium ? "Pro — 7% commission" : "Clear to keep accepting jobs"}</small>
+          <small>{isPremium ? "Pro â€” 7% commission" : "Clear to keep accepting jobs"}</small>
         </div>
       </div>
 
@@ -2446,7 +2403,7 @@ function EarningsTab({
             <p className="wk-eyebrow">Fees</p>
             <h2>Payments &amp; dues</h2>
           </div>
-          <span className="wk-badge wk-badge--muted">Razorpay · automatic</span>
+          <span className="wk-badge wk-badge--muted">Razorpay Â· automatic</span>
         </div>
 
         {pending.length ? (
@@ -2459,7 +2416,7 @@ function EarningsTab({
                 <div className="grow">
                   <strong>{commission.service || "Job fees"}</strong>
                   <span>
-                    {formatDateTime(commission.createdAt)} ·{" "}
+                    {formatDateTime(commission.createdAt)} Â·{" "}
                     <span className={`wk-capitalize wk-text-${commission.status}`}>
                       {commission.status}
                     </span>
@@ -2475,7 +2432,7 @@ function EarningsTab({
                       Pay now
                     </button>
                   ) : (
-                    <span>{commission.status === "paid" ? "Verifying…" : "Approved"}</span>
+                    <span>{commission.status === "paid" ? "Verifyingâ€¦" : "Approved"}</span>
                   )}
                 </div>
               </div>
@@ -2741,13 +2698,13 @@ function ProfileTab({ worker, onLogout }) {
                 disabled={photoSaving}
               >
                 {photoSaving ? <Spinner size={14} /> : <Pencil size={14} />}
-                {photoSaving ? "Uploading…" : "Update photo"}
+                {photoSaving ? "Uploadingâ€¦" : "Update photo"}
               </button>
             </div>
             <div>
               <h2>{worker.name}</h2>
               <p>
-                {worker.service} · {worker.area}
+                {worker.service} Â· {worker.area}
               </p>
               <div className="wk-profile-badges">
                 <span className="wk-badge wk-badge--green">
@@ -2839,7 +2796,7 @@ function ProfileTab({ worker, onLogout }) {
                   ))}
                 </select>
               </Field>
-              <Field label="Starting price (₹)" htmlFor="wk-price">
+              <Field label="Starting price (â‚¹)" htmlFor="wk-price">
                 <Input
                   id="wk-price"
                   type="number"
@@ -2892,7 +2849,7 @@ function ProfileTab({ worker, onLogout }) {
                 </strong>
                 <span>
                   {coords
-                    ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)} · confirm before saving`
+                    ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)} Â· confirm before saving`
                     : "Use your device location to receive nearby jobs."}
                 </span>
               </div>
@@ -2903,7 +2860,7 @@ function ProfileTab({ worker, onLogout }) {
                 disabled={locating}
               >
                 {locating ? <Spinner size={14} /> : <Crosshair size={14} />}
-                {locating ? "Finding…" : "Update Location"}
+                {locating ? "Findingâ€¦" : "Update Location"}
               </button>
             </div>
             <p className="wk-fineprint">
@@ -2928,7 +2885,7 @@ function ProfileTab({ worker, onLogout }) {
           <p className="wk-eyebrow">Account</p>
           <h2>Status &amp; support</h2>
           <p className="wk-fineprint">
-            Worker ID {worker.id?.slice(0, 10)} · joined {formatDateTime(worker.createdAt)}
+            Worker ID {worker.id?.slice(0, 10)} Â· joined {formatDateTime(worker.createdAt)}
           </p>
         </div>
         <div className="wk-account-actions">
@@ -2962,7 +2919,7 @@ function CompleteModal({ job, busy, onClose, onConfirm }) {
       open={Boolean(job)}
       onClose={onClose}
       title="Mark job completed?"
-      subtitle={job ? `${job.service} · ${job.customerName}` : ""}
+      subtitle={job ? `${job.service} Â· ${job.customerName}` : ""}
       size="sm"
       footer={
         <>
@@ -3007,7 +2964,7 @@ function PaymentModeModal({ job, busy, onClose, onChoose }) {
       open={Boolean(job)}
       onClose={onClose}
       title="Collect payment"
-      subtitle={job ? `${job.service} · Final price set` : ""}
+      subtitle={job ? `${job.service} Â· Final price set` : ""}
       size="sm"
       footer={
         <Button variant="ghost" onClick={onClose}>
@@ -3019,7 +2976,7 @@ function PaymentModeModal({ job, busy, onClose, onChoose }) {
         <div className="wk-payment-card">
           <span>Amount to collect</span>
           <strong>{inr(job?.pricing?.finalPrice || job?.budget || 0)}</strong>
-          <small>{job?.pricing?.finalPrice ? "Final price agreed · fees recorded after payment" : "Collect cash or UPI"}</small>
+          <small>{job?.pricing?.finalPrice ? "Final price agreed Â· fees recorded after payment" : "Collect cash or UPI"}</small>
         </div>
         <p className="small muted">
           Choose how the customer will pay you. This tells the customer which
@@ -3067,7 +3024,7 @@ function FeesModal({ commission, onClose, onPaid }) {
       title="Pay fees"
       subtitle={
         commission
-          ? `${commission.service} · ${inr(commission.amount)}`
+          ? `${commission.service} Â· ${inr(commission.amount)}`
           : ""
       }
       size="sm"
@@ -3081,7 +3038,7 @@ function FeesModal({ commission, onClose, onPaid }) {
         {commission ? (
           <RazorpayPayment
             amount={commission.amount || 0}
-            description={`EasyHome fees · ${commission.service || "Job"}`}
+            description={`EasyHome fees Â· ${commission.service || "Job"}`}
             orderEndpoint="/payment/commission/order"
             verifyEndpoint="/payment/commission/verify"
             orderBody={{ commissionId: commission.id }}
