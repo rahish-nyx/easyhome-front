@@ -691,7 +691,11 @@ export function WorkerCard({ worker, onBook }) {
             Book
           </Button>
         ) : (
-          <Link to={`/book?service=${worker.serviceKey || ""}&worker=${worker.id}`} className="btn btn--dark btn--sm">
+          <Link
+            to={`/book?service=${encodeURIComponent(worker.serviceKey || "")}&worker=${encodeURIComponent(worker.id)}&price=${Number(worker.pricePerWork) || ""}&name=${encodeURIComponent(worker.name || "")}`}
+            state={{ worker }}
+            className="btn btn--dark btn--sm"
+          >
             Book
           </Link>
         )}

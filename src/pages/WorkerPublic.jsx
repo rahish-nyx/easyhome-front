@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -49,7 +49,7 @@ export default function WorkerPublic() {
     (worker?.isPremium === true && !worker?.premiumUntil);
 
   usePageMeta(
-    worker ? `${worker.name} — ${worker.service || meta.name}` : "Verified professional",
+    worker ? `${worker.name} â€” ${worker.service || meta.name}` : "Verified professional",
     worker
       ? `Book ${worker.name}, a verified ${worker.service || meta.name} professional in ${
           worker.area || "your city"
@@ -65,7 +65,7 @@ export default function WorkerPublic() {
       if (navigator.share) {
         await navigator.share({
           title: `${worker.name} on EasyHome`,
-          text: `Book ${worker.name} — ${worker.service} on EasyHome.`,
+          text: `Book ${worker.name} â€” ${worker.service} on EasyHome.`,
           url,
         });
       } else {
@@ -82,7 +82,7 @@ export default function WorkerPublic() {
   if (loading && !data) {
     return (
       <div className="page">
-        <PageLoader label="Loading professional…" />
+        <PageLoader label="Loading professionalâ€¦" />
       </div>
     );
   }
@@ -106,7 +106,7 @@ export default function WorkerPublic() {
     );
   }
 
-  const bookLink = `/book?service=${encodeURIComponent(worker.serviceKey || "")}&worker=${worker.id}`;
+  const bookLink = `/book?service=${encodeURIComponent(worker.serviceKey || "")}&worker=${encodeURIComponent(worker.id)}&price=${Number(worker.pricePerWork) || ""}&name=${encodeURIComponent(worker.name || "")}`;
 
   return (
     <div className="page">
@@ -119,7 +119,7 @@ export default function WorkerPublic() {
           <Avatar name={worker.name} path={worker.photoPath} size={112} ring={isPro} />
           <h1>{worker.name}</h1>
           <p className="small muted" style={{ marginTop: 4 }}>
-            {worker.service || meta.name} · {worker.area || "Local pro"}
+            {worker.service || meta.name} Â· {worker.area || "Local pro"}
           </p>
 
           <div className="worker-public__meta">
@@ -185,7 +185,7 @@ export default function WorkerPublic() {
               <ShieldCheck size={13} /> Government ID checked by EasyHome
             </span>
             <span className="tiny muted row" style={{ gap: 6 }}>
-              <Wallet size={13} /> Pay after the job — cash or UPI
+              <Wallet size={13} /> Pay after the job â€” cash or UPI
             </span>
           </div>
 
@@ -242,7 +242,7 @@ export default function WorkerPublic() {
               eyebrow="Verified reviews"
               title={
                 reviews.length
-                  ? `${Number(worker.rating || 0).toFixed(1)} · ${reviews.length} review${
+                  ? `${Number(worker.rating || 0).toFixed(1)} Â· ${reviews.length} review${
                       reviews.length === 1 ? "" : "s"
                     }`
                   : "No reviews yet"
@@ -259,7 +259,7 @@ export default function WorkerPublic() {
                       <div className="grow">
                         <strong>{review.customerName || "EasyHome customer"}</strong>
                         <p className="tiny muted">
-                          {review.service} · {formatDate(review.createdAt, { year: false })}
+                          {review.service} Â· {formatDate(review.createdAt, { year: false })}
                         </p>
                       </div>
                       <RatingStars value={review.stars} size={13} />

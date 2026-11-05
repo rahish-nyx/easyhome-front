@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+﻿import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation as useRouterLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowRight,
@@ -53,6 +53,7 @@ export default function Booking() {
   );
 
   const [params] = useSearchParams();
+  const routerLocation = useRouterLocation();
   const navigate = useNavigate();
   const toast = useToast();
   const { services, folders } = useCatalogue();
@@ -79,6 +80,9 @@ export default function Booking() {
   const initialKey = params.get("service") || "";
   const preferredWorkerId = params.get("worker") || "";
   const initialUrgency = params.get("urgency") === "urgent" ? "urgent" : "normal";
+  const linkedWorker = routerLocation.state?.worker;
+  const initialWorkerName = params.get("name") || "";
+  const initialWorkerPrice = Math.max(0, Number(params.get("price")) || 0);
 
   const [serviceKey, setServiceKey] = useState(initialKey || services[0]?.key || "");
   const [description, setDescription] = useState("");
@@ -108,7 +112,11 @@ export default function Booking() {
       icon: SERVICE_META[initialKey]?.icon || "wrench",
     };
   const minimum = Math.max(99, Number(service.fromPrice) || 199);
-  const budgetAmount = Math.max(minimum, Number(budget) || minimum);
+  const lockedFloor = initialWorkerPrice > 0 ? Math.min(minimum, initialWorkerPrice) : minimum;
+  const budgetAmount =
+    initialWorkerPrice > 0
+      ? Math.max(initialWorkerPrice, Number(budget) || 0)
+      : Math.max(minimum, Number(budget) || minimum);
   const urgentFee =
     urgency === "urgent" && !isPremium
       ? Math.round(budgetAmount * 0.1)
@@ -131,7 +139,20 @@ export default function Booking() {
     [preferredWorkerId],
   );
   const workerState = useLiveDoc(workerRef);
-  const preferredWorker = workerState.data;
+  // Keep the card data handed over by the worker list so the summary renders
+  // instantly and survives a slow or failed profile fetch.
+  const fallbackWorker = useMemo(() => {
+    if (linkedWorker?.id === preferredWorkerId) return linkedWorker;
+    if (!preferredWorkerId) return null;
+    return {
+      id: preferredWorkerId,
+      name: initialWorkerName || "Preferred professional",
+      pricePerWork: initialWorkerPrice || null,
+    };
+  }, [linkedWorker, preferredWorkerId, initialWorkerName, initialWorkerPrice]);
+  const preferredWorker = workerState.data || fallbackWorker;
+  const lockedPrice =
+    Number(preferredWorker?.pricePerWork) || initialWorkerPrice || 0;
 
   useEffect(() => {
     if (!serviceKey && services.length) setServiceKey(services[0].key);
@@ -142,10 +163,15 @@ export default function Booking() {
   }, [promoCode]);
 
   // A stale budget from a previous (cheaper/expensive) service is a classic
-  // source of rejected bookings — reset it whenever the trade changes.
+  // source of rejected bookings â€” reset it whenever the trade changes.
   useEffect(() => {
     setBudget(String(minimum));
   }, [minimum]);
+
+  // A professional booked from their card keeps their own starting rate.
+  useEffect(() => {
+    if (lockedPrice > 0) setBudget(String(lockedPrice));
+  }, [lockedPrice, minimum]);
 
   useEffect(() => {
     if (!profile?.phone) return;
@@ -259,10 +285,10 @@ export default function Booking() {
       next.phone = "Enter a valid 10-digit Indian mobile number.";
     }
     const amount = Number(budget);
-    if (!Number.isFinite(amount) || amount < minimum) {
-      next.budget = `The minimum budget for ${service.name} is ${inr(minimum)}.`;
+    if (!Number.isFinite(amount) || amount < lockedFloor) {
+      next.budget = `The minimum budget for ${service.name} is ${inr(lockedFloor)}.`;
     }
-    if (amount > 100000) next.budget = "The maximum budget is ₹1,00,000.";
+    if (amount > 100000) next.budget = "The maximum budget is â‚¹1,00,000.";
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -335,7 +361,7 @@ export default function Booking() {
     <div className="page">
       <div className="page-head">
         <div>
-          <p className="eyebrow">New request · 60 seconds</p>
+          <p className="eyebrow">New request Â· 60 seconds</p>
           <h1>Tell us what needs fixing.</h1>
           <p>
             A verified pro will accept your request and apply their final price before starting.
@@ -428,7 +454,7 @@ export default function Booking() {
                 >
                   {services.map((item) => (
                     <option key={item.key} value={item.key}>
-                      {item.name} — from {inr(item.fromPrice || SERVICE_META[item.key]?.from || 199)}
+                      {item.name} â€” from {inr(item.fromPrice || SERVICE_META[item.key]?.from || 199)}
                     </option>
                   ))}
                 </Select>
@@ -449,7 +475,7 @@ export default function Booking() {
               <Field
                 label="Describe the job"
                 htmlFor="description"
-                hint={`${description.length}/600 · mention size, access and materials`}
+                hint={`${description.length}/600 Â· mention size, access and materials`}
                 error={errors.description}
                 required
                 className="span-2"
@@ -479,9 +505,9 @@ export default function Booking() {
                 {bookingPoint
                   ? `Pinned${
                       Number.isFinite(Number(bookingPoint.accuracy))
-                        ? ` ±${Math.round(bookingPoint.accuracy)} m`
+                        ? ` Â±${Math.round(bookingPoint.accuracy)} m`
                         : ""
-                    } · ${Number(bookingPoint.lat).toFixed(4)}, ${Number(bookingPoint.lng).toFixed(4)}`
+                    } Â· ${Number(bookingPoint.lat).toFixed(4)}, ${Number(bookingPoint.lng).toFixed(4)}`
                   : city?.name
                     ? `Serving in ${city.name}. Pin your exact location for faster matching.`
                     : "Pin your exact location for faster matching."}
@@ -515,9 +541,13 @@ export default function Booking() {
             </h2>
             <div className="form-grid">
               <Field
-                label="Your budget (₹)"
+                label={lockedPrice > 0 ? "Agreed price with your pro (₹)" : "Your budget (₹)"}
                 htmlFor="budget"
-                hint={`Minimum ${inr(minimum)} for ${service.name}. You can adjust within this range before the pro accepts.`}
+                hint={
+                  lockedPrice > 0
+                    ? `Locked to ${preferredWorker?.name || "this professional"}'s starting price. They set this rate on their profile.`
+                    : `Minimum ${inr(minimum)} for ${service.name}. You can adjust within this range before the pro accepts.`
+                }
                 error={errors.budget}
                 required
               >
@@ -525,9 +555,11 @@ export default function Booking() {
                   id="budget"
                   type="number"
                   inputMode="numeric"
-                  min={minimum}
+                  min={lockedFloor}
                   max={100000}
                   value={budget}
+                  readOnly={lockedPrice > 0}
+                  aria-readonly={lockedPrice > 0}
                   onChange={(event) => setBudget(event.target.value)}
                 />
               </Field>
@@ -551,14 +583,14 @@ export default function Booking() {
                 {
                   id: "normal",
                   title: "Normal",
-                  sub: "Within 24 hours · standard rate",
+                  sub: "Within 24 hours Â· standard rate",
                 },
                 {
                   id: "urgent",
                   title: "Urgent",
                   sub: isPremium
-                    ? "ASAP · priority dispatch · no urgent fee"
-                    : "ASAP · priority dispatch + 10% fee",
+                    ? "ASAP Â· priority dispatch Â· no urgent fee"
+                    : "ASAP Â· priority dispatch + 10% fee",
                 },
               ].map((option) => (
                 <button
@@ -612,7 +644,7 @@ export default function Booking() {
                 ) : null}
               </div>
               {promoLoading && promoCode ? (
-                <p className="promo-code-box__status">Checking this code…</p>
+                <p className="promo-code-box__status">Checking this codeâ€¦</p>
               ) : promoStatus === "invalid" ? (
                 <p className="promo-code-box__status is-error">
                   This code is invalid or has expired.
@@ -623,7 +655,7 @@ export default function Booking() {
                 </p>
               ) : servicePromo ? (
                 <p className="promo-code-box__status is-success">
-                  {servicePromo.title || "Promo"} · {promoDiscountLabel(servicePromo)} applied.
+                  {servicePromo.title || "Promo"} Â· {promoDiscountLabel(servicePromo)} applied.
                 </p>
               ) : (
                 <p className="promo-code-box__status">
@@ -646,6 +678,9 @@ export default function Booking() {
             <div className="form-section">
               <h2 className="form-section__title">
                 <span className="form-section__num">3</span> Preferred professional
+                <span className="badge badge--blue" style={{ marginLeft: 8 }}>
+                  <BadgeCheck size={11} /> Locked in
+                </span>
               </h2>
               {preferredWorker ? (
                 <div className="row row--between" style={{ gap: 12, flexWrap: "wrap" }}>
@@ -658,7 +693,9 @@ export default function Booking() {
                     <div>
                       <strong style={{ fontSize: 14 }}>{preferredWorker.name}</strong>
                       <p className="tiny muted">
-                        {preferredWorker.service} · {preferredWorker.area}
+                        {[preferredWorker.service, preferredWorker.area]
+                          .filter(Boolean)
+                          .join(" · ") || "Verified EasyHome professional"}
                       </p>
                     </div>
                   </div>
@@ -668,7 +705,7 @@ export default function Booking() {
                 </div>
               ) : workerState.loading ? (
                 <div className="row small muted" role="status" aria-live="polite">
-                  <Loader2 size={15} className="spin" /> Loading preferred pro…
+                  <Loader2 size={15} className="spin" /> Loading preferred proâ€¦
                 </div>
               ) : (
                 <div className="inline-error" role="status">
@@ -702,11 +739,11 @@ export default function Booking() {
             </div>
             <div className="summary-row">
               <span>City</span>
-              <strong>{city?.name || "—"}</strong>
+              <strong>{city?.name || "â€”"}</strong>
             </div>
             <div className="summary-row">
               <span>Area</span>
-              <strong style={{ maxWidth: "60%", textAlign: "right" }}>{area || "—"}</strong>
+              <strong style={{ maxWidth: "60%", textAlign: "right" }}>{area || "â€”"}</strong>
             </div>
             <div className="summary-row">
               <span>Coverage</span>
@@ -735,7 +772,7 @@ export default function Booking() {
                 <span>
                   {servicePromo.title || "Promo"}{" "}
                   <span className="summary-promo-code">
-                    {servicePromo.couponCode} · {promoDiscountShort(servicePromo)}
+                    {servicePromo.couponCode} Â· {promoDiscountShort(servicePromo)}
                   </span>
                 </span>
                 <strong>-{inr(promoDiscount)}</strong>

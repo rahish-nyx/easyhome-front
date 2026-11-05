@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Lightweight REST descriptors used by `useLiveQuery`/`useLiveDoc`.
  *
  * The app polls REST endpoints instead of keeping an open listener per
@@ -25,7 +25,7 @@ export const qWorkers = (serviceKey = "", count = 12) => {
   const params = new URLSearchParams();
   if (serviceKey) params.set("serviceKey", serviceKey);
   params.set("limit", String(count));
-  return liveQuery(`/workers?${params.toString()}`, "workers");
+  return liveQuery(`/public/workers?${params.toString()}`, "workers");
 };
 
 export const qBookingsForCustomer = (uid) =>
@@ -45,7 +45,7 @@ export const qNotifications = (uid) =>
   uid ? liveQuery("/notifications", "notifications") : null;
 
 export const qReviews = (workerId) =>
-  workerId ? liveQuery(`/workers/${encodeURIComponent(workerId)}`, "reviews") : null;
+  workerId ? liveQuery(`/public/workers/${encodeURIComponent(workerId)}`, "reviews") : null;
 
 export const qChatMessages = (uid) =>
   uid ? liveQuery("/chat/messages", "messages") : null;
@@ -59,4 +59,4 @@ export const bookingRef = (id) =>
   id ? liveDoc(`/bookings/${encodeURIComponent(id)}`, "booking") : null;
 
 export const publicWorkerRef = (id) =>
-  id ? liveDoc(`/workers/${encodeURIComponent(id)}`, "worker") : null;
+  id ? liveDoc(`/public/workers/${encodeURIComponent(id)}`, "worker") : null;
