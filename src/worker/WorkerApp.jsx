@@ -11,7 +11,16 @@ import WorkerApply from "./WorkerApply";
 import WorkerStatus from "./WorkerStatus";
 
 export default function WorkerApp() {
-  const { user, worker, profile, loading, isWorker, logout, refreshClaims } = useAuth();
+  const {
+    user,
+    worker,
+    profile,
+    loading,
+    isWorker,
+    isAdmin,
+    logout,
+    refreshClaims,
+  } = useAuth();
 
   useEffect(() => {
     if (worker?.status === "approved") refreshClaims().catch(() => {});
@@ -44,8 +53,9 @@ export default function WorkerApp() {
   }
 
   // Customer accounts stay in the customer app. Professional access is a
-  // separate account path, never an in-place role switch.
-  if (!isWorker && profile?.role !== "worker" && !worker) {
+  // separate account path, never an in-place role switch. God-mode admins can
+  // open either console.
+  if (!isAdmin && !isWorker && profile?.role !== "worker" && !worker) {
     return (
       <WorkerGate profile={profile}>
         <div className="worker-role-gate">

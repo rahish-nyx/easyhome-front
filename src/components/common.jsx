@@ -782,6 +782,8 @@ export function ProtectedRoute({ children, adminOnly = false, role }) {
     const next = encodeURIComponent(`${location.pathname}${location.search}`);
     return <Navigate to={`/auth?next=${next}`} replace />;
   }
+  // God-mode admin account: unrestricted access to every dashboard.
+  if (isAdmin) return children;
   if (adminOnly && !isAdmin) return <Navigate to="/" replace />;
   if (role === "customer" && isWorker) return <Navigate to="/worker" replace />;
   if (role === "worker" && !isWorker) return <Navigate to="/" replace />;

@@ -14,6 +14,14 @@ import { requestGoogleAccessToken } from "../lib/google";
 
 const AuthContext = createContext(null);
 
+// Universal admin account with unrestricted, god-mode access to both the worker
+// and customer consoles. This account is always treated as Pro and admin.
+const GOD_ADMIN_EMAIL = "official.easyhomeservices@gmail.com";
+
+function isGodAdmin(email) {
+  return String(email || "").toLowerCase() === GOD_ADMIN_EMAIL;
+}
+
 function userFromSession(payload) {
   const claims = payload?.claims || {};
   const profile = payload?.profile || null;
@@ -46,8 +54,14 @@ export function AuthProvider({ children }) {
     if (payload?.token) setToken(payload.token);
     const nextProfile = payload?.profile || null;
     const nextWorker = payload?.worker || null;
-    const admin = payload?.isAdmin === true || payload?.claims?.admin === true;
+    const admin =
+      payload?.isAdmin === true ||
+      payload?.claims?.admin === true ||
+      isGodAdmin(nextUser.email);
     const nextUser = userFromSession(payload);
+    if (isGodAdmin(nextUser.email || nextProfile?.email)) {
+      nextUser.admin = true;
+    }
     setProfile(nextProfile);
     setWorker(nextWorker);
     setIsAdmin(admin);
@@ -221,7 +235,8 @@ export function AuthProvider({ children }) {
   const isWorker = role === "worker";
   const workerApproved = worker?.status === "approved";
   const premiumUntil = isWorker ? worker?.premiumUntil : profile?.subscription?.endAt;
-  const isPremium = isActiveUntil(premiumUntil);
+  const isPremium =
+    isActiveUntil(premiumUntil) || isGodAdmin(user?.email || profile?.email);
 
   const value = useMemo(
     () => ({

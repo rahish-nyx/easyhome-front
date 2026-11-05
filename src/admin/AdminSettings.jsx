@@ -21,8 +21,8 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../lib/api";
-import { formatDateTime, timeAgo } from "../lib/format";
-import { Avatar, Button, Field, Input, Modal, Textarea } from "../components/ui";
+import { formatDateTime, inr, planLabel, timeAgo } from "../lib/format";
+import { Avatar, Badge, Button, Field, Input, Modal, Select, Textarea } from "../components/ui";
 import {
   AdminPage,
   ConfirmModal,
@@ -73,6 +73,86 @@ const ACTION_LABELS = {
   "admin.add": "Admin added",
   "admin.remove": "Admin removed",
 };
+
+const PROMO_PLANS = [
+  { id: "monthly", label: "Monthly" },
+  { id: "quarterly", label: "Quarterly" },
+  { id: "yearly", label: "Yearly" },
+];
+
+function PromoPlanEditor({ role, label, value, basePrices, onChange }) {
+  const prefix = role === "worker" ? "worker" : "customer";
+  const mutate = (plan, patch) =>
+    onChange((prev) => {
+      const nextPromos = {
+        ...prev[role],
+        [plan]: { ...(prev[role]?.[plan] || {}), ...patch },
+      };
+      return { ...prev, [role]: nextPromos };
+    });
+
+  return (
+    <Panel title={label} subtitle="Set an active promotional discount for this membership tier.">
+      <div className="adm-form-grid adm-form-grid--4">
+        {PROMO_PLANS.map((plan) => {
+          const current = value?.[plan] || {};
+          const active = current.active === true;
+          const type = current.type || "percentage";
+          const promoValue = Number(current.value) || 0;
+          const base = Number(basePrices?.[plan]) || 0;
+          let displayPrice = base;
+          if (active) {
+            displayPrice =
+              type === "percentage"
+                ? Math.round((base * (100 - Math.min(100, promoValue))) / 100)
+                : Math.max(0, Math.round(promoValue));
+          }
+          return (
+            <div key={plan} className="adm-promo-tile">
+              <Field label={planLabel(plan)} htmlFor={`set-${prefix}-promo-${plan}`}>
+                <div className="adm-promo-controls">
+                  <Toggle
+                    checked={active}
+                    onChange={(next) => mutate(plan, { active: next })}
+                    label="Active"
+                    hint="Promo applies to this plan at checkout."
+                  />
+                  <Select
+                    id={`set-${prefix}-promo-${plan}-type`}
+                    value={type}
+                    onChange={(event) => mutate(plan, { type: event.target.value })}
+                    className="adm-promo-type-select"
+                  >
+                    <option value="percentage">Percentage off</option>
+                    <option value="flat">Fixed price</option>
+                  </Select>
+                  <Input
+                    id={`set-${prefix}-promo-${plan}-value`}
+                    type="number"
+                    min={0}
+                    max={type === "percentage" ? 100 : 100000}
+                    step={type === "percentage" ? 1 : 0.5}
+                    value={promoValue}
+                    onChange={(event) => mutate(plan, { value: Number(event.target.value) || 0 })}
+                    placeholder={type === "percentage" ? "% off" : "Price"}
+                  />
+                </div>
+              </Field>
+              {active ? (
+                <p className="adm-promo-preview">
+                  {type === "percentage"
+                    ? `${promoValue}% off → ${inr(displayPrice)}`
+                    : `Promo price ${inr(displayPrice)}`}
+                  {base > displayPrice ? ` (save ${inr(base - displayPrice)})` : null}
+                </p>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </Panel>
+  );
+}
 
 export default function AdminSettings() {
   const toast = useToast();
@@ -131,6 +211,8 @@ export default function AdminSettings() {
       maintenanceMode: Boolean(fresh.maintenanceMode),
       customerBenefits: (fresh.customerBenefits || []).join("\n"),
       workerBenefits: (fresh.workerBenefits || []).join("\n"),
+      customerPlanPromos: fresh.customerPlanPromos || {},
+      workerPlanPromos: fresh.workerPlanPromos || {},
     });
     setAnnouncement((prev) => ({
       ...prev,
@@ -203,6 +285,8 @@ export default function AdminSettings() {
         maintenanceMode: Boolean(form.maintenanceMode),
         customerBenefits: splitLines(form.customerBenefits),
         workerBenefits: splitLines(form.workerBenefits),
+        customerPlanPromos: form.customerPlanPromos || {},
+        workerPlanPromos: form.workerPlanPromos || {},
       };
 
       await api.patch("/admin/settings", payload);
@@ -494,6 +578,40 @@ export default function AdminSettings() {
                   />
                 </Field>
               </div>
+
+              <div className="adm-settings-divider" />
+
+              <h4 className="adm-settings-subhead">Membership promotional discounts</h4>
+              <p className="adm-settings-caption">
+                Configure active promo discounts per membership tier. When active, customers and
+                pros see the discounted price at checkout and pay the promo amount.
+              </p>
+              <PromoPlanEditor
+                role="customer"
+                label="Customer membership promos"
+                value={form.customerPlanPromos}
+                basePrices={{
+                  monthly: form.customerMonthly,
+                  quarterly: form.customerQuarterly,
+                  yearly: form.customerYearly,
+                }}
+                onChange={(next) =>
+                  setForm((prev) => ({ ...prev, customerPlanPromos: next.customerPlanPromos }))
+                }
+              />
+              <PromoPlanEditor
+                role="worker"
+                label="Worker membership promos"
+                value={form.workerPlanPromos}
+                basePrices={{
+                  monthly: form.workerMonthly,
+                  quarterly: form.workerQuarterly,
+                  yearly: form.workerYearly,
+                }}
+                onChange={(next) =>
+                  setForm((prev) => ({ ...prev, workerPlanPromos: next.workerPlanPromos }))
+                }
+              />
 
               <div className="adm-settings-divider" />
 

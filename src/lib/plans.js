@@ -55,6 +55,43 @@ export function subscriptionAmount(settings, role, plan) {
   return plans[plan] ?? plans.monthly;
 }
 
+/**
+ * Resolves an active admin-configured promotional discount for a membership plan.
+ * Returns null when no promo is active for the plan.
+ */
+export function planPromo(settings, role, plan) {
+  const promos =
+    role === "worker"
+      ? settings?.workerPlanPromos
+      : settings?.customerPlanPromos;
+  const promo = promos?.[plan];
+  if (!promo || !promo.active) return null;
+  return { type: promo.type, value: Number(promo.value) || 0 };
+}
+
+/**
+ * Returns { base, price, promo } for a role/plan, applying the active promo when
+ * one exists. Mirrors the server-side `subscriptionPriceWithPromo`.
+ */
+export function planPriceWithPromo(settings, role, plan) {
+  const plans = rolePlans(settings, role);
+  const base = Number(plans[plan] ?? plans.monthly) || 0;
+  const promo = planPromo(settings, role, plan);
+  if (!promo) return { base, price: base, promo: null };
+  let price = base;
+  if (promo.type === "percentage") {
+    price = Math.round((base * (100 - Math.min(100, promo.value))) / 100);
+  } else if (promo.type === "flat") {
+    price = Math.max(0, Math.round(promo.value));
+  }
+  price = Math.max(0, price);
+  return {
+    base,
+    price,
+    promo: { ...promo, saved: Math.max(0, base - price) },
+  };
+}
+
 export function workerFeePct(settings) {
   const value = Number(settings?.workerRules?.feesPct ?? settings?.commissionPct);
   return Number.isFinite(value) ? value : 0;

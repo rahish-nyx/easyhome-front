@@ -60,7 +60,7 @@ import {
   toDate,
 } from "../lib/format";
 import { PLANS, SERVICE_META, TRACKING_PHASES } from "../lib/constants";
-import { rolePlans, workerFeePct } from "../lib/plans";
+import { planPriceWithPromo, workerFeePct } from "../lib/plans";
 import { usePageMeta } from "../lib/usePageMeta";
 import {
   Avatar,
@@ -1023,12 +1023,14 @@ function MembershipTab({ worker, settings }) {
   const { refreshClaims, refreshProfile, isPremium } = useAuth();
   const toast = useToast();
   const [plan, setPlan] = useState("monthly");
-  const prices = rolePlans(settings, "worker");
   const plans = PLANS.map((item) => {
-    const amount = prices[item.id] ?? prices.monthly;
+    const priced = planPriceWithPromo(settings, "worker", item.id);
+    const amount = priced.price;
     return {
       ...item,
       amount,
+      baseAmount: priced.base,
+      promo: priced.promo,
       perMonth: Math.round(amount / item.months),
     };
   });
@@ -1087,7 +1089,19 @@ function MembershipTab({ worker, settings }) {
                   >
                     {item.badge ? <span className="wk-plan-option__badge">{item.badge}</span> : null}
                     <strong>{item.label}</strong>
-                    <span className="wk-plan-option__price">{inr(item.amount)}</span>
+                    {item.promo ? (
+                      <>
+                        <span className="wk-plan-option__price--strike">{inr(item.baseAmount)}</span>
+                        <span className="wk-plan-option__price">{inr(item.amount)}</span>
+                        <span className="wk-plan-option__promo-badge">
+                          {item.promo.type === "percentage"
+                            ? `${item.promo.value}% off`
+                            : `Promo ${inr(item.amount)}`}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="wk-plan-option__price">{inr(item.amount)}</span>
+                    )}
                     <small>{item.id === "monthly" ? "per month" : `${inr(item.perMonth)} / month`}</small>
                     <span className="wk-plan-option__blurb">{item.blurb}</span>
                   </button>

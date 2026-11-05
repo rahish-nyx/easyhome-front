@@ -29,7 +29,7 @@ import {
   planLabel,
 } from "../lib/format";
 import { PLANS } from "../lib/constants";
-import { rolePlans } from "../lib/plans";
+import { planPriceWithPromo, rolePlans } from "../lib/plans";
 import { usePageMeta } from "../lib/usePageMeta";
 import {
   Badge,
@@ -53,10 +53,13 @@ export default function Subscription() {
   const prices = rolePlans(settings, role);
   const monthly = prices.monthly;
   const plans = PLANS.map((item) => {
-    const amount = prices[item.id] ?? monthly;
+    const priced = planPriceWithPromo(settings, role, item.id);
+    const amount = priced.price;
     return {
       ...item,
       amount,
+      baseAmount: priced.base,
+      promo: priced.promo,
       perMonth: Math.round(amount / item.months),
     };
   });
@@ -273,7 +276,19 @@ export default function Subscription() {
                     <span className="plan-card__sub">{item.blurb}</span>
                   </span>
                   <span className="plan-card__amount">
-                    <span className="plan-card__price">{inr(item.amount)}</span>
+                    {item.promo ? (
+                      <>
+                        <span className="plan-card__price--strike">{inr(item.baseAmount)}</span>
+                        <span className="plan-card__price">{inr(item.amount)}</span>
+                        <span className="plan-card__promo-badge">
+                          {item.promo.type === "percentage"
+                            ? `${item.promo.value}% off`
+                            : `Promo price ${inr(item.amount)}`}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="plan-card__price">{inr(item.amount)}</span>
+                    )}
                     <span className="plan-card__sub">
                       {item.id === "monthly" ? "per month" : `${inr(item.perMonth)}/mo`}
                     </span>
