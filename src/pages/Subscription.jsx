@@ -69,38 +69,38 @@ export default function Subscription() {
     ? [
         {
           icon: ShieldCheck,
-          title: "Zero dues penalty & uninterrupted work guarantee",
-          body: "No platform dues or account locks interrupt your workflow under the standard clearance cycle.",
+          title: "Zero Dues Penalty & Uninterrupted Work Guarantee",
+          body: "Enjoy absolute peace of mind with zero account locks or penalties on platform dues, keeping your workflow completely uninterrupted.",
         },
         {
           icon: Wallet,
-          title: "Lower commission rate (7%)",
-          body: "Keep a larger share of every job — the discounted 7% Pro commission rate instead of the standard 10%.",
+          title: "Lower Commission Rate (Only 7%)",
+          body: "Keep a much larger share of your hard-earned money with a discounted 7% platform fee instead of the standard 10%.",
         },
         {
           icon: Search,
-          title: "Local search visibility boost",
-          body: "Your profile gets prioritized ranking and higher placement in local customer search results.",
+          title: "Local Search Visibility Boost",
+          body: "Get prioritized ranking and higher placement in local customer search results to get discovered faster.",
         },
         {
           icon: Zap,
-          title: "Priority urgent job alerts",
-          body: "You get instant, first-access notifications for high-value urgent service requests in your zone.",
+          title: "Priority Urgent Job Alerts",
+          body: "Get instant, first-access notifications for high-value urgent service requests in your service zone before anyone else.",
         },
         {
           icon: QrCode,
-          title: "Pro trust badge, digital QR code & shareable profile",
-          body: "Build instant customer trust with the exclusive Pro badge, professional digital QR code and shareable profile.",
+          title: "Pro Trust Badge, Digital QR Code & Shareable Profile",
+          body: "Build instant customer trust with an exclusive Pro badge, a professional digital QR code, and a shareable profile card.",
         },
         {
           icon: Layers,
-          title: "Multi-service category unlock",
-          body: "Unlock 2 additional optional service categories for free and maximize the types of work you can take on.",
+          title: "Multi-Service Category Unlock (Extra Earning)",
+          body: "Unlock 2 additional optional service categories for free, allowing you to take on multiple types of work and maximize your daily income.",
         },
         {
           icon: LayoutDashboard,
-          title: "Top priority featured profile card visibility",
-          body: "Your profile card is showcased on the customer home feed for maximum local exposure and instant booking.",
+          title: "Top priority featured profile card visibility on customer home feed",
+          body: "Showcase your professional profile card directly on the main customer page and feed for maximum local exposure and instant booking.",
         },
       ]
     : [
@@ -111,33 +111,33 @@ export default function Subscription() {
         },
         {
           icon: Zap,
-          title: "Active priority worker matching",
-          body: "Your requests are dispatched to eligible, available professionals in your service area first.",
+          title: "Active Priority Worker Matching",
+          body: "Prioritize matching Pro customers with eligible, available professionals in their registered service area.",
         },
         {
           icon: Wallet,
-          title: "No 10% urgent-job extra charge",
+          title: "No 10% Urgent-Job Extra Charge",
           body: "Urgent bookings cost the same as normal — the extra fee is waived for Pro customers.",
         },
         {
           icon: BadgeCheck,
-          title: "Exclusive EasyHome Pro badge",
-          body: "Your active Pro badge appears on your profile and relevant platform sections.",
+          title: "Exclusive EasyHome Pro Badge",
+          body: "Display an exclusive EasyHome Pro badge on the customer's profile and relevant platform sections while their membership is active.",
         },
         {
           icon: BadgeCheck,
-          title: "Extended 15-day service work warranty",
-          body: "All completed Pro jobs carry an extended 15-day service warranty for total peace of mind.",
+          title: "Extended 15-Day Service Work Warranty",
+          body: "Enjoy an extended 15-day service warranty on all completed jobs for total peace of mind and quality assurance.",
         },
         {
           icon: Ticket,
-          title: "Monthly Pro promo codes (up to 20% off)",
-          body: "Two exclusive discount promo codes every month offering up to 20% off on service bookings.",
+          title: "Monthly Pro Promo Codes (Up to 20% Off)",
+          body: "Receive 2 exclusive discount promo codes every month offering up to 20% off on your service bookings to save more on home maintenance.",
         },
         {
           icon: RefreshCw,
-          title: "Priority re-assignment & VIP dispatch",
-          body: "Instant priority re-matching and fast-tracked worker assignment if your professional is unavailable.",
+          title: "Priority Re-Assignment & VIP Dispatch",
+          body: "Get instant priority re-matching and fast-tracked worker assignment if an assigned professional becomes unavailable, ensuring zero hassle.",
         },
       ];
 

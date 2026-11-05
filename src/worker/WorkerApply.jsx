@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   BadgeCheck,
   BriefcaseBusiness,
@@ -26,7 +26,7 @@ function uniqueTrades(list) {
 }
 
 export default function WorkerApply({ existing, onCancel }) {
-  const { profile, refreshClaims, worker, isPremium } = useAuth();
+  const { profile, refreshClaims } = useAuth();
   const { services } = useCatalogue();
   const { city, cities, states, citiesForState } = useLocation();
   const toast = useToast();
@@ -233,11 +233,7 @@ export default function WorkerApply({ existing, onCancel }) {
       return;
     }
 
-    const trades = uniqueTrades([
-      form.serviceKey,
-      form.secondaryServiceKey,
-      form.optionalServiceKey,
-    ]);
+    const trades = [form.serviceKey];
 
     setBusy(true);
     try {
@@ -338,7 +334,7 @@ export default function WorkerApply({ existing, onCancel }) {
               value={form.serviceKey}
               onChange={set("serviceKey")}
             >
-              <option value="">Select trade…</option>
+              <option value="">Select tradeâ€¦</option>
               {tradeOptions("serviceKey").map((service) => (
                 <option key={service.key} value={service.key}>
                   {service.name}
@@ -347,47 +343,7 @@ export default function WorkerApply({ existing, onCancel }) {
             </Select>
           </Field>
 
-          <Field
-            label="Second trade (optional)"
-            htmlFor="apply-service-2"
-            hint={isPremium ? "EasyHome Pro unlock: available for pro workers." : "Available for EasyHome Pro members only."}
-          >
-            <Select
-              id="apply-service-2"
-              value={form.secondaryServiceKey}
-              onChange={set("secondaryServiceKey")}
-              disabled={!isPremium}
-            >
-              <option value="">— None —</option>
-              {tradeOptions("secondaryServiceKey").map((service) => (
-                <option key={service.key} value={service.key}>
-                  {service.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <Field
-            label="Third trade (optional)"
-            htmlFor="apply-service-3"
-            hint={isPremium ? "EasyHome Pro unlock: available for pro workers." : "Available for EasyHome Pro members only."}
-          >
-            <Select
-              id="apply-service-3"
-              value={form.optionalServiceKey}
-              onChange={set("optionalServiceKey")}
-              disabled={!isPremium}
-            >
-              <option value="">— None —</option>
-              {tradeOptions("optionalServiceKey").map((service) => (
-                <option key={service.key} value={service.key}>
-                  {service.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <Field label="Starting price (₹)" htmlFor="apply-price">
+          <Field label="Starting price (â‚¹)" htmlFor="apply-price">
             <Input
               id="apply-price"
               type="number"
@@ -405,7 +361,7 @@ export default function WorkerApply({ existing, onCancel }) {
               value={form.state}
               onChange={(event) => chooseState(event.target.value)}
             >
-              <option value="">Select a state…</option>
+              <option value="">Select a stateâ€¦</option>
               {states.map((state) => (
                 <option key={state} value={state}>
                   {state}
@@ -423,7 +379,7 @@ export default function WorkerApply({ existing, onCancel }) {
               value={form.city}
               onChange={(event) => chooseCity(event.target.value)}
             >
-              <option value="">Select a city…</option>
+              <option value="">Select a cityâ€¦</option>
               {stateCities.map((item) => (
                 <option key={item.id || item.name} value={item.name}>
                   {item.name}
@@ -447,7 +403,7 @@ export default function WorkerApply({ existing, onCancel }) {
               value={form.areaName}
               onChange={set("areaName")}
             >
-              <option value="">Select a local area…</option>
+              <option value="">Select a local areaâ€¦</option>
               {areaOptions.map((area) => (
                 <option key={area} value={area}>
                   {area}
@@ -485,9 +441,9 @@ export default function WorkerApply({ existing, onCancel }) {
         >
           <Crosshair size={16} />
           {locating
-            ? "Capturing location…"
+            ? "Capturing locationâ€¦"
             : coords
-              ? `Location pinned · ${coords.lat.toFixed(3)}, ${coords.lng.toFixed(3)}`
+              ? `Location pinned Â· ${coords.lat.toFixed(3)}, ${coords.lng.toFixed(3)}`
               : "Pin my location (optional)"}
         </button>
 
@@ -507,7 +463,7 @@ export default function WorkerApply({ existing, onCancel }) {
             </Button>
           ) : null}
           <Button type="submit" disabled={busy}>
-            {busy ? "Submitting…" : "Submit application"}
+            {busy ? "Submittingâ€¦" : "Submit application"}
           </Button>
         </div>
       </form>
@@ -539,14 +495,14 @@ export default function WorkerApply({ existing, onCancel }) {
                 type="search"
                 value={zoneQuery}
                 onChange={(event) => setZoneQuery(event.target.value)}
-                placeholder="Search city, area or state…"
+                placeholder="Search city, area or stateâ€¦"
                 autoFocus
               />
             </label>
 
             <div className="wk-zone-list">
               {zoneLoading ? (
-                <p className="wk-zone-state">Loading live service zones…</p>
+                <p className="wk-zone-state">Loading live service zonesâ€¦</p>
               ) : zoneError ? (
                 <p className="wk-zone-state wk-zone-state--error">{zoneError}</p>
               ) : filteredZones.length === 0 ? (
@@ -572,7 +528,7 @@ export default function WorkerApply({ existing, onCancel }) {
                         <strong>{zone.areaName || zone.cityName || zone.label}</strong>
                         <small>
                           {[zone.cityName, zone.state].filter(Boolean).join(", ") || zone.label}
-                          {zone.radiusKm ? ` · ${zone.radiusKm} km radius` : ""}
+                          {zone.radiusKm ? ` Â· ${zone.radiusKm} km radius` : ""}
                         </small>
                       </span>
                       {active ? <BadgeCheck size={16} /> : null}

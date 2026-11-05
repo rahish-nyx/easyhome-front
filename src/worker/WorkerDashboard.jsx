@@ -1002,8 +1002,8 @@ function WorkerAdSlot({ promos }) {
   );
 }
 
-function MembershipTab({ worker, isPremium, settings }) {
-  const { refreshClaims, refreshProfile } = useAuth();
+function MembershipTab({ worker, settings }) {
+  const { refreshClaims, refreshProfile, isPremium } = useAuth();
   const toast = useToast();
   const [plan, setPlan] = useState("monthly");
   const prices = rolePlans(settings, "worker");
@@ -2504,12 +2504,17 @@ function EarningsTab({
 function ProfileTab({ worker, onLogout }) {
   const { services, settings } = useCatalogue();
   const toast = useToast();
-  const { refreshClaims, refreshProfile } = useAuth();
+  const { refreshClaims, refreshProfile, isPremium } = useAuth();
   const photoInputRef = useRef(null);
+  const savedTrades = Array.isArray(worker.trades) && worker.trades.length
+    ? worker.trades
+    : [worker.serviceKey].filter(Boolean);
   const [form, setForm] = useState({
     name: worker.name || "",
     phone: worker.phone || "",
     serviceKey: worker.serviceKey || "",
+    secondaryServiceKey: savedTrades[1] || "",
+    optionalServiceKey: savedTrades[2] || "",
     service: worker.service || "",
     pricePerWork: worker.pricePerWork || "",
     bio: worker.bio || "",
@@ -2554,6 +2559,11 @@ function ProfileTab({ worker, onLogout }) {
         ...(place.city ? { city: place.city } : {}),
         ...(place.state ? { state: place.state } : {}),
         ...(place.areaName ? { areaName: place.areaName } : {}),
+        trades: [
+          form.serviceKey,
+          isPremium ? form.secondaryServiceKey : "",
+          isPremium ? form.optionalServiceKey : "",
+        ].filter(Boolean),
         pricePerWork: Number(form.pricePerWork) || 199,
         bio: form.bio.trim(),
         upiId: form.upiId.trim(),
@@ -2796,7 +2806,87 @@ function ProfileTab({ worker, onLogout }) {
                   ))}
                 </select>
               </Field>
-              <Field label="Starting price (â‚¹)" htmlFor="wk-price">
+              {isPremium ? (
+                <>
+                  <Field
+                    label="Second service category"
+                    htmlFor="wk-service-2"
+                    hint="EasyHome Pro unlock · extra earning category."
+                  >
+                    <select
+                      id="wk-service-2"
+                      className="input"
+                      value={form.secondaryServiceKey}
+                      onChange={(event) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          secondaryServiceKey: event.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">— None —</option>
+                      {services
+                        .filter(
+                          (service) =>
+                            service.key !== form.serviceKey &&
+                            service.key !== form.optionalServiceKey,
+                        )
+                        .map((service) => (
+                          <option key={service.key} value={service.key}>
+                            {service.name}
+                          </option>
+                        ))}
+                    </select>
+                  </Field>
+                  <Field
+                    label="Third service category"
+                    htmlFor="wk-service-3"
+                    hint="EasyHome Pro unlock · extra earning category."
+                  >
+                    <select
+                      id="wk-service-3"
+                      className="input"
+                      value={form.optionalServiceKey}
+                      onChange={(event) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          optionalServiceKey: event.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">— None —</option>
+                      {services
+                        .filter(
+                          (service) =>
+                            service.key !== form.serviceKey &&
+                            service.key !== form.secondaryServiceKey,
+                        )
+                        .map((service) => (
+                          <option key={service.key} value={service.key}>
+                            {service.name}
+                          </option>
+                        ))}
+                    </select>
+                  </Field>
+                </>
+              ) : (
+                <div className="wk-trade-lock">
+                  <span className="wk-trade-lock__icon">
+                    <Crown size={17} />
+                  </span>
+                  <div className="grow">
+                    <strong>Multi-service unlock</strong>
+                    <small>
+                      Add 2 extra service categories and take more work. Available with EasyHome
+                      Pro.
+                    </small>
+                  </div>
+                  <Link to="/subscription" className="wk-btn wk-btn--primary wk-btn--sm">
+                    Upgrade to Pro
+                  </Link>
+                </div>
+              )}
+              <Field label="Starting price (₹)" htmlFor="wk-price">
                 <Input
                   id="wk-price"
                   type="number"

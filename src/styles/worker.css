@@ -6627,3 +6627,38 @@
     display: none;
   }
 }
+
+/* Pro-only multi-service unlock on profile */
+.wk-trade-lock {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: 12px;
+  border: 1px dashed #bcd6ff;
+  background: #f2f7ff;
+}
+
+.wk-trade-lock__icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #e8f1ff;
+  color: #1d4ed8;
+  flex-shrink: 0;
+}
+
+.wk-trade-lock strong {
+  display: block;
+  font-size: 12.5px;
+  color: #0b1f3a;
+}
+
+.wk-trade-lock small {
+  color: #667085;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
