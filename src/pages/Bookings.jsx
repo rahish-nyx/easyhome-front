@@ -72,7 +72,6 @@ export default function Bookings() {
   const { data: bookings, loading, error } = useLiveQuery(query);
   const [tab, setTab] = useState("active");
   const [cancelTarget, setCancelTarget] = useState(null);
-  const [offerTarget, setOfferTarget] = useState(null);
   const [payTarget, setPayTarget] = useState(null);
   const [reviewTarget, setReviewTarget] = useState(null);
   const [busyId, setBusyId] = useState("");
@@ -91,18 +90,6 @@ export default function Bookings() {
   }, [bookings]);
 
   const shown = groups[tab] || [];
-
-  const acceptPrice = async (booking) => {
-    setBusyId(booking.id);
-    try {
-      await api.patch(`/bookings/${booking.id}/accept-price`);
-      toast.success("Price accepted. Your pro can start the job now.");
-    } catch (submitError) {
-      toast.error(submitError.message);
-    } finally {
-      setBusyId("");
-    }
-  };
 
   const tabs = STATUS_TABS.map((item) => ({
     ...item,
@@ -179,9 +166,7 @@ export default function Bookings() {
               booking={booking}
               busy={busyId === booking.id}
               isPremium={isPremium}
-              onAccept={() => acceptPrice(booking)}
               onCancel={() => setCancelTarget(booking)}
-              onOffer={() => setOfferTarget(booking)}
               onPay={() => setPayTarget(booking)}
               onReview={() => setReviewTarget(booking)}
             />
@@ -255,15 +240,6 @@ export default function Bookings() {
         }}
       />
 
-      <OfferModal
-        booking={offerTarget}
-        onClose={() => setOfferTarget(null)}
-        onDone={() => {
-          setOfferTarget(null);
-          toast.success("Counter-offer sent to your pro.");
-        }}
-      />
-
       <PaymentModal
         booking={payTarget}
         profile={profile}
@@ -290,9 +266,7 @@ function BookingCard({
   booking,
   busy,
   isPremium,
-  onAccept,
   onCancel,
-  onOffer,
   onPay,
   onReview,
 }) {
@@ -324,11 +298,6 @@ function BookingCard({
   const minutesLeft = deadline
     ? Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 60_000))
     : null;
-  const quoteReady =
-    booking.status === "accepted" &&
-    booking.pricing?.workerPrice &&
-    !booking.pricing?.confirmedAt;
-  const alreadyOffered = Boolean(booking.pricing?.customerOffer);
   const accepted =
     Boolean(booking.workerId) &&
     ["accepted", "ongoing", "completed"].includes(booking.status);
@@ -532,36 +501,7 @@ function BookingCard({
         </div>
       </div>
 
-      {quoteReady ? (
-        <div
-          className="offer-box"
-          style={{ background: "var(--yellow-soft)", alignItems: "center" }}
-        >
-          <div className="grow">
-            <strong style={{ fontSize: 13.5 }}>
-              {worker} quoted {inr(booking.pricing.workerPrice)}
-            </strong>
-            <p className="tiny muted" style={{ color: "var(--yellow-ink)" }}>
-              Accept to unlock contact details, or send one counter-offer.
-              {alreadyOffered
-                ? ` Your offer of ${inr(booking.pricing.customerOffer)} is awaiting the pro.`
-                : ""}
-            </p>
-          </div>
-          <div className="row" style={{ gap: 8 }}>
-            {!alreadyOffered ? (
-              <Button size="sm" variant="outline" onClick={onOffer}>
-                Counter
-              </Button>
-            ) : null}
-            <Button size="sm" loading={busy} onClick={onAccept}>
-              Accept {inr(booking.pricing.workerPrice)}
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
-      {booking.status === "accepted" && booking.pricing?.confirmedAt ? (
+      {booking.status === "accepted" && booking.pricing?.finalPrice ? (
         <div
           className="row"
           style={{
@@ -732,67 +672,6 @@ function CancelModal({ booking, isPremium, onClose, onDone }) {
           />
         </Field>
       )}
-    </Modal>
-  );
-}
-
-function OfferModal({ booking, onClose, onDone }) {
-  const toast = useToast();
-  const [price, setPrice] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const submit = async () => {
-    if (!booking) return;
-    const amount = Number(price);
-    if (!Number.isFinite(amount) || amount < 99) {
-      toast.error("Enter a valid amount of at least ₹99.");
-      return;
-    }
-    setBusy(true);
-    try {
-      await api.patch(`/bookings/${booking.id}/offer`, { price: Math.round(amount) });
-      onDone();
-      setPrice("");
-    } catch (error) {
-      toast.error(error.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Modal
-      open={Boolean(booking)}
-      onClose={onClose}
-      title="Send a counter-offer"
-      subtitle={
-        booking
-          ? `${booking.workerName} quoted ${inr(booking.pricing?.workerPrice || 0)}. You get one counter-offer per booking.`
-          : ""
-      }
-      size="sm"
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            Close
-          </Button>
-          <Button loading={busy} onClick={submit}>
-            Send offer
-          </Button>
-        </>
-      }
-    >
-      <Field label="Your price (₹)" htmlFor="offer-price" hint="The pro can accept or confirm a final price.">
-        <Input
-          id="offer-price"
-          type="number"
-          min={99}
-          max={100000}
-          value={price}
-          onChange={(event) => setPrice(event.target.value)}
-          placeholder={String(booking?.pricing?.workerPrice || booking?.budget || 199)}
-        />
-      </Field>
     </Modal>
   );
 }

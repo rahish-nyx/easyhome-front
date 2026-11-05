@@ -290,7 +290,7 @@ export default function WorkerPublic() {
                 </p>
                 <h3 style={{ fontSize: 20 }}>Book {worker.name.split(" ")[0]} for your home.</h3>
                 <p className="small" style={{ color: "rgba(255,255,255,.6)", marginTop: 5 }}>
-                  Set a budget, agree the final price, pay after completion.
+                  A platform-set final price applies when the pro accepts your booking. Pay after completion.
                 </p>
               </div>
               <Link to={bookLink} className="btn btn--primary">

@@ -25,7 +25,7 @@ const GROUPS = [
       },
       {
         q: "When do I pay?",
-        a: "You pay the professional directly after the work is completed. No advance payment is taken by EasyHome. The final price is agreed in the app before any work starts.",
+        a: "You pay the professional directly after the work is completed. No advance payment is taken by EasyHome. The professional's final price applies when the job is accepted.",
       },
       {
         q: "Can I choose a specific professional?",

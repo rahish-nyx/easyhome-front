@@ -12,8 +12,8 @@
   --wk-panel-2: #f8fbff;
   --wk-line: #e3eaf3;
   --wk-line-strong: #cbd8e8;
-  --wk-blue: #1769d2;
-  --wk-blue-2: #2b7de9;
+  --wk-blue: #2563eb;
+  --wk-blue-2: #3b82f6;
   --wk-blue-soft: rgba(23, 105, 210, 0.09);
   --wk-yellow: #9a6500;
   --wk-green: #087a55;
@@ -2676,16 +2676,50 @@
   background: var(--yellow-soft);
 }
 
-.wk-confirm-amount span {
+.worker-app .wk-confirm-amount {
+  background: #f8fbff;
+  border: 1px solid #e3eaf3;
+}
+
+.worker-app .wk-confirm-amount span {
   font-size: 12px;
-  color: var(--yellow-ink);
+  color: #2563eb;
   font-weight: 700;
 }
 
-.wk-confirm-amount strong {
-  font-size: 24px;
+.worker-app .wk-confirm-amount strong {
+  font-size: 30px;
   letter-spacing: -0.03em;
-  color: var(--ink);
+  color: #0b1f3a;
+}
+
+/* --- Payment collection card (after job Complete) --- */
+.worker-app .wk-payment-card {
+  display: grid;
+  gap: 2px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #f8fbff;
+  border: 1px solid #e3eaf3;
+}
+
+.worker-app .wk-payment-card span {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+.worker-app .wk-payment-card strong {
+  font-size: 32px;
+  letter-spacing: -0.03em;
+  color: #0b1f3a;
+}
+
+.worker-app .wk-payment-card small {
+  font-size: 11px;
+  color: var(--wk-muted);
 }
 
 /* ------------------------------- Responsive ------------------------------ */
@@ -5570,4 +5604,431 @@
     min-height: 44px;
     border-radius: 12px;
   }
+}
+
+/* ==========================================================================
+   Design refresh — mobile job cards, new job leads, payment card, palette
+   EasyHome primary blue #2563eb · pastel blue fills · dark navy ink · white cards
+   ========================================================================== */
+
+/* --- Active job card (Card A) --- */
+.worker-app .wk-active {
+  background: #ffffff;
+  border: 1px solid #e3eaf3;
+  border-radius: 20px;
+  box-shadow: 0 18px 44px rgba(15, 42, 82, 0.1);
+}
+
+.worker-app .wk-active.is-focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18), 0 18px 44px rgba(15, 42, 82, 0.12);
+}
+
+.worker-app .wk-active__icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #3b82f6, #2563eb);
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35);
+}
+
+.worker-app .wk-active__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  color: var(--wk-muted);
+}
+
+.worker-app .wk-active__money {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.worker-app .wk-active__money > svg {
+  align-self: center;
+  color: #2563eb;
+}
+
+.worker-app .wk-active__money strong {
+  font-size: 22px;
+  color: #0b1f3a;
+  letter-spacing: -0.02em;
+}
+
+.worker-app .wk-active__money span {
+  font-size: 9.5px;
+  color: var(--wk-muted-2);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* Customer uploaded photos — object-fit cover, uniform rounded frames */
+.worker-app .wk-active__photos {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 14px;
+  background: #f8fbff;
+  border: 1px solid #e3eaf3;
+}
+
+.worker-app .wk-active__photos-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+.worker-app .wk-active__photos-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-top: 8px;
+  scrollbar-width: none;
+}
+
+.worker-app .wk-active__photos-row::-webkit-scrollbar {
+  display: none;
+}
+
+.worker-app .wk-active__photo-wrap {
+  flex-shrink: 0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.worker-app .wk-active__photo {
+  display: block;
+  width: 68px;
+  height: 68px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #e3eaf3;
+}
+
+.worker-app .wk-active__photo-wrap:hover .wk-active__photo {
+  border-color: #2563eb;
+}
+
+/* Live timer — pastel blue box */
+.worker-app .wk-job-timer {
+  background: rgba(37, 99, 235, 0.07);
+  border-color: rgba(37, 99, 235, 0.28);
+}
+
+.worker-app .wk-job-timer__icon {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.worker-app .wk-job-timer strong {
+  color: #0b1f3a;
+}
+
+/* Phase progress — pastel blue track, blue current node */
+.worker-app .wk-phase-track {
+  background: #f4f8fc;
+  border: 1px solid #e3eaf3;
+}
+
+.worker-app .wk-phase-track > span:not(:last-child)::after {
+  background: #dbeafe;
+}
+
+.worker-app .wk-phase-track > span.is-current {
+  color: #2563eb;
+}
+
+.worker-app .wk-phase-track > span.is-current i {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+/* --- New job lead card (Card B) --- */
+.worker-app .wk-lead {
+  position: relative;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid #e3eaf3;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(15, 42, 82, 0.08);
+}
+
+.worker-app .wk-lead--urgent {
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
+.worker-app .wk-lead__top {
+  display: grid;
+  gap: 12px;
+}
+
+.worker-app .wk-lead__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.09);
+  border: 1px solid rgba(37, 99, 235, 0.22);
+  color: #2563eb;
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.worker-app .wk-lead__head-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.worker-app .wk-lead__budget {
+  flex-shrink: 0;
+  text-align: right;
+  padding: 9px 13px;
+  border-radius: 13px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px dashed rgba(37, 99, 235, 0.35);
+}
+
+.worker-app .wk-lead__budget strong {
+  display: block;
+  font-size: 21px;
+  color: #0b1f3a;
+  letter-spacing: -0.02em;
+}
+
+.worker-app .wk-lead__budget span {
+  display: block;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+.worker-app .wk-lead__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.worker-app .wk-lead__grid > div {
+  background: #f8fbff;
+  border: 1px solid #e3eaf3;
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+
+.worker-app .wk-lead__grid span {
+  display: block;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wk-muted);
+}
+
+.worker-app .wk-lead__grid strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: #0b1f3a;
+}
+
+.worker-app .wk-lead__message {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f8fbff;
+  border: 1px solid #e3eaf3;
+}
+
+.worker-app .wk-lead__message svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #2563eb;
+}
+
+.worker-app .wk-lead__message p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--wk-muted);
+}
+
+.worker-app .wk-lead__footer {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 14px;
+}
+
+.worker-app .wk-lead__customer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.worker-app .wk-lead__customer strong {
+  display: block;
+  font-size: 13px;
+}
+
+.worker-app .wk-lead__customer small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  color: var(--wk-muted);
+  font-size: 11px;
+}
+
+/* --- Primary button uses EasyHome blue #2563eb --- */
+.worker-app .wk-btn--primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  box-shadow: 0 8px 22px rgba(37, 99, 235, 0.3);
+}
+
+.worker-app .wk-btn--primary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+/* --- Desktop: active jobs (60-70%) + leads (30-40%) --- */
+@media (min-width: 1100px) {
+  .worker-app .wk-jobs-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: 16px;
+    align-items: start;
+  }
+}
+
+@media (max-width: 1099px) {
+  .worker-app .wk-jobs-layout {
+    display: grid;
+    gap: 16px;
+  }
+}
+
+.worker-app .wk-job-list {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.worker-app .wk-phase-btn {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+  box-shadow: 0 10px 26px rgba(37, 99, 235, 0.28);
+}
+
+.worker-app .wk-phase-btn:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+/* --- Application status page (WorkerStatus) — design refresh --- */
+.worker-app .wk-status-hero__icon,
+.worker-app .wk-status-hero__icon--pending {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+  border-color: rgba(37, 99, 235, 0.28);
+}
+
+.worker-app .wk-status-hero__icon--rejected,
+.worker-app .wk-status-hero__icon--suspended {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+.worker-app .wk-status-hero h2 {
+  color: #0b1f3a;
+}
+
+.worker-app .wk-status-hero p {
+  color: #667085;
+}
+
+.worker-app .wk-panel {
+  background: #ffffff;
+  border: 1px solid #e3eaf3;
+  box-shadow: 0 18px 44px rgba(15, 42, 82, 0.08);
+}
+
+.worker-app .wk-application {
+  background: #f8fbff;
+  border: 1px solid #e3eaf3;
+}
+
+.worker-app .wk-application__row {
+  background: #ffffff;
+  border-bottom: 1px solid #eef3f9;
+}
+
+.worker-app .wk-application__row:last-child {
+  border-bottom: 0;
+}
+
+.worker-app .wk-application__row span {
+  color: #667085;
+}
+
+.worker-app .wk-application__row strong {
+  color: #0b1f3a;
+}
+
+.worker-app .wk-progress__item.is-done .wk-progress__dot {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+  border-color: rgba(37, 99, 235, 0.25);
+}
+
+.worker-app .wk-progress__item.is-current .wk-progress__dot {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+  border-color: rgba(37, 99, 235, 0.32);
+  animation: wk-pulse 2s infinite;
+}
+
+.worker-app .wk-progress__item strong {
+  color: #0b1f3a;
+}
+
+.worker-app .wk-progress__item small {
+  color: #667085;
+}
+
+.worker-app .wk-back {
+  color: #2563eb;
+}
+
+.worker-app .wk-fineprint {
+  color: #667085;
+}
+
+.worker-app .wk-fineprint a {
+  color: #2563eb;
 }

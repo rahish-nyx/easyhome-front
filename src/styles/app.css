@@ -8,9 +8,9 @@
   --yellow-soft: #fff8cc;
   --yellow-ink: #6b5200;
 
-  --ink: #0a0a0a;
-  --ink-2: #141414;
-  --ink-3: #222222;
+  --ink: #0b1f3a;
+  --ink-2: #141f33;
+  --ink-3: #1c2a42;
   --paper: #ffffff;
   --paper-2: #f7f7f3;
   --paper-3: #efefe8;
@@ -19,9 +19,9 @@
   --muted: #6f6f66;
   --muted-2: #9a9a90;
 
-  --blue: #2f6bff;
-  --blue-strong: #1d54e0;
-  --blue-soft: rgba(47, 107, 255, 0.1);
+  --blue: #2563eb;
+  --blue-strong: #1d4ed8;
+  --blue-soft: rgba(37, 99, 235, 0.1);
   --green: #067a52;
   --green-soft: #e6f7f1;
   --red: #d92d20;
@@ -3846,6 +3846,54 @@ ol {
 
 .timeline-step.is-done::before {
   background: var(--yellow-strong);
+}
+
+/* Design refresh — EasyHome blue milestone rail */
+.page .booking-timeline {
+  border-top-color: #e3eaf3;
+}
+
+.page .timeline-step {
+  color: #667085;
+}
+
+.page .timeline-step::before {
+  background: #dbeafe;
+}
+
+.page .timeline-step::after {
+  background: #e3eaf3;
+}
+
+.page .timeline-step.is-done {
+  color: #2563eb;
+}
+
+.page .timeline-step.is-done::before {
+  background: #2563eb;
+}
+
+.page .timeline-step.is-current {
+  color: #0b1f3a;
+}
+
+.page .timeline-step.is-current::before {
+  background: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+/* Design refresh — customer booking card: white card, soft shadow, rounded, pastel blue */
+.page .booking-card {
+  background: #ffffff;
+  border: 1px solid #e3eaf3;
+  border-radius: 20px;
+  box-shadow: 0 18px 44px rgba(15, 42, 82, 0.08);
+}
+
+.page .booking-card__photo {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
 }
 
 .offer-box {

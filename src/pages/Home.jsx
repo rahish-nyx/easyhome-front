@@ -638,7 +638,7 @@ export default function Home() {
               {
                 icon: Wallet,
                 title: "No surprise invoices",
-                body: "Agree the final price in the app before work starts. Pay after it's done.",
+                body: "The professional's platform-set final price applies when the pro accepts your booking. Pay after it's done.",
               },
             ].map((item) => (
               <div className="card card--pad" key={item.title}>

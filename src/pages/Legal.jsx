@@ -22,7 +22,7 @@ const PAGES = {
         heading: "What we do",
         body: [
           "EasyHome is a local home-services platform. Customers describe a job, set a budget and receive a verified professional. Professionals choose jobs that fit their trade, area and schedule.",
-          "We are not a marketplace for anonymous bidding. One approved professional takes ownership of each booking, agrees a final price in the app and completes the visit.",
+          "We are not a marketplace for anonymous bidding. One approved professional takes ownership of each booking, sets the final price in the app and completes the visit.",
         ],
       },
       {
@@ -64,8 +64,7 @@ const PAGES = {
       {
         heading: "Bookings and pricing",
         body: [
-          "A booking is a request, not a confirmed contract, until an approved professional accepts it. The professional then quotes a final price. The customer may accept it or send one counter-offer.",
-          "No work should begin before the final price is confirmed in the app. The customer pays the professional directly after completion. EasyHome records the payment confirmation for support and fee purposes.",
+          "A booking is a request, not a confirmed contract, until an approved professional accepts it. The professional's platform-set final price then applies to the job. The customer pays the professional directly after completion. EasyHome records the payment confirmation for support and fee purposes.",
         ],
       },
       {
@@ -115,7 +114,7 @@ const PAGES = {
         body: [
           "We use your data to authenticate you, match bookings, show relevant services, process payments and fees, prevent fraud and provide support.",
           "If you choose current-location detection, your coordinates are used to identify service coverage and resolve your locality through OpenStreetMap Nominatim. If GPS is unavailable, EasyHome may use your network IP to estimate your city and state through ipapi.co; this estimate is approximate and does not provide precise coordinates. When a professional is assigned to an active booking, their live location is shared with that booking's customer while tracking is active.",
-          "We do not sell personal data. We do not show your phone number publicly or to workers until the final price is confirmed.",
+          "We do not sell personal data. We do not show your phone number publicly or to workers until a professional is assigned to an active booking.",
         ],
       },
       {
@@ -156,7 +155,7 @@ const PAGES = {
       {
         heading: "Independent professionals",
         body: [
-          "Professionals on EasyHome are independent service providers. They set their own availability, agree the final price in the app and perform the work directly for the customer.",
+          "Professionals on EasyHome are independent service providers. They set their own availability, set the final price for a job in the app and perform the work directly for the customer.",
           "EasyHome verifies identity and account details before approval, but verification is not a warranty of any particular outcome, workmanship or timeline.",
         ],
       },
@@ -170,7 +169,7 @@ const PAGES = {
       {
         heading: "Pricing and urgency",
         body: [
-          "Budgets, quotes and final prices are shown in the app. Urgent requests include a 10% urgent fee for non-members; active EasyHome Pro customers are exempt. Urgent and priority benefits apply only while the membership is active.",
+          "Budgets and final prices are shown in the app. Urgent requests include a 10% urgent fee for non-members; active EasyHome Pro customers are exempt. Urgent and priority benefits apply only while the membership is active.",
           "EasyHome service fees and membership fees are separate from the amount paid to the professional for the service.",
         ],
       },

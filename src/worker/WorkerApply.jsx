@@ -26,7 +26,7 @@ function uniqueTrades(list) {
 }
 
 export default function WorkerApply({ existing, onCancel }) {
-  const { profile, refreshClaims } = useAuth();
+  const { profile, refreshClaims, worker, isPremium } = useAuth();
   const { services } = useCatalogue();
   const { city, cities, states, citiesForState } = useLocation();
   const toast = useToast();
@@ -347,11 +347,16 @@ export default function WorkerApply({ existing, onCancel }) {
             </Select>
           </Field>
 
-          <Field label="Second trade (optional)" htmlFor="apply-service-2">
+          <Field
+            label="Second trade (optional)"
+            htmlFor="apply-service-2"
+            hint={isPremium ? "EasyHome Pro unlock: available for pro workers." : "Available for EasyHome Pro members only."}
+          >
             <Select
               id="apply-service-2"
               value={form.secondaryServiceKey}
               onChange={set("secondaryServiceKey")}
+              disabled={!isPremium}
             >
               <option value="">— None —</option>
               {tradeOptions("secondaryServiceKey").map((service) => (
@@ -362,11 +367,16 @@ export default function WorkerApply({ existing, onCancel }) {
             </Select>
           </Field>
 
-          <Field label="Third trade (optional)" htmlFor="apply-service-3">
+          <Field
+            label="Third trade (optional)"
+            htmlFor="apply-service-3"
+            hint={isPremium ? "EasyHome Pro unlock: available for pro workers." : "Available for EasyHome Pro members only."}
+          >
             <Select
               id="apply-service-3"
               value={form.optionalServiceKey}
               onChange={set("optionalServiceKey")}
+              disabled={!isPremium}
             >
               <option value="">— None —</option>
               {tradeOptions("optionalServiceKey").map((service) => (

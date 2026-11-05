@@ -338,8 +338,8 @@ export default function Booking() {
           <p className="eyebrow">New request · 60 seconds</p>
           <h1>Tell us what needs fixing.</h1>
           <p>
-            A verified pro will accept your request, quote a final price and confirm before
-            starting. Pay only after the job is done.
+            A verified pro will accept your request and apply their final price before starting.
+            Pay only after the job is done.
           </p>
         </div>
         <Link to="/services" className="btn btn--ghost btn--sm">
@@ -517,7 +517,7 @@ export default function Booking() {
               <Field
                 label="Your budget (₹)"
                 htmlFor="budget"
-                hint={`Minimum ${inr(minimum)} for ${service.name}. You can adjust after the pro quotes.`}
+                hint={`Minimum ${inr(minimum)} for ${service.name}. You can adjust within this range before the pro accepts.`}
                 error={errors.budget}
                 required
               >
@@ -756,16 +756,16 @@ export default function Booking() {
           </div>
 
           <div className="summary-total">
-            <span>Agreed price</span>
+            <span>Final price</span>
             <span style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600 }}>
-              after quote
+              after pro accepts
             </span>
           </div>
 
           <div className="summary-note">
             <ShieldCheck size={16} style={{ flexShrink: 0, color: "var(--green)" }} />
             <span>
-              No advance payment. The final price is agreed in the app before work starts.
+              No advance payment. The professional's final price applies when the job is accepted.
             </span>
           </div>
 
@@ -823,8 +823,8 @@ export default function Booking() {
             },
             {
               icon: Sparkles,
-              title: "Price agreed first",
-              body: "Accept the quote or send one counter-offer before any work begins.",
+              title: "Price set before work",
+              body: "The professional's platform-set final price is applied when the job is accepted. Pay after completion.",
             },
             {
               icon: ShieldCheck,

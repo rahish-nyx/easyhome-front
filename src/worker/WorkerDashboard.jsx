@@ -6,6 +6,7 @@ import {
   Banknote,
   Bell,
   BriefcaseBusiness,
+  Camera,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -20,6 +21,7 @@ import {
   IndianRupee,
   LogOut,
   MapPin,
+  MessageCircle,
   Navigation,
   Percent,
   Phone,
@@ -149,8 +151,6 @@ export default function WorkerDashboard() {
   const [busy, setBusy] = useState("");
   const [onlineSaving, setOnlineSaving] = useState(false);
   const [onlineOverride, setOnlineOverride] = useState(null);
-  const [priceTarget, setPriceTarget] = useState(null);
-  const [confirmTarget, setConfirmTarget] = useState(null);
   const [paymentTarget, setPaymentTarget] = useState(null);
   const [feeTarget, setFeeTarget] = useState(null);
   const [hiddenHistory, setHiddenHistory] = useState(() => new Set());
@@ -398,38 +398,10 @@ export default function WorkerDashboard() {
         ...previous.filter((item) => item.id !== job.id),
       ]);
       setHiddenFeedIds((previous) => new Set([...previous, job.id]));
-      toast.success("Job accepted. Contact details unlock after you confirm the price.");
+      toast.success("Job accepted. The admin-set final price is now active for this job.");
       setTab("jobs");
     } catch (error) {
       toast.error(error.message);
-    } finally {
-      setBusy("");
-    }
-  };
-
-  const submitPrice = async (job, price) => {
-    setBusy(`price:${job.id}`);
-    try {
-      await api.patch(`/worker/jobs/${job.id}/price`, { price });
-      toast.success("Quote sent to the customer.");
-      setPriceTarget(null);
-    } catch (error) {
-      toast.error(error.message);
-      throw error;
-    } finally {
-      setBusy("");
-    }
-  };
-
-  const submitConfirm = async (job, price) => {
-    setBusy(`confirm:${job.id}`);
-    try {
-      await api.patch(`/worker/jobs/${job.id}/confirm`, { price });
-      toast.success("Price confirmed. You can now contact the customer.");
-      setConfirmTarget(null);
-    } catch (error) {
-      toast.error(error.message);
-      throw error;
     } finally {
       setBusy("");
     }
@@ -689,8 +661,6 @@ export default function WorkerDashboard() {
             isPremium={isPremium}
             focusJobId={focusJobId}
             onTab={setTab}
-            onQuote={setPriceTarget}
-            onConfirm={setConfirmTarget}
             onPhase={advanceJob}
             onStart={startJob}
             onComplete={submitComplete}
@@ -711,8 +681,6 @@ export default function WorkerDashboard() {
             canAccept={canAccept}
             isPremium={isPremium}
             focusJobId={focusJobId}
-            onQuote={setPriceTarget}
-            onConfirm={setConfirmTarget}
             onPhase={advanceJob}
             onStart={startJob}
             onComplete={submitComplete}
@@ -733,8 +701,6 @@ export default function WorkerDashboard() {
             canAccept={canAccept}
             isPremium={isPremium}
             focusJobId={focusJobId}
-            onQuote={setPriceTarget}
-            onConfirm={setConfirmTarget}
             onPhase={advanceJob}
             onStart={startJob}
             onComplete={submitComplete}
@@ -815,21 +781,6 @@ export default function WorkerDashboard() {
         })}
       </nav>
 
-      <PriceModal
-        key={priceTarget?.id || "closed"}
-        job={priceTarget}
-        settings={settings}
-        isPremium={isPremium}
-        busy={Boolean(busy)}
-        onClose={() => setPriceTarget(null)}
-        onSubmit={(price) => submitPrice(priceTarget, price)}
-      />
-      <ConfirmPriceModal
-        job={confirmTarget}
-        busy={Boolean(busy)}
-        onClose={() => setConfirmTarget(null)}
-        onSubmit={(price) => submitConfirm(confirmTarget, price)}
-      />
       <PaymentModeModal
         job={paymentTarget}
         busy={Boolean(busy)}
@@ -1148,8 +1099,6 @@ function HomeTab({
   isPremium,
   focusJobId,
   onTab,
-  onQuote,
-  onConfirm,
   onStart,
   onPhase,
   onComplete,
@@ -1173,7 +1122,7 @@ function HomeTab({
           </h1>
           <p>
             {activeJobs.length
-              ? "Keep customers updated, confirm every price before work and mark the job complete when you are done."
+              ? "Keep customers updated, watch the live job timer and mark it complete when you are done."
               : "Jobs in your trade, city and local area appear below in real time. Accept one to get started."}
           </p>
         </div>
@@ -1195,29 +1144,29 @@ function HomeTab({
         </div>
       </div>
 
-      <ActiveJobsSection
-        jobs={activeJobs}
-        loading={loading}
-        busy={busy}
-        focusJobId={focusJobId}
-        onQuote={onQuote}
-        onConfirm={onConfirm}
-        onPhase={onPhase}
-        onStart={onStart}
-        onComplete={onComplete}
-        onReceivePayment={onReceivePayment}
-        gps={gps}
-        onSeeAll={() => onTab("jobs")}
-      />
+      <div className="wk-jobs-layout">
+        <ActiveJobsSection
+          jobs={activeJobs}
+          loading={loading}
+          busy={busy}
+          focusJobId={focusJobId}
+          onPhase={onPhase}
+          onStart={onStart}
+          onComplete={onComplete}
+          onReceivePayment={onReceivePayment}
+          gps={gps}
+          onSeeAll={() => onTab("jobs")}
+        />
 
-      <AvailableJobsSection
-        jobs={available.slice(0, 3)}
-        loading={loading}
-        busy={busy}
-        canAccept={canAccept}
-        onAccept={onAccept}
-        onSeeAll={() => onTab("jobs")}
-      />
+        <AvailableJobsSection
+          jobs={available.slice(0, 3)}
+          loading={loading}
+          busy={busy}
+          canAccept={canAccept}
+          onAccept={onAccept}
+          onSeeAll={() => onTab("jobs")}
+        />
+      </div>
 
       <WorkerPromos worker={worker} isPremium={isPremium} onTab={onTab} />
 
@@ -1638,8 +1587,6 @@ function JobsTab({
   canAccept,
   isPremium,
   focusJobId,
-  onQuote,
-  onConfirm,
   onStart,
   onPhase,
   onComplete,
@@ -1684,28 +1631,28 @@ function JobsTab({
         </div>
       ) : null}
 
-      <ActiveJobsSection
-        jobs={activeJobs}
-        loading={loading}
-        busy={busy}
-        focusJobId={focusJobId}
-        onQuote={onQuote}
-        onConfirm={onConfirm}
-        onPhase={onPhase}
-        onStart={onStart}
-        onComplete={onComplete}
-            onReceivePayment={onReceivePayment}
+      <div className="wk-jobs-layout">
+        <ActiveJobsSection
+          jobs={activeJobs}
+          loading={loading}
+          busy={busy}
+          focusJobId={focusJobId}
+          onPhase={onPhase}
+          onStart={onStart}
+          onComplete={onComplete}
+          onReceivePayment={onReceivePayment}
         gps={gps}
       />
 
-      <AvailableJobsSection
-        jobs={available}
-        loading={loading}
-        busy={busy}
-        canAccept={canAccept}
-        onAccept={onAccept}
-        showEmptyHint
-      />
+        <AvailableJobsSection
+          jobs={available}
+          loading={loading}
+          busy={busy}
+          canAccept={canAccept}
+          onAccept={onAccept}
+          showEmptyHint
+        />
+      </div>
 
       <section className="wk-section">
         <div className="wk-section__head">
@@ -1765,8 +1712,6 @@ function TrackTab({
   loading,
   busy,
   focusJobId,
-  onQuote,
-  onConfirm,
   onStart,
   onPhase,
   onComplete,
@@ -1810,8 +1755,6 @@ function TrackTab({
           loading={loading}
           busy={busy}
           focusJobId={focusJobId}
-          onQuote={onQuote}
-          onConfirm={onConfirm}
           onPhase={onPhase}
         onStart={onStart}
           onComplete={onComplete}
@@ -1830,8 +1773,6 @@ function ActiveJobsSection({
   loading,
   busy,
   focusJobId,
-  onQuote,
-  onConfirm,
   onStart,
   onPhase,
   onComplete,
@@ -1861,8 +1802,6 @@ function ActiveJobsSection({
               job={job}
               busy={busy}
               highlight={focusJobId === job.id}
-              onQuote={() => onQuote(job)}
-              onConfirm={() => onConfirm(job)}
               onStart={() => onStart(job)}
               onPhase={(phase) => onPhase(job, phase)}
                onComplete={() => onComplete(job)}
@@ -1947,49 +1886,75 @@ function AvailableJobsSection({
 function AvailableJobCard({ job, busy, canAccept, onAccept }) {
   const photo = mediaUrl(job.imagePath);
   const address = job.addressLabel || job.location?.label || job.area || "Service location shared";
+  const serviceDate = job.serviceDate || formatDateTime(job.createdAt);
+  const preferredTime = job.preferredTime || "Anytime";
+  const jobType = job.jobType || "Home Service";
   return (
-    <article className={`wk-job${job.urgency === "urgent" ? " wk-job--urgent" : ""}`}>
-      <div className="wk-job__top">
-        <span className="wk-job__icon">
-          <ServiceIcon service={{ key: job.serviceKey }} size={42} iconSize={20} />
+    <article className={`wk-lead${job.urgency === "urgent" ? " wk-lead--urgent" : ""}`}>
+      <div className="wk-lead__top">
+        <span className="wk-lead__tag">
+          <Sparkles size={11} /> New Booking
         </span>
-        <div className="grow">
-          <div className="wk-job__title-row">
-            <h3>{job.service}</h3>
-            {job.urgency === "urgent" ? (
-              <span className="wk-badge wk-badge--red">
-                <Timer size={11} /> Urgent
-              </span>
-            ) : null}
-            {job.priority === "pro" ? (
-              <span className="wk-badge wk-badge--yellow">
-                <Crown size={11} /> Pro priority
-              </span>
-            ) : job.urgency !== "urgent" ? (
-              <span className="wk-badge wk-badge--muted">Standard</span>
-            ) : null}
-          </div>
-          <p className="wk-job__meta">
-            <span>
-              <MapPin size={12} /> {job.area}
-            </span>
-            {job.sameServiceZone ? (
-              <span>In your service zone</span>
-            ) : job.distance !== null && job.distance !== undefined ? (
+        <div className="wk-lead__head-row">
+          <span className="wk-job__icon">
+            <ServiceIcon service={{ key: job.serviceKey }} size={42} iconSize={20} />
+          </span>
+          <div className="grow">
+            <div className="wk-job__title-row">
+              <h3>{job.service}</h3>
+              {job.urgency === "urgent" ? (
+                <span className="wk-badge wk-badge--red">
+                  <Timer size={11} /> Urgent
+                </span>
+              ) : null}
+              {job.priority === "pro" ? (
+                <span className="wk-badge wk-badge--yellow">
+                  <Crown size={11} /> Pro priority
+                </span>
+              ) : null}
+            </div>
+            <p className="wk-job__meta">
               <span>
-                <Navigation size={12} /> {distanceLabel(job.distance)}
+                <MapPin size={12} /> {job.area}
               </span>
-            ) : null}
-            <span>
-              <Clock3 size={12} /> {timeAgo(job.createdAt)}
-            </span>
-          </p>
-        </div>
-        <div className="wk-job__budget">
-          <strong>{inr(job.budget)}</strong>
-          <span>budget</span>
+              {job.sameServiceZone ? <span>In your service zone</span> : null}
+              <span>
+                <Clock3 size={12} /> {timeAgo(job.createdAt)}
+              </span>
+            </p>
+          </div>
+          <div className="wk-lead__budget">
+            <strong>{inr(job.budget)}</strong>
+            <span>Budget</span>
+          </div>
         </div>
       </div>
+
+      <div className="wk-lead__grid">
+        <div>
+          <span>Service Date</span>
+          <strong>{serviceDate}</strong>
+        </div>
+        <div>
+          <span>Preferred Time</span>
+          <strong>{preferredTime}</strong>
+        </div>
+        <div>
+          <span>Service Area</span>
+          <strong>{job.area}</strong>
+        </div>
+        <div>
+          <span>Job Type</span>
+          <strong>{jobType}</strong>
+        </div>
+      </div>
+
+      {job.description ? (
+        <div className="wk-lead__message">
+          <MessageCircle size={13} />
+          <p>{job.description}</p>
+        </div>
+      ) : null}
 
       {photo ? (
         <a className="wk-job__photo-wrap" href={photo} target="_blank" rel="noreferrer">
@@ -1997,25 +1962,24 @@ function AvailableJobCard({ job, busy, canAccept, onAccept }) {
         </a>
       ) : null}
 
-      <div className="wk-job__details">
-        <span><MapPin size={12} /> {address}</span>
-        {job.zoneName || job.cityName ? <span>{[job.zoneName, job.cityName].filter(Boolean).join(" · ")}</span> : null}
-      </div>
-
-      {job.description ? <p className="wk-job__desc">{job.description}</p> : null}
-
-      <div className="wk-job__actions">
-        <span className="wk-job__note">
-          {canAccept ? "One tap accepts this job." : "Account checks are required before accepting."}
-        </span>
+      <div className="wk-lead__footer">
+        <div className="wk-lead__customer">
+          <Avatar name={job.customerName} path={job.customerPhotoPath} size={40} />
+          <div className="grow">
+            <strong>{job.customerName || "EasyHome Member"}</strong>
+            <small>
+              <Phone size={11} /> {job.customerPhone || "Contact shared after accept"}
+            </small>
+          </div>
+        </div>
         <button
           type="button"
-          className="wk-btn wk-btn--primary"
+          className="wk-btn wk-btn--primary wk-btn--block"
           onClick={onAccept}
           disabled={busy}
         >
           {busy ? <Spinner size={16} /> : <Zap size={16} />}
-          {busy ? "Accepting…" : "Accept job"}
+          {busy ? "Accepting…" : "Accept Job"}
         </button>
       </div>
     </article>
@@ -2026,8 +1990,6 @@ function ActiveJobCard({
   job,
   busy,
   highlight,
-  onQuote,
-  onConfirm,
   onStart,
   onPhase,
   onComplete,
@@ -2036,10 +1998,11 @@ function ActiveJobCard({
 }) {
   const [phone, setPhone] = useState("");
   const [phoneLoadedFor, setPhoneLoadedFor] = useState("");
-  const confirmed = Boolean(job.pricing?.confirmedAt);
-  const loadingPhone = confirmed && phoneLoadedFor !== job.id;
   const price =
     job.pricing?.finalPrice || job.pricing?.workerPrice || job.pricing?.customerOffer || job.budget;
+  const hasFinalPrice = Boolean(price);
+  const photo = mediaUrl(job.imagePath);
+  const loadingPhone = hasFinalPrice && phoneLoadedFor !== job.id;
   const lat = job.location?.lat;
   const lng = job.location?.lng;
   // The booking status is the source of truth. Older records can retain a
@@ -2110,7 +2073,7 @@ function ActiveJobCard({
 
   useEffect(() => {
     let active = true;
-    if (!confirmed) {
+    if (!hasFinalPrice) {
       return undefined;
     }
     api
@@ -2125,18 +2088,27 @@ function ActiveJobCard({
     return () => {
       active = false;
     };
-  }, [job.id, confirmed]);
+  }, [job.id, hasFinalPrice]);
 
   return (
     <article className={`wk-active${highlight ? " is-focus" : ""}`}>
       <div className="wk-active__head">
+        <span className="wk-active__icon">
+          <ServiceIcon service={{ key: job.serviceKey }} size={26} iconSize={12} />
+        </span>
         <span className={`wk-status-dot wk-status-dot--${job.status}`} />
         <div className="grow">
           <span className="wk-active__status">
             {meta.label}
-            {confirmed ? "" : " · agree the price"}
+            {!hasFinalPrice ? " · final price pending" : ""}
           </span>
           <h3>{job.service}</h3>
+          <p className="wk-active__meta">
+            <MapPin size={12} /> {job.area}
+            {job.urgency === "urgent" ? (
+              <span className="wk-badge wk-badge--red">Urgent</span>
+            ) : null}
+          </p>
         </div>
         {gps ? (
           <span className={`wk-gps-pill${gpsLive ? " is-on" : ""}`}>
@@ -2145,8 +2117,9 @@ function ActiveJobCard({
           </span>
         ) : null}
         <div className="wk-active__money">
+          <Wallet size={15} />
           <strong>{inr(price)}</strong>
-          <span>{confirmed ? "Agreed" : "Budget / quote"}</span>
+          <span>{hasFinalPrice ? "Agreed price" : "Budget / quote"}</span>
         </div>
       </div>
 
@@ -2202,10 +2175,31 @@ function ActiveJobCard({
         </div>
       ) : null}
 
+      {job.imagePath ? (
+        <div className="wk-active__photos">
+          <div className="wk-active__photos-head">
+            <Camera size={14} />
+            <span>Customer Uploaded Photos</span>
+          </div>
+          <div className="wk-active__photos-row">
+            <a className="wk-active__photo-wrap" href={photo} target="_blank" rel="noreferrer">
+              <img
+                className="wk-active__photo"
+                src={photo}
+                alt={`${job.service} customer reference`}
+              />
+            </a>
+          </div>
+        </div>
+      ) : null}
+
       <div className="wk-active__customer">
         <Avatar name={job.customerName} path={job.customerPhotoPath} size={44} />
         <div className="grow">
-          <strong>{job.customerName || "EasyHome customer"}</strong>
+          <strong>
+            {job.customerName || "EasyHome customer"}
+            <BadgeCheck size={13} style={{ color: "var(--wk-blue-2)", verticalAlign: "-2px" }} />
+          </strong>
           <p>
             <MapPin size={12} /> {job.area}
             {job.urgency === "urgent" ? (
@@ -2215,7 +2209,7 @@ function ActiveJobCard({
             ) : null}
           </p>
         </div>
-        {confirmed ? (
+        {hasFinalPrice ? (
           <div className="wk-contact-actions">
             {loadingPhone ? (
               <Spinner size={16} />
@@ -2239,11 +2233,11 @@ function ActiveJobCard({
 
       <p className="wk-active__desc">{job.description}</p>
 
-      {confirmed ? (
+      {hasFinalPrice ? (
         <div className="wk-confirmed">
           <BadgeCheck size={16} />
           <span>
-            Price confirmed at <strong>{inr(job.pricing?.finalPrice || price)}</strong>. Contact
+            Final price set at <strong>{inr(job.pricing?.finalPrice || price)}</strong>. Contact
             the customer before you leave.
           </span>
         </div>
@@ -2267,63 +2261,7 @@ function ActiveJobCard({
       )}
 
       <div className="wk-active__actions">
-        {!confirmed ? (
-          <>
-            <button
-              type="button"
-              className="wk-btn wk-btn--outline"
-              onClick={onQuote}
-              disabled={busy}
-            >
-              <IndianRupee size={16} />
-              {job.pricing?.workerPrice ? "Change quote" : "Set final price"}
-            </button>
-            {job.pricing?.customerOffer || job.pricing?.workerPrice ? (
-              <button
-                type="button"
-                className="wk-btn wk-btn--primary"
-                onClick={onConfirm}
-                disabled={busy}
-              >
-                <CheckCircle2 size={16} />
-                Confirm {inr(job.pricing.customerOffer || job.pricing.workerPrice)}
-              </button>
-            ) : null}
-          </>
-        ) : null}
-
-        {confirmed && !isCompleted ? (
-          phase === TRACKING_PHASES.WORKING ? (
-            <button
-              type="button"
-              className="wk-btn wk-btn--block wk-btn--complete"
-              onClick={onComplete}
-              disabled={busy}
-            >
-              <CheckCircle2 size={22} />
-              <span>
-                <strong>Complete job</strong>
-                <small>Finish the job and open payment collection</small>
-              </span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="wk-btn wk-btn--block wk-phase-btn"
-              onClick={onStart}
-              disabled={busy}
-            >
-              <Zap size={22} />
-              <span>
-                <strong>Start job</strong>
-                <small>Begin work and start the timer</small>
-              </span>
-              <ChevronRight size={18} />
-            </button>
-          )
-        ) : null}
-
-        {confirmed && isCompleted ? (
+        {isCompleted ? (
           <button
             type="button"
             className="wk-btn wk-btn--block wk-btn--primary"
@@ -2337,9 +2275,36 @@ function ActiveJobCard({
             </span>
             <ChevronRight size={18} />
           </button>
-        ) : null}
+        ) : phase === TRACKING_PHASES.WORKING ? (
+          <button
+            type="button"
+            className="wk-btn wk-btn--block wk-btn--complete"
+            onClick={onComplete}
+            disabled={busy}
+          >
+            <CheckCircle2 size={22} />
+            <span>
+              <strong>Complete job</strong>
+              <small>Finish the job and open payment collection</small>
+            </span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="wk-btn wk-btn--block wk-phase-btn"
+            onClick={onStart}
+            disabled={busy}
+          >
+            <Zap size={22} />
+            <span>
+              <strong>Start job</strong>
+              <small>Begin work and start the timer</small>
+            </span>
+            <ChevronRight size={18} />
+          </button>
+        )}
 
-        {confirmed && gps && !gpsLive ? (
+        {!isCompleted && gps && !gpsLive ? (
           <button
             type="button"
             className="wk-btn wk-btn--outline"
@@ -2991,124 +2956,6 @@ function ProfileTab({ worker, onLogout }) {
 
 /* --------------------------------- Modals --------------------------------- */
 
-function PriceModal({ job, settings, isPremium, busy, onClose, onSubmit }) {
-  const [price, setPrice] = useState(
-    String(job?.pricing?.workerPrice || job?.budget || ""),
-  );
-  const [error, setError] = useState("");
-
-  const amount = Number(price) || 0;
-  const commission = isPremium ? 0 : Math.round((amount * (workerFeePct(settings))) / 100);
-
-  const submit = async () => {
-    if (amount < 99) {
-      setError("Enter at least ₹99.");
-      return;
-    }
-    setError("");
-    try {
-      await onSubmit(amount);
-    } catch (submitError) {
-      setError(submitError.message);
-    }
-  };
-
-  return (
-    <Modal
-      open={Boolean(job)}
-      onClose={onClose}
-      title="Set the final price"
-      subtitle={job ? `${job.service} · ${job.area}` : ""}
-      size="sm"
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button loading={busy} onClick={submit}>
-            Send quote
-          </Button>
-        </>
-      }
-    >
-      <div className="stack">
-        <Field
-          label="Final price (₹)"
-          htmlFor="wk-quote"
-          error={error}
-          hint={job ? `Customer budget: ${inr(job.budget)}` : ""}
-        >
-          <Input
-            id="wk-quote"
-            type="number"
-            min={99}
-            max={100000}
-            value={price}
-            autoFocus
-            onChange={(event) => setPrice(event.target.value)}
-          />
-        </Field>
-        <div className="wk-quote-summary">
-          <div>
-            <span>Customer pays</span>
-            <strong>{inr(amount)}</strong>
-          </div>
-          <div>
-            <span>Fees</span>
-            <strong>{inr(commission)}</strong>
-          </div>
-          <div>
-            <span>You receive</span>
-            <strong>{inr(Math.max(0, amount - commission))}</strong>
-          </div>
-        </div>
-        <p className="tiny muted">
-          The customer sees this price immediately and can accept or send one counter-offer.
-        </p>
-      </div>
-    </Modal>
-  );
-}
-
-function ConfirmPriceModal({ job, busy, onClose, onSubmit }) {
-  const price = Number(job?.pricing?.customerOffer || job?.pricing?.workerPrice) || 0;
-
-  return (
-    <Modal
-      open={Boolean(job)}
-      onClose={onClose}
-      title="Confirm this price?"
-      subtitle={job ? `${job.service} · ${job.customerName}` : ""}
-      size="sm"
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            Not yet
-          </Button>
-          <Button loading={busy} onClick={() => onSubmit(price)} icon={CheckCircle2}>
-            Confirm {inr(price)}
-          </Button>
-        </>
-      }
-    >
-      <div className="stack">
-        <div className="wk-confirm-amount">
-          <span>Agreed price</span>
-          <strong>{inr(price)}</strong>
-        </div>
-        <p className="small">
-          Confirming unlocks the customer's phone number and address so you can coordinate the
-          visit. Only confirm when you are ready to do the work.
-        </p>
-        <div className="wk-alert wk-alert--info">
-          <ShieldCheck size={16} />
-          <span>Prices cannot be changed after confirmation. Contact support for disputes.</span>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
 function CompleteModal({ job, busy, onClose, onConfirm }) {
   return (
     <Modal
@@ -3159,8 +3006,8 @@ function PaymentModeModal({ job, busy, onClose, onChoose }) {
     <Modal
       open={Boolean(job)}
       onClose={onClose}
-      title="Accept payment by UPI or cash"
-      subtitle={job ? `${job.service} · ${inr(job.pricing?.finalPrice || job.budget || 0)}` : ""}
+      title="Collect payment"
+      subtitle={job ? `${job.service} · Final price set` : ""}
       size="sm"
       footer={
         <Button variant="ghost" onClick={onClose}>
@@ -3169,9 +3016,10 @@ function PaymentModeModal({ job, busy, onClose, onChoose }) {
       }
     >
       <div className="stack">
-        <div className="wk-confirm-amount">
+        <div className="wk-payment-card">
           <span>Amount to collect</span>
           <strong>{inr(job?.pricing?.finalPrice || job?.budget || 0)}</strong>
+          <small>{job?.pricing?.finalPrice ? "Final price agreed · fees recorded after payment" : "Collect cash or UPI"}</small>
         </div>
         <p className="small muted">
           Choose how the customer will pay you. This tells the customer which

@@ -379,7 +379,7 @@ export default function Tracking() {
                 <MessageSquare size={18} />
                 <span>
                   <strong>Chat support</strong>
-                  <small>Quote, timing or help</small>
+                  <small>Timing or help</small>
                 </span>
               </Link>
             </div>

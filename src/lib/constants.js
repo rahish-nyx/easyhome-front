@@ -161,7 +161,7 @@ export const STATUS_META = {
   accepted: {
     label: "Worker assigned",
     tone: "blue",
-    hint: "Confirm the final price to unlock contact details.",
+    hint: "The pro's final price is set and contact details are unlocked.",
   },
   ongoing: {
     label: "In progress",

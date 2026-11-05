@@ -473,8 +473,8 @@ function ServiceDetail({ serviceKey }) {
                 <Wrench size={18} />
               </span>
               <div>
-                <strong className="small">Agree the final price</strong>
-                <p className="tiny muted">Your pro quotes before work begins. Accept or counter once.</p>
+                <strong className="small">Final price at acceptance</strong>
+                <p className="tiny muted">Your pro's platform-set price applies once the job is accepted.</p>
               </div>
             </div>
             <div className="row" style={{ gap: 12 }}>
