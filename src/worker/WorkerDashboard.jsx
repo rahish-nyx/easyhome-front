@@ -1002,6 +1002,23 @@ function WorkerAdSlot({ promos }) {
   );
 }
 
+const WORKER_BENEFIT_DETAILS = {
+  "Zero Dues Penalty & Uninterrupted Work Guarantee":
+    "Enjoy absolute peace of mind with zero account locks or penalties on platform dues, keeping your workflow completely uninterrupted.",
+  "Lower Commission Rate (Only 7%)":
+    "Keep a much larger share of your hard-earned money with a discounted 7% platform fee instead of the standard 10%.",
+  "Local Search Visibility Boost":
+    "Get prioritized ranking and higher placement in local customer search results to get discovered faster.",
+  "Priority Urgent Job Alerts":
+    "Get instant, first-access notifications for high-value urgent service requests in your service zone before anyone else.",
+  "Pro Trust Badge, Digital QR Code & Shareable Profile":
+    "Build instant customer trust with an exclusive Pro badge, a professional digital QR code, and a shareable profile card.",
+  "Multi-Service Category Unlock (Extra Earning)":
+    "Unlock 2 additional optional service categories for free, allowing you to take on multiple types of work and maximize your daily income.",
+  "Top priority featured profile card visibility on customer home feed":
+    "Showcase your professional profile card directly on the main customer page and feed for maximum local exposure and instant booking.",
+};
+
 function MembershipTab({ worker, settings }) {
   const { refreshClaims, refreshProfile, isPremium } = useAuth();
   const toast = useToast();
@@ -1041,9 +1058,17 @@ function MembershipTab({ worker, settings }) {
               ? `Your current membership is active until ${formatDateTime(worker.premiumUntil)}.`
               : "Pro includes a lower 7% commission rate, priority job placement and a verified Pro badge."}
           </p>
-          <ul>
+          <ul className="wk-benefits">
             {(settings.workerBenefits || []).map((benefit) => (
-              <li key={benefit}><CheckCircle2 size={16} /> {benefit}</li>
+              <li className="wk-benefit" key={benefit}>
+                <CheckCircle2 size={16} />
+                <div>
+                  <strong>{benefit}</strong>
+                  {WORKER_BENEFIT_DETAILS[benefit] ? (
+                    <small>{WORKER_BENEFIT_DETAILS[benefit]}</small>
+                  ) : null}
+                </div>
+              </li>
             ))}
           </ul>
         </div>

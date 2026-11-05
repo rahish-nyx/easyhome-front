@@ -6662,3 +6662,22 @@
   font-size: 11.5px;
   line-height: 1.45;
 }
+
+/* Worker membership benefit descriptions */
+.wk-membership-card li svg {
+  margin-top: 2px;
+}
+
+.wk-membership-card li strong {
+  display: block;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.wk-membership-card li small {
+  display: block;
+  margin-top: 2px;
+  color: var(--wk-muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
