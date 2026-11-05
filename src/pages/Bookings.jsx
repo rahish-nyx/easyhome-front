@@ -1,21 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowRight,
   BadgeCheck,
   CalendarCheck,
-  Camera,
+  Check,
   CheckCircle2,
+  ChevronRight,
   CircleAlert,
   Clock3,
   Crown,
+  Expand,
   Headphones,
-  IndianRupee,
   MapPin,
   MessageSquare,
   Navigation,
-  Phone,
-  ReceiptText,
+  ShieldCheck,
   Star,
   Timer,
   Wallet,
@@ -26,15 +26,9 @@ import { useToast } from "../context/ToastContext";
 import { useLiveQuery } from "../hooks/useLive";
 import { qBookingsForCustomer } from "../lib/queries";
 import { api } from "../lib/api";
-import { distanceKm, distanceLabel } from "../lib/geo";
 import { mediaUrl } from "../lib/media";
-import { formatDateTime, inr, toDate } from "../lib/format";
-import {
-  SERVICE_META,
-  STATUS_META,
-  STATUS_TABS,
-  TRACKING_META,
-} from "../lib/constants";
+import { cx, formatDateTime, inr, toDate } from "../lib/format";
+import { STATUS_TABS } from "../lib/constants";
 import { usePageMeta } from "../lib/usePageMeta";
 import {
   Avatar,
@@ -49,16 +43,12 @@ import {
   Tabs,
   Textarea,
 } from "../components/ui";
-import {
-  BookingTimeline,
-  ServiceIcon,
-  StatusBadge,
-} from "../components/common";
+import { ServiceIcon } from "../components/common";
 
 export default function Bookings() {
   usePageMeta(
     "My bookings",
-    "Track every EasyHome request — live status, agreed prices, payments and reviews.",
+    "Track every EasyHome request â€” live status, agreed prices, payments and reviews.",
   );
 
   const { user, profile, isPremium } = useAuth();
@@ -74,7 +64,7 @@ export default function Bookings() {
   const [cancelTarget, setCancelTarget] = useState(null);
   const [payTarget, setPayTarget] = useState(null);
   const [reviewTarget, setReviewTarget] = useState(null);
-  const [busyId, setBusyId] = useState("");
+  const [busyId] = useState("");
 
   const groups = useMemo(() => {
     const active = bookings.filter((item) =>
@@ -125,7 +115,7 @@ export default function Bookings() {
           <div>
             <strong style={{ fontSize: 14 }}>Request sent successfully</strong>
             <p className="small" style={{ color: "#0a6b4c" }}>
-              We are matching you with a verified pro. Keep notifications on — the first
+              We are matching you with a verified pro. Keep notifications on â€” the first
               acceptance usually arrives within minutes.
             </p>
           </div>
@@ -232,7 +222,6 @@ export default function Bookings() {
 
       <CancelModal
         booking={cancelTarget}
-        isPremium={isPremium}
         onClose={() => setCancelTarget(null)}
         onDone={() => {
           setCancelTarget(null);
@@ -262,16 +251,72 @@ export default function Bookings() {
   );
 }
 
-function BookingCard({
-  booking,
-  busy,
-  isPremium,
-  onCancel,
-  onPay,
-  onReview,
-}) {
-  const meta = STATUS_META[booking.status] || { hint: "" };
+const MILESTONES = [
+  { id: "assigned", label: "Assigned" },
+  { id: "en_route", label: "En route" },
+  { id: "arrived", label: "Arrived" },
+  { id: "working", label: "In progress" },
+  { id: "completed", label: "Completed" },
+];
+
+function useLiveElapsed(startedAt, stoppedAt) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!startedAt || stoppedAt) return undefined;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [startedAt, stoppedAt]);
+  const start = toDate(startedAt);
+  if (!start) return "";
+  const end = stoppedAt ? toDate(stoppedAt) : new Date(now);
+  const seconds = Math.max(
+    0,
+    Math.floor(((end ? end.getTime() : now) - start.getTime()) / 1000),
+  );
+  return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(
+    seconds % 60,
+  ).padStart(2, "0")}`;
+}
+
+function MilestoneRail({ phaseIndex, cancelled, timer }) {
+  return (
+    <ol className="booking-card__rail" aria-label="Job progress">
+      {MILESTONES.map((step, index) => {
+        const done = phaseIndex >= 0 && index <= phaseIndex;
+        const current = index === phaseIndex;
+        const isFinal = index === MILESTONES.length - 1;
+        const finished = isFinal && current;
+        return (
+          <li
+            key={step.id}
+            className={cx(
+              "booking-card__step",
+              done && "is-done",
+              current && "is-current",
+              (isFinal && (done || current)) && "is-final",
+              cancelled && index > phaseIndex && "is-skipped",
+            )}
+          >
+            <span className="booking-card__step-mark">
+              {done || finished ? <Check size={12} strokeWidth={3} /> : index + 1}
+            </span>
+            <span className="booking-card__step-label">{step.label}</span>
+            {step.id === "working" && current && timer ? (
+              <span className="booking-card__timer">
+                <span className="booking-card__timer-dot" /> {timer}
+              </span>
+            ) : null}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function BookingCard({ booking, busy, isPremium, onCancel, onPay, onReview }) {
+  const [preview, setPreview] = useState(-1);
   const worker = booking.workerName;
+  const isPro = Boolean(isPremium || booking.customerPremium);
   const paidTotal =
     booking.status === "completed" && booking.paidAt
       ? Number(booking.pricing?.paymentTotal) || 0
@@ -282,7 +327,6 @@ function BookingCard({
     booking.pricing?.workerPrice ||
     booking.pricing?.customerOffer ||
     booking.budget;
-  const urgentFee = Math.max(0, Number(booking.urgentFee) || 0);
   const promoDiscount = Math.max(
     0,
     Number(booking.promoDiscount) || Number(booking.pricing?.promoDiscount) || 0,
@@ -293,44 +337,63 @@ function BookingCard({
     ? new Date(createdAt.getTime() + windowMinutes * 60_000)
     : toDate(booking.freeCancellationUntil);
   const windowOpen = !deadline || Date.now() <= deadline.getTime();
-  const canCancel =
-    ["pending", "accepted"].includes(booking.status) && windowOpen;
   const minutesLeft = deadline
     ? Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 60_000))
     : null;
-  const accepted =
-    Boolean(booking.workerId) &&
-    ["accepted", "ongoing", "completed"].includes(booking.status);
-  const livePoint =
-    booking.currentLat !== null &&
-    booking.currentLat !== undefined &&
-    booking.currentLng !== null &&
-    booking.currentLng !== undefined
-      ? { lat: Number(booking.currentLat), lng: Number(booking.currentLng) }
-      : null;
-  const targetPoint = {
-    lat: booking.location?.lat,
-    lng: booking.location?.lng,
-  };
-  const distance = accepted ? distanceKm(livePoint, targetPoint) : null;
+  const canCancel =
+    ["pending", "accepted"].includes(booking.status) && windowOpen;
+  const cancelled = booking.status === "cancelled";
+
   const phase =
     booking.trackingPhase ||
-    (booking.status === "ongoing"
-      ? "working"
-      : booking.status === "accepted"
-        ? booking.workerId
+    (booking.status === "completed"
+      ? "completed"
+      : booking.status === "ongoing"
+        ? "working"
+        : booking.status === "accepted" && booking.workerId
           ? "assigned"
-          : "requested"
-        : booking.status);
-  const phaseMeta = TRACKING_META[phase] || null;
-  const photo = mediaUrl(booking.imagePath);
+          : "");
+  const phaseIndex = cancelled ? 0 : MILESTONES.findIndex((step) => step.id === phase);
+  const timer = useLiveElapsed(booking.startedAt, booking.completedAt);
+
+  const photos = (
+    Array.isArray(booking.imagePaths) && booking.imagePaths.length
+      ? booking.imagePaths
+      : [booking.imagePath]
+  )
+    .map(mediaUrl)
+    .filter(Boolean);
+
+  const statusBadge = cancelled ? (
+    <Badge tone="red">Cancelled</Badge>
+  ) : booking.status === "completed" ? (
+    <Badge tone="green">
+      <CheckCircle2 size={12} /> Completed
+    </Badge>
+  ) : booking.status === "ongoing" ? (
+    <Badge tone="blue" className="booking-card__status-outline">
+      In progress
+    </Badge>
+  ) : booking.status === "accepted" ? (
+    <Badge tone="blue" className="booking-card__status-outline">
+      Worker assigned
+    </Badge>
+  ) : (
+    <Badge tone="amber">Finding a pro</Badge>
+  );
 
   return (
-    <article className="card booking-card">
-      <div className="booking-card__head">
+    <article
+      className={cx(
+        "card booking-card booking-card--tile",
+        cancelled && "booking-card--cancelled",
+        booking.status === "completed" && "booking-card--completed",
+      )}
+    >
+      <header className="booking-card__head">
         <div className="booking-card__title">
           <span className="booking-card__icon">
-            <ServiceIcon service={{ key: booking.serviceKey }} size={46} iconSize={22} />
+            <ServiceIcon service={{ key: booking.serviceKey }} size={48} iconSize={23} />
           </span>
           <div>
             <h3>{booking.service}</h3>
@@ -338,261 +401,222 @@ function BookingCard({
               <span>
                 <Clock3 size={12} /> {formatDateTime(booking.createdAt)}
               </span>
+              <span className="booking-card__meta-sep">|</span>
               <span>
                 <MapPin size={12} /> {booking.area}
-              </span>
-              <span>
-                <Timer size={12} /> {booking.urgency === "urgent" ? "Urgent" : "Normal"}
               </span>
             </div>
           </div>
         </div>
-        <div className="row" style={{ gap: 8 }}>
-          {isPremium ? (
-            <Badge tone="yellow">
-              <BadgeCheck size={11} /> Verified Pro
+        <div className="booking-card__badges">
+          {statusBadge}
+          {isPro ? (
+            <Badge tone="yellow" className="booking-card__tier">
+              <Crown size={12} /> EasyHome Pro
+            </Badge>
+          ) : (
+            <Badge tone="neutral" className="booking-card__tier">
+              <ShieldCheck size={12} /> Normal
+            </Badge>
+          )}
+        </div>
+      </header>
+
+      {booking.description || photos.length ? (
+        <div className="booking-card__panel">
+          {booking.description ? (
+            <p className="booking-card__message">
+              <MessageSquare size={14} /> <span>{booking.description}</span>
+            </p>
+          ) : null}
+          {photos.length ? (
+            <div className="booking-card__photos">
+              {photos.map((src, index) => (
+                <button
+                  key={`${src}-${index}`}
+                  type="button"
+                  className="booking-card__photo"
+                  onClick={() => setPreview(index)}
+                  aria-label={`Open reference photo ${index + 1}`}
+                >
+                  <img src={src} alt={`${booking.service} reference ${index + 1}`} loading="lazy" />
+                  <span className="booking-card__photo-zoom">
+                    <Expand size={13} />
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="booking-card__workerrow">
+        {worker ? (
+          <>
+            <Avatar name={worker} path={booking.workerPhotoPath} size={42} />
+            <div className="booking-card__workerinfo">
+              <strong>
+                {worker}
+                {booking.workerId ? (
+                  <BadgeCheck size={14} className="booking-card__verified" />
+                ) : null}
+              </strong>
+              <small>
+                <Star size={11} fill="currentColor" />{" "}
+                {booking.workerRating
+                  ? `${Number(booking.workerRating).toFixed(1)} (${booking.workerJobsCompleted || 0} jobs)`
+                  : "New EasyHome pro"}
+                {booking.workerPremium ? (
+                  <span className="booking-card__pro-tag">Pro</span>
+                ) : null}
+              </small>
+            </div>
+            {booking.workerId ? (
+              <Link to={`/workers/${booking.workerId}`} className="btn btn--ghost btn--sm">
+                View Profile <ChevronRight size={14} />
+              </Link>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <span
+              className="stat__icon"
+              style={{ background: "var(--yellow-soft)", color: "var(--yellow-ink)" }}
+            >
+              <Timer size={18} />
+            </span>
+            <div className="booking-card__workerinfo">
+              <strong>Finding your pro</strong>
+              <small>We notify approved {booking.service} workers near you.</small>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="booking-card__pricebox">
+        <div>
+          <strong>{inr(price)}</strong>
+          <small>{booking.pricing?.confirmedAt || booking.pricing?.finalPrice ? "Agreed price" : "Budget reference"}</small>
+          {promoDiscount > 0 ? (
+            <small className="booking-card__saved">
+              {paidTotal ? "Saved" : "Promo"} {inr(promoDiscount)} with{" "}
+              {booking.promoCode || booking.pricing?.promoCode || "promo"}
+            </small>
+          ) : null}
+        </div>
+        {paidTotal || (booking.status === "completed" && booking.paidAt) ? (
+          <span className="booking-card__paid">
+            <CheckCircle2 size={14} /> Paid via {booking.paymentMode || "cash"}
+          </span>
+        ) : booking.pricing?.finalPrice || booking.status !== "pending" ? (
+          <span className="booking-card__confirmed">
+            <BadgeCheck size={14} /> Price confirmed at {inr(booking.pricing?.finalPrice || price)}
+          </span>
+        ) : (
+          <span className="booking-card__awaiting">Awaiting pro quote</span>
+        )}
+      </div>
+
+      {cancelled ? (
+        <div className="booking-card__cancelled">
+          <CircleAlert size={15} />
+          <span>
+            This booking was cancelled.
+            {booking.cancelReason ? ` ${booking.cancelReason}` : ""}
+          </span>
+        </div>
+      ) : (
+        <MilestoneRail phaseIndex={phaseIndex} cancelled={cancelled} timer={timer} />
+      )}
+
+      <footer className="booking-card__actions">
+        <div className="booking-card__actions-left">
+          {cancelled ? (
+            <span className="booking-card__window is-closed">
+              <X size={13} /> Booking cancelled
+            </span>
+          ) : windowOpen && canCancel ? (
+            <span className="booking-card__window">
+              <Timer size={13} /> Free cancellation Â· {minutesLeft ?? 0} min left
+            </span>
+          ) : (
+            <span className="booking-card__window is-closed">
+              <Timer size={13} /> Cancellation window closed
+            </span>
+          )}
+          {canCancel ? (
+            <button type="button" className="booking-card__cancel" disabled={busy} onClick={onCancel}>
+              Cancel request
+            </button>
+          ) : null}
+        </div>
+        <div className="booking-card__actions-right">
+          <Link to={`/chat${booking.workerId ? `?booking=${booking.id}` : ""}`} className="booking-card__chat">
+            <Headphones size={15} /> Chat Support
+          </Link>
+          {["pending", "accepted", "ongoing"].includes(booking.status) ? (
+            <Link to={`/bookings/${booking.id}/track`} className="btn btn--dark btn--sm">
+              <Navigation size={14} /> Track
+            </Link>
+          ) : null}
+          {booking.status === "completed" && !booking.paidAt ? (
+            <Button size="sm" variant="primary" onClick={onPay} icon={Wallet}>
+              Complete payment
+            </Button>
+          ) : null}
+          {booking.status === "completed" && booking.paidAt && !booking.reviewId ? (
+            <Button size="sm" variant="dark" onClick={onReview} icon={Star}>
+              Rate your pro
+            </Button>
+          ) : null}
+          {booking.reviewId ? (
+            <Badge tone="green">
+              <Star size={11} /> Reviewed
             </Badge>
           ) : null}
-          {booking.urgency === "urgent" ? <Badge tone="red">Urgent</Badge> : null}
-          <StatusBadge status={booking.status} />
-        </div>
-      </div>
-
-      <p className="small muted" style={{ marginTop: 12 }}>
-        {meta.hint}
-      </p>
-
-      <div
-        style={{
-          display: "grid",
-          gap: 10,
-          marginTop: 12,
-          padding: 12,
-          borderRadius: 12,
-          background: "var(--surface-2, #f7f7f8)",
-          border: "1px solid var(--line, #e6e6ea)",
-        }}
-      >
-        {booking.description ? (
-          <div>
-            <div className="tiny muted">Your message</div>
-            <p className="small" style={{ margin: "2px 0 0" }}>
-              {booking.description}
-            </p>
-          </div>
-        ) : null}
-        {photo ? (
-          <a href={photo} target="_blank" rel="noreferrer">
-             <img
-               className="booking-card__photo"
-              src={photo}
-              alt={`${booking.service} reference`}
-              style={{
-                width: "100%",
-                maxHeight: 180,
-                objectFit: "cover",
-                borderRadius: 10,
-                display: "block",
-              }}
-            />
-          </a>
-        ) : null}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-          <span className="tiny">
-            <Phone size={12} /> You: {booking.customerPhone || "number on file"}
-          </span>
-          {accepted && booking.workerPhone ? (
-            <a className="tiny" href={`tel:${booking.workerPhone}`} style={{ fontWeight: 700 }}>
-              <Phone size={12} /> Call pro: {booking.workerPhone}
-            </a>
-          ) : (
-            <span className="tiny muted">
-              <Phone size={12} /> Pro number unlocks after acceptance
-            </span>
-          )}
-          <span className="tiny">
-            <MapPin size={12} />{" "}
-            {booking.location?.label || booking.addressLabel || booking.area || "Location shared"}
-          </span>
-          {distance !== null ? (
-            <span className="tiny">
-              <Navigation size={12} /> {distanceLabel(distance)}
-            </span>
-          ) : null}
-          {phaseMeta ? <Badge tone={phaseMeta.tone}>{phaseMeta.label}</Badge> : null}
-        </div>
-        {!accepted && booking.status === "pending" ? (
-          <span className="tiny muted">
-            <Timer size={12} /> Finding a pro — your phone stays private until a
-            professional accepts.
-          </span>
-        ) : null}
-      </div>
-
-      <div className="booking-card__body">
-        <div className="booking-card__worker">
-          {worker ? (
-            <>
-              <Avatar name={worker} path={booking.workerPhotoPath} size={40} />
-              <div>
-                <strong>
-                  {worker} {booking.workerId ? <BadgeCheck size={14} style={{ color: "var(--blue)" }} /> : null}
-                </strong>
-                <small>
-                  {booking.workerId ? (
-                    <Link to={`/workers/${booking.workerId}`}>View verified profile</Link>
-                  ) : (
-                    "Matching a verified pro"
-                  )}
-                </small>
-              </div>
-            </>
-          ) : (
-            <>
-              <span
-                className="stat__icon"
-                style={{ background: "var(--yellow-soft)", color: "var(--yellow-ink)" }}
-              >
-                <Timer size={18} />
-              </span>
-              <div>
-                <strong>Finding your pro</strong>
-                <small>We notify approved {booking.service} workers near you.</small>
-              </div>
-            </>
-          )}
-        </div>
-        <div className="booking-card__price">
-          <strong>{inr(price)}</strong>
-          <small>
-            {booking.status === "completed" && booking.paidAt
-              ? `Paid via ${booking.paymentMode || "cash"}`
-              : booking.pricing?.confirmedAt
-                ? "Agreed price"
-                : "Budget / quote"}
-          </small>
-          {promoDiscount > 0 ? (
-            <small
-              style={{
-                display: "block",
-                marginTop: 3,
-                color: "var(--green)",
-                fontWeight: 700,
-              }}
-            >
-              {paidTotal
-                ? `Saved ${inr(promoDiscount)} with ${booking.promoCode || booking.pricing?.promoCode || "promo"}`
-                : `${booking.promoCode || booking.pricing?.promoCode || "Promo"} · −${inr(promoDiscount)}`}
-            </small>
-          ) : null}
-          {urgentFee > 0 ? (
-            <small style={{ display: "block", marginTop: 3 }}>
-              {paidTotal
-                ? `Includes ${inr(urgentFee)} urgent fee`
-                : `+ ${inr(urgentFee)} urgent fee`}
-            </small>
-          ) : booking.urgency === "urgent" ? (
-            <small style={{ display: "block", marginTop: 3 }}>
-              {booking.urgentFeeWaived || booking.customerPremium
-                ? "No urgent fee — Pro benefit"
-                : "No urgent fee"}
-            </small>
-          ) : null}
-        </div>
-      </div>
-
-      {booking.status === "accepted" && booking.pricing?.finalPrice ? (
-        <div
-          className="row"
-          style={{
-            marginTop: 12,
-            padding: "10px 12px",
-            borderRadius: 10,
-            background: "var(--green-soft)",
-            color: "#0a6b4c",
-            fontSize: 12,
-          }}
-        >
-          <BadgeCheck size={16} /> Price confirmed at {inr(booking.pricing.finalPrice)}. Your pro
-          will contact you before arriving.
-        </div>
-      ) : null}
-
-      {booking.status === "cancelled" && booking.cancelReason ? (
-        <p className="tiny muted" style={{ marginTop: 12 }}>
-          Reason: {booking.cancelReason}
-        </p>
-      ) : null}
-
-      <BookingTimeline booking={booking} />
-
-      <div className="booking-card__actions">
-        {canCancel ? (
-          <>
-            <Button variant="ghost" size="sm" onClick={onCancel}>
-              Cancel request
-            </Button>
-            {minutesLeft !== null ? (
-              <span className="tiny muted">
-                <Timer size={12} /> Free cancellation for {minutesLeft} more min
-              </span>
-            ) : null}
-          </>
-        ) : null}
-
-        {["pending", "accepted"].includes(booking.status) && !windowOpen ? (
-          <span className="tiny muted">
-            Cancellation window closed.{" "}
-            <Link to="/chat">Chat support</Link>
-          </span>
-        ) : null}
-
-        {booking.status === "completed" && !booking.paidAt ? (
-          <>
-            {booking.workerPaymentMode ? (
-              <span className="tiny muted">
-                Your pro requested {booking.workerPaymentMode.toUpperCase()}. Pay them directly,
-                then confirm it here.
-              </span>
-            ) : null}
-            <Button size="sm" variant="primary" onClick={onPay} icon={Wallet}>
-              Confirm payment
-            </Button>
-          </>
-        ) : null}
-
-        {booking.status === "completed" && booking.paidAt && !booking.reviewId ? (
-          <Button size="sm" variant="dark" onClick={onReview} icon={Star}>
-            Rate your pro
-          </Button>
-        ) : null}
-
-        {booking.reviewId ? (
-          <Badge tone="green">
-            <Star size={11} /> Reviewed
-          </Badge>
-        ) : null}
-
-        {["pending", "accepted", "ongoing"].includes(booking.status) ? (
-          <Link to={`/bookings/${booking.id}/track`} className="btn btn--dark btn--sm">
-            <Navigation size={14} /> Track
-          </Link>
-        ) : null}
-
-        {booking.status === "accepted" || booking.status === "ongoing" ? (
           <Link to="/chat" className="btn btn--outline btn--sm">
             <MessageSquare size={14} /> Support
           </Link>
-        ) : null}
+        </div>
+      </footer>
 
-        <span className="grow" />
-        <span className="tiny muted">Ref {booking.id.slice(0, 8).toUpperCase()}</span>
-      </div>
+      <p className="booking-card__ref">Booking Ref: {booking.id.slice(0, 8).toUpperCase()}</p>
+
+      <Modal
+        open={preview >= 0}
+        onClose={() => setPreview(-1)}
+        title="Reference photos"
+        subtitle={booking.service}
+        size="lg"
+      >
+        {preview >= 0 ? (
+          <img
+            className="booking-card__preview"
+            src={photos[preview]}
+            alt={`${booking.service} reference ${preview + 1}`}
+          />
+        ) : null}
+        {photos.length > 1 ? (
+          <div className="booking-card__thumbs">
+            {photos.map((src, index) => (
+              <button
+                key={src}
+                type="button"
+                className={cx("booking-card__thumb", index === preview && "is-active")}
+                onClick={() => setPreview(index)}
+                aria-label={`Show reference photo ${index + 1}`}
+              >
+                <img src={src} alt="" />
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </Modal>
     </article>
   );
 }
 
-function CancelModal({ booking, isPremium, onClose, onDone }) {
+function CancelModal({ booking, onClose, onDone }) {
   const toast = useToast();
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -668,7 +692,7 @@ function CancelModal({ booking, isPremium, onClose, onDone }) {
             value={reason}
             maxLength={300}
             onChange={(event) => setReason(event.target.value)}
-            placeholder="Plans changed, found another pro, timing no longer works…"
+            placeholder="Plans changed, found another pro, timing no longer worksâ€¦"
           />
         </Field>
       )}
@@ -764,7 +788,7 @@ function PaymentModal({ booking, profile, onClose, onDone }) {
 
         {promoDiscount > 0 ? (
           <p className="tiny" style={{ color: "var(--green)", fontWeight: 700 }}>
-            {booking?.promoCode || booking?.pricing?.promoCode || "Promo"} applied —
+            {booking?.promoCode || booking?.pricing?.promoCode || "Promo"} applied â€”
             you save {inr(promoDiscount)}.
           </p>
         ) : null}
@@ -805,7 +829,7 @@ function PaymentModal({ booking, profile, onClose, onDone }) {
         </p>
 
         {profile?.phone ? (
-          <p className="tiny muted">Your contact on file: •••••{String(profile.phone).slice(-4)}</p>
+          <p className="tiny muted">Your contact on file: â€¢â€¢â€¢â€¢â€¢{String(profile.phone).slice(-4)}</p>
         ) : null}
       </div>
     </Modal>
@@ -876,7 +900,7 @@ function ReviewModal({ booking, onClose, onDone }) {
             maxLength={500}
             value={comment}
             onChange={(event) => setComment(event.target.value)}
-            placeholder="Punctual, tidy and fixed it properly…"
+            placeholder="Punctual, tidy and fixed it properlyâ€¦"
           />
         </Field>
         <p className="tiny muted">
