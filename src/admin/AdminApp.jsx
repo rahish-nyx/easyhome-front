@@ -238,6 +238,9 @@ export default function AdminApp() {
         <Link to="/" className="adm-open-app">
           <ExternalLink size={15} /> Open customer app
         </Link>
+        <Link to="/worker" className="adm-open-app">
+          <ExternalLink size={15} /> Open worker app
+        </Link>
         <div className="adm-signed">
           <Avatar name={profile?.name || user.email} path={profile?.photoPath} size={36} />
           <div>

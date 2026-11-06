@@ -101,7 +101,7 @@ const PRIMARY_TABS = TABS.filter((item) => PRIMARY_TAB_IDS.includes(item.id));
 const HEADER_TABS = TABS.filter((item) => item.id !== "profile");
 
 const PHASE_TOAST = {
-  [TRACKING_PHASES.EN_ROUTE]: "Customer notified â€” you are on the way.",
+  [TRACKING_PHASES.EN_ROUTE]: "Customer notified — you are on the way.",
   [TRACKING_PHASES.ARRIVED]: "Arrival recorded. The customer can see you are on site.",
   [TRACKING_PHASES.WORKING]: "Work started. Keep your status and GPS fresh.",
 };
@@ -254,7 +254,7 @@ export default function WorkerDashboard() {
   const available = useMemo(() => {
     if (!worker) return [];
     // The backend already matches jobs to this worker's zones. Only apply the
-    // zone filter here when zone data is actually loaded â€” otherwise a slow or
+    // zone filter here when zone data is actually loaded — otherwise a slow or
     // failed bootstrap would hide every job in the feed.
     const zonesKnown = activeZoneIds.size > 0;
     const inZone = (job) =>
@@ -1041,6 +1041,25 @@ function MembershipTab({ worker, settings }) {
     toast.success("Payment verified. Your EasyHome Pro membership is active.");
   };
 
+  const shareMyProfile = async () => {
+    if (!worker) return;
+    const url = `${window.location.origin}/workers/${worker.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `My EasyHome Pro — ${worker.name}`,
+          text: `Book ${worker.name} on EasyHome`,
+          url,
+        });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Profile link copied.");
+      }
+    } catch {
+      /* user cancelled */
+    }
+  };
+
   return (
     <>
       <div className="wk-page-head">
@@ -1054,7 +1073,7 @@ function MembershipTab({ worker, settings }) {
       <section className="wk-membership-card">
         <div>
           <p className="wk-eyebrow">{isPremium ? "Your plan" : "Professional membership"}</p>
-          <h2>{isPremium ? "Youâ€™re on EasyHome Pro" : "Keep more of every job"}</h2>
+          <h2>{isPremium ? "You’re on EasyHome Pro" : "Keep more of every job"}</h2>
           <p>
             {isPremium
               ? `Your current membership is active until ${formatDateTime(worker.premiumUntil)}.`
@@ -1073,6 +1092,11 @@ function MembershipTab({ worker, settings }) {
               </li>
             ))}
           </ul>
+          {isPremium ? (
+            <button type="button" className="wk-chip-btn" style={{ marginTop: 16 }} onClick={shareMyProfile}>
+              <Share2 size={14} /> Share my Pro profile
+            </button>
+          ) : null}
         </div>
         {!isPremium ? (
           <div className="wk-membership-card__checkout">
@@ -1110,7 +1134,7 @@ function MembershipTab({ worker, settings }) {
             </fieldset>
             <RazorpayPayment
               amount={selected.amount}
-              description={`EasyHome Pro Â· ${selected.label}`}
+              description={`EasyHome Pro · ${selected.label}`}
               orderEndpoint="/payment/subscription/order"
               verifyEndpoint="/payment/subscription/verify"
               orderBody={{ plan: selected.id }}
@@ -1405,7 +1429,7 @@ function WorkerReferTab({ worker, profile }) {
       try {
         await navigator.share({
           title: "Join EasyHome as a professional",
-          text: "Join EasyHome with my professional invite. We each unlock â‚¹51 after your first completed job and admin verification.",
+          text: "Join EasyHome with my professional invite. We each unlock ₹51 after your first completed job and admin verification.",
           url: shareUrl,
         });
         return;
@@ -1423,17 +1447,17 @@ function WorkerReferTab({ worker, profile }) {
           <p className="wk-eyebrow">Refer &amp; Earn</p>
           <h1>Grow the professional network</h1>
           <p>
-            Invite another verified professional. You both unlock â‚¹51 after
+            Invite another verified professional. You both unlock ₹51 after
             their first completed job and admin approval.
           </p>
         </div>
-        <span className="wk-badge wk-badge--green">â‚¹51 each</span>
+        <span className="wk-badge wk-badge--green">₹51 each</span>
       </div>
 
       <section className="wk-refer-card">
         <div className="wk-refer-card__main">
           <p className="wk-eyebrow">Your professional code</p>
-          <h2>{state.loading && !code ? "Loading your codeâ€¦" : code || "Code unavailable"}</h2>
+          <h2>{state.loading && !code ? "Loading your code…" : code || "Code unavailable"}</h2>
           <p>
             {worker?.name || profile?.name || "This professional"} invites another
             professional to join EasyHome. Same-role referrals only.
@@ -1491,7 +1515,7 @@ function WorkerReferTab({ worker, profile }) {
                 <div>
                   <strong>{item.referredName}</strong>
                   <small>
-                    Joined {formatDateTime(item.createdAt)} Â· {meta.hint}
+                    Joined {formatDateTime(item.createdAt)} · {meta.hint}
                   </small>
                 </div>
                 <span className={`wk-badge wk-badge--${meta.tone}`}>
@@ -1606,7 +1630,7 @@ function WorkerFooter() {
       </div>
 
       <div className="wk-footer__bottom">
-        <span>Â© {new Date().getFullYear()} EasyHome. For independent professionals.</span>
+        <span>© {new Date().getFullYear()} EasyHome. For independent professionals.</span>
         <span>Made for local work across India ðŸ‡®ðŸ‡³</span>
       </div>
     </footer>
@@ -1638,11 +1662,11 @@ function JobsTab({
           <p className="wk-eyebrow">Job desk</p>
           <h1>Active &amp; available jobs</h1>
           <p>
-            {worker.service} Â·{" "}
+            {worker.service} ·{" "}
             {[worker.areaName, worker.city].filter(Boolean).join(", ") ||
               worker.area ||
               "Your local area"}{" "}
-            Â· {worker.radiusKm || 25} km radius
+            · {worker.radiusKm || 25} km radius
           </p>
         </div>
         <button
@@ -1707,7 +1731,7 @@ function JobsTab({
                 <div className="grow">
                   <strong>{job.service}</strong>
                   <span>
-                    {job.area} Â· {formatDateTime(job.completedAt)}
+                    {job.area} · {formatDateTime(job.completedAt)}
                   </span>
                 </div>
                 <div className="wk-history__money">
@@ -2034,7 +2058,7 @@ function AvailableJobCard({ job, busy, canAccept, onAccept }) {
           title={canAccept ? "" : "Fees due - tap to settle"}
         >
           {busy ? <Spinner size={16} /> : <Zap size={16} />}
-          {busy ? "Acceptingâ€¦" : "Accept Job"}
+          {busy ? "Accepting…" : "Accept Job"}
         </button>
       </div>
     </article>
@@ -2145,9 +2169,9 @@ function ActiveJobCard({
             <span>
               <MapPin size={12} /> {job.area}
             </span>
-            <span className="wk-ticket__meta-sep">â€¢</span>
+            <span className="wk-ticket__meta-sep">•</span>
             <span>
-              <Clock3 size={12} /> Today â€¢ {formatDateTime(job.createdAt)}
+              <Clock3 size={12} /> Today • {formatDateTime(job.createdAt)}
             </span>
           </p>
         </div>
@@ -2359,12 +2383,12 @@ function EarningsTab({
         <div className="wk-money-card">
           <span>This week</span>
           <strong>{inr(earnings.week)}</strong>
-          <small>Monâ€“Sun</small>
+          <small>Mon–Sun</small>
         </div>
         <div className={`wk-money-card${Number(earnings.dues) > 0 ? " wk-money-card--warn" : ""}`}>
           <span>Fees due</span>
           <strong>{inr(earnings.dues)}</strong>
-          <small>{isPremium ? "Pro â€” 7% commission" : "Clear to keep accepting jobs"}</small>
+          <small>{isPremium ? "Pro — 7% commission" : "Clear to keep accepting jobs"}</small>
         </div>
       </div>
 
@@ -2442,7 +2466,7 @@ function EarningsTab({
             <p className="wk-eyebrow">Fees</p>
             <h2>Payments &amp; dues</h2>
           </div>
-          <span className="wk-badge wk-badge--muted">Razorpay Â· automatic</span>
+          <span className="wk-badge wk-badge--muted">Razorpay · automatic</span>
         </div>
 
         {pending.length ? (
@@ -2455,7 +2479,7 @@ function EarningsTab({
                 <div className="grow">
                   <strong>{commission.service || "Job fees"}</strong>
                   <span>
-                    {formatDateTime(commission.createdAt)} Â·{" "}
+                    {formatDateTime(commission.createdAt)} ·{" "}
                     <span className={`wk-capitalize wk-text-${commission.status}`}>
                       {commission.status}
                     </span>
@@ -2471,7 +2495,7 @@ function EarningsTab({
                       Pay now
                     </button>
                   ) : (
-                    <span>{commission.status === "paid" ? "Verifyingâ€¦" : "Approved"}</span>
+                    <span>{commission.status === "paid" ? "Verifying…" : "Approved"}</span>
                   )}
                 </div>
               </div>
@@ -2747,13 +2771,13 @@ function ProfileTab({ worker, onLogout }) {
                 disabled={photoSaving}
               >
                 {photoSaving ? <Spinner size={14} /> : <Pencil size={14} />}
-                {photoSaving ? "Uploadingâ€¦" : "Update photo"}
+                {photoSaving ? "Uploading…" : "Update photo"}
               </button>
             </div>
             <div>
               <h2>{worker.name}</h2>
               <p>
-                {worker.service} Â· {worker.area}
+                {worker.service} · {worker.area}
               </p>
               <div className="wk-profile-badges">
                 <span className="wk-badge wk-badge--green">
@@ -2978,7 +3002,7 @@ function ProfileTab({ worker, onLogout }) {
                 </strong>
                 <span>
                   {coords
-                    ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)} Â· confirm before saving`
+                    ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)} · confirm before saving`
                     : "Use your device location to receive nearby jobs."}
                 </span>
               </div>
@@ -2989,7 +3013,7 @@ function ProfileTab({ worker, onLogout }) {
                 disabled={locating}
               >
                 {locating ? <Spinner size={14} /> : <Crosshair size={14} />}
-                {locating ? "Findingâ€¦" : "Update Location"}
+                {locating ? "Finding…" : "Update Location"}
               </button>
             </div>
             <p className="wk-fineprint">
@@ -3014,7 +3038,7 @@ function ProfileTab({ worker, onLogout }) {
           <p className="wk-eyebrow">Account</p>
           <h2>Status &amp; support</h2>
           <p className="wk-fineprint">
-            Worker ID {worker.id?.slice(0, 10)} Â· joined {formatDateTime(worker.createdAt)}
+            Worker ID {worker.id?.slice(0, 10)} · joined {formatDateTime(worker.createdAt)}
           </p>
         </div>
         <div className="wk-account-actions">
@@ -3048,7 +3072,7 @@ function CompleteModal({ job, busy, onClose, onConfirm }) {
       open={Boolean(job)}
       onClose={onClose}
       title="Mark job completed?"
-      subtitle={job ? `${job.service} Â· ${job.customerName}` : ""}
+      subtitle={job ? `${job.service} · ${job.customerName}` : ""}
       size="sm"
       footer={
         <>
@@ -3093,7 +3117,7 @@ function PaymentModeModal({ job, busy, onClose, onChoose }) {
       open={Boolean(job)}
       onClose={onClose}
       title="Collect payment"
-      subtitle={job ? `${job.service} Â· Final price set` : ""}
+      subtitle={job ? `${job.service} · Final price set` : ""}
       size="sm"
       footer={
         <Button variant="ghost" onClick={onClose}>
@@ -3105,7 +3129,7 @@ function PaymentModeModal({ job, busy, onClose, onChoose }) {
         <div className="wk-payment-card">
           <span>Amount to collect</span>
           <strong>{inr(job?.pricing?.finalPrice || job?.budget || 0)}</strong>
-          <small>{job?.pricing?.finalPrice ? "Final price agreed Â· fees recorded after payment" : "Collect cash or UPI"}</small>
+          <small>{job?.pricing?.finalPrice ? "Final price agreed · fees recorded after payment" : "Collect cash or UPI"}</small>
         </div>
         <p className="small muted">
           Choose how the customer will pay you. This tells the customer which
@@ -3153,7 +3177,7 @@ function FeesModal({ commission, onClose, onPaid }) {
       title="Pay fees"
       subtitle={
         commission
-          ? `${commission.service} Â· ${inr(commission.amount)}`
+          ? `${commission.service} · ${inr(commission.amount)}`
           : ""
       }
       size="sm"
@@ -3167,7 +3191,7 @@ function FeesModal({ commission, onClose, onPaid }) {
         {commission ? (
           <RazorpayPayment
             amount={commission.amount || 0}
-            description={`EasyHome fees Â· ${commission.service || "Job"}`}
+            description={`EasyHome fees · ${commission.service || "Job"}`}
             orderEndpoint="/payment/commission/order"
             verifyEndpoint="/payment/commission/verify"
             orderBody={{ commissionId: commission.id }}

@@ -52,6 +52,8 @@ const EMPTY_SETTINGS = {
   maintenanceMode: false,
   customerBenefits: "",
   workerBenefits: "",
+  customerPlanPromos: {},
+  workerPlanPromos: {},
 };
 
 function derivedPlan(monthly, months) {
@@ -83,12 +85,11 @@ const PROMO_PLANS = [
 function PromoPlanEditor({ role, label, value, basePrices, onChange }) {
   const prefix = role === "worker" ? "worker" : "customer";
   const mutate = (plan, patch) =>
-    onChange((prev) => {
-      const nextPromos = {
-        ...prev[role],
-        [plan]: { ...(prev[role]?.[plan] || {}), ...patch },
-      };
-      return { ...prev, [role]: nextPromos };
+    onChange({
+      [`${role}PlanPromos`]: {
+        ...(value || {}),
+        [plan]: { ...(value?.[plan] || {}), ...patch },
+      },
     });
 
   return (

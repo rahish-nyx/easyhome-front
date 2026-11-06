@@ -474,7 +474,7 @@ export default function AdminPromos() {
                     <strong>{promo.title}</strong>
                     <span>
                       {promo.subtitle || "Tap to book a service today."}
-                      {promo.couponCode ? ` Â· Code ${promo.couponCode}` : ""}
+                      {promo.couponCode ? ` · Code ${promo.couponCode}` : ""}
                     </span>
                     <em>{promo.ctaText || "Book now"}</em>
                   </div>
@@ -513,7 +513,7 @@ export default function AdminPromos() {
       <PageError error={promosState.error} onRetry={refresh} />
 
       {promosState.loading && !promosState.data ? (
-        <LoadingBlock label="Loading promo campaignsâ€¦" />
+        <LoadingBlock label="Loading promo campaigns…" />
       ) : (
         <Panel flush>
           {sorted.length ? (
@@ -537,25 +537,25 @@ export default function AdminPromos() {
                       />
                     </div>
                     <p>
-                      {promo.subtitle || "No subtitle"} Â· CTA â€œ{promo.ctaText}â€ â†’{" "}
+                      {promo.subtitle || "No subtitle"} · CTA â€œ{promo.ctaText}â€ â†’{" "}
                       {promo.ctaLink}
-                      {promo.couponCode ? ` Â· Coupon ${promo.couponCode}` : ""}
+                      {promo.couponCode ? ` · Coupon ${promo.couponCode}` : ""}
                     </p>
                     <small className="adm-note-inline">
                       {promo.placement === "worker_dashboard"
-                        ? "Worker dashboard Â· "
-                        : "Customer home Â· "}
+                        ? "Worker dashboard · "
+                        : "Customer home · "}
                       {promo.startsAt || promo.endsAt
-                        ? `${promo.startsAt ? formatDate(promo.startsAt) : "Now"} â€“ ${
+                        ? `${promo.startsAt ? formatDate(promo.startsAt) : "Now"} “ ${
                             promo.endsAt ? formatDate(promo.endsAt) : "No end"
                           }`
                         : "Always on"}
                       {promo.couponCode
-                        ? ` Â· ${
+                        ? ` · ${
                             promo.discountType === "percentage"
                               ? `${Number(promo.discountValue) || 0}% off`
                               : `${inr(Number(promo.discountValue) || 0)} off`
-                          } Â· ${promoScope(promo, folderById, serviceById)}`
+                          } · ${promoScope(promo, folderById, serviceById)}`
                         : ""}
                     </small>
                   </div>
@@ -678,7 +678,7 @@ export default function AdminPromos() {
         }
       >
         <p className="small muted">
-          The banner is removed immediately. This cannot be undone â€” hide it instead if you only
+          The banner is removed immediately. This cannot be undone — hide it instead if you only
           want to pause the campaign.
         </p>
       </Modal>
@@ -797,7 +797,7 @@ function PromoModal({ draft, file, folders, services, onFile, onClose, onSave, l
             value={form.title}
             maxLength={80}
             onChange={set("title")}
-            placeholder="Monsoon home refresh â€” 20% off"
+            placeholder="Monsoon home refresh — 20% off"
           />
         </Field>
         <Field
@@ -886,8 +886,8 @@ function PromoModal({ draft, file, folders, services, onFile, onClose, onSave, l
               htmlFor="promo-discount-value"
               hint={
                 form.discountType === "percentage"
-                  ? "1â€“100. Rounded to the nearest rupee."
-                  : "Flat amount in â‚¹. Never exceeds the base price."
+                  ? "1“100. Rounded to the nearest rupee."
+                  : "Flat amount in ₹. Never exceeds the base price."
               }
             >
               <Input

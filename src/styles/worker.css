@@ -4301,7 +4301,7 @@
 
 /* ---------------------- Header responsiveness + support ------------------- */
 
-/* Desktop: brand Â· tabs Â· actions on one line. The tab strip owns the free
+/* Desktop: brand · tabs · actions on one line. The tab strip owns the free
    space and scrolls horizontally instead of pushing the profile off-screen. */
 @media (min-width: 900px) {
   .worker-top__inner {
@@ -4790,7 +4790,7 @@
 }
 
 /* ==========================================================================
-   Worker console â€” Professional Refresh v2
+   Worker console — Professional Refresh v2
    Cohesive redesign layer for the worker side: refined surfaces, radii,
    shadows, type scale, interactive states and status treatment. Scoped
    under .worker-app so the customer theme stays untouched.
@@ -5098,7 +5098,7 @@
    the professional look for the worker console without touching the customer UI. */
 
 /* ==========================================================================
-   Worker console â€” Premium Light Refresh v3
+   Worker console — Premium Light Refresh v3
    Final premium light design system for the worker portal:
    Light Blue background #EFF6FF, Baby Blue borders/highlights #DBEAFE,
    Pure White cards, Midnight Black headings #0F172A, Royal Blue primary
@@ -5163,7 +5163,7 @@
   gap: 22px;
 }
 
-/* Buttons â€” Royal Blue #2563EB */
+/* Buttons — Royal Blue #2563EB */
 .worker-app .wk-btn,
 .worker-app .btn,
 .worker-app button.btn {
@@ -5226,7 +5226,7 @@
   transform: none;
 }
 
-/* Cards â€” Pure White with Baby Blue borders */
+/* Cards — Pure White with Baby Blue borders */
 .worker-app .wk-hero,
 .worker-app .wk-earnings-strip,
 .worker-app .wk-panel,
@@ -5250,7 +5250,7 @@
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
 }
 
-/* Headings â€” Midnight Black */
+/* Headings — Midnight Black */
 .worker-app h1,
 .worker-app h2,
 .worker-app h3,
@@ -5282,7 +5282,7 @@
   line-height: 1.55;
 }
 
-/* Status pills â€” Green success / Orange pending / Red warning + Blue info */
+/* Status pills — Green success / Orange pending / Red warning + Blue info */
 .worker-app .wk-badge,
 .worker-app .wk-badge--yellow,
 .worker-app .wk-badge--blue,
@@ -5359,7 +5359,7 @@
   color: #b45309;
 }
 
-/* Stats â€” white premium cards on baby blue canvas */
+/* Stats — white premium cards on baby blue canvas */
 .worker-app .wk-stats,
 .worker-app .wk-hero__stats > div,
 .worker-app .wk-mini-stats > div,
@@ -5373,7 +5373,7 @@
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
 }
 
-/* Forms â€” Baby Blue borders, white surfaces */
+/* Forms — Baby Blue borders, white surfaces */
 .worker-app .input,
 .worker-app .textarea,
 .worker-app .select,
@@ -5403,7 +5403,7 @@
   color: #94a3b8;
 }
 
-/* Progress â€” Baby Blue track, Royal Blue fill */
+/* Progress — Baby Blue track, Royal Blue fill */
 .worker-app .wk-progress {
   background: #dbeafe;
 }
@@ -5413,7 +5413,7 @@
   background: #2563eb;
 }
 
-/* Bottom nav â€” white with soft blue active state */
+/* Bottom nav — white with soft blue active state */
 .worker-app .worker-nav {
   border-radius: 20px 20px 0 0;
   border: 1px solid #dbeafe;
@@ -5432,7 +5432,7 @@
   box-shadow: none;
 }
 
-/* Hero â€” premium light banner: baby blue canvas, white card, royal accent */
+/* Hero — premium light banner: baby blue canvas, white card, royal accent */
 .worker-app .wk-hero {
   margin: 24px 0 18px;
   padding: clamp(20px, 3vw, 30px);
@@ -5484,7 +5484,7 @@
   color: #0f172a;
 }
 
-/* Membership â€” premium light pricing card */
+/* Membership — premium light pricing card */
 .worker-app .wk-premium-card {
   background: #ffffff;
   border-color: #dbeafe;
@@ -5502,7 +5502,7 @@
   border-color: #dbeafe;
 }
 
-/* Offline / dues banners â€” light tints */
+/* Offline / dues banners — light tints */
 .worker-app .wk-banner--offline {
   background: #fff8e9;
   border-color: #f5ddb8;
@@ -5518,13 +5518,13 @@
   border-color: #dbeafe;
 }
 
-/* Referral card â€” light premium card */
+/* Referral card — light premium card */
 .worker-app .wk-refer-card {
   background: linear-gradient(130deg, #eff6ff, #ffffff 68%);
   border-color: #dbeafe;
 }
 
-/* Active job / job cards â€” hover polish */
+/* Active job / job cards — hover polish */
 .worker-app .wk-active,
 .worker-app .wk-job {
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
@@ -5563,7 +5563,7 @@
 }
 
 /* ==========================================================================
-   Worker console â€” Premium Light final overrides
+   Worker console — Premium Light final overrides
    Light premium theme: baby blue canvas, white cards, royal blue actions.
    ========================================================================== */
 
@@ -5637,8 +5637,8 @@
 }
 
 /* ==========================================================================
-   Design refresh â€” mobile job cards, new job leads, payment card, palette
-   EasyHome primary blue #2563eb Â· pastel blue fills Â· dark navy ink Â· white cards
+   Design refresh — mobile job cards, new job leads, payment card, palette
+   EasyHome primary blue #2563eb · pastel blue fills · dark navy ink · white cards
    ========================================================================== */
 
 /* --- Active job card (Card A) --- */
@@ -5700,7 +5700,7 @@
   letter-spacing: 0.07em;
 }
 
-/* Customer uploaded photos â€” object-fit cover, uniform rounded frames */
+/* Customer uploaded photos — object-fit cover, uniform rounded frames */
 .worker-app .wk-active__photos {
   margin-top: 12px;
   padding: 10px;
@@ -5751,7 +5751,7 @@
   border-color: #2563eb;
 }
 
-/* Live timer â€” pastel blue box */
+/* Live timer — pastel blue box */
 .worker-app .wk-job-timer {
   background: rgba(37, 99, 235, 0.07);
   border-color: rgba(37, 99, 235, 0.28);
@@ -5766,7 +5766,7 @@
   color: #0b1f3a;
 }
 
-/* Phase progress â€” pastel blue track, blue current node */
+/* Phase progress — pastel blue track, blue current node */
 .worker-app .wk-phase-track {
   background: #f4f8fc;
   border: 1px solid #e3eaf3;
@@ -5979,7 +5979,7 @@
   background: #1d4ed8;
 }
 
-/* --- Application status page (WorkerStatus) â€” design refresh --- */
+/* --- Application status page (WorkerStatus) — design refresh --- */
 .worker-app .wk-status-hero__icon,
 .worker-app .wk-status-hero__icon--pending {
   background: rgba(37, 99, 235, 0.1);

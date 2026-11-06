@@ -334,7 +334,7 @@ export default function WorkerApply({ existing, onCancel }) {
               value={form.serviceKey}
               onChange={set("serviceKey")}
             >
-              <option value="">Select tradeâ€¦</option>
+              <option value="">Select trade…</option>
               {tradeOptions("serviceKey").map((service) => (
                 <option key={service.key} value={service.key}>
                   {service.name}
@@ -343,7 +343,7 @@ export default function WorkerApply({ existing, onCancel }) {
             </Select>
           </Field>
 
-          <Field label="Starting price (â‚¹)" htmlFor="apply-price">
+          <Field label="Starting price (₹)" htmlFor="apply-price">
             <Input
               id="apply-price"
               type="number"
@@ -361,7 +361,7 @@ export default function WorkerApply({ existing, onCancel }) {
               value={form.state}
               onChange={(event) => chooseState(event.target.value)}
             >
-              <option value="">Select a stateâ€¦</option>
+              <option value="">Select a state…</option>
               {states.map((state) => (
                 <option key={state} value={state}>
                   {state}
@@ -379,7 +379,7 @@ export default function WorkerApply({ existing, onCancel }) {
               value={form.city}
               onChange={(event) => chooseCity(event.target.value)}
             >
-              <option value="">Select a cityâ€¦</option>
+              <option value="">Select a city…</option>
               {stateCities.map((item) => (
                 <option key={item.id || item.name} value={item.name}>
                   {item.name}
@@ -403,7 +403,7 @@ export default function WorkerApply({ existing, onCancel }) {
               value={form.areaName}
               onChange={set("areaName")}
             >
-              <option value="">Select a local areaâ€¦</option>
+              <option value="">Select a local area…</option>
               {areaOptions.map((area) => (
                 <option key={area} value={area}>
                   {area}
@@ -441,9 +441,9 @@ export default function WorkerApply({ existing, onCancel }) {
         >
           <Crosshair size={16} />
           {locating
-            ? "Capturing locationâ€¦"
+            ? "Capturing location…"
             : coords
-              ? `Location pinned Â· ${coords.lat.toFixed(3)}, ${coords.lng.toFixed(3)}`
+              ? `Location pinned · ${coords.lat.toFixed(3)}, ${coords.lng.toFixed(3)}`
               : "Pin my location (optional)"}
         </button>
 
@@ -463,7 +463,7 @@ export default function WorkerApply({ existing, onCancel }) {
             </Button>
           ) : null}
           <Button type="submit" disabled={busy}>
-            {busy ? "Submittingâ€¦" : "Submit application"}
+            {busy ? "Submitting…" : "Submit application"}
           </Button>
         </div>
       </form>
@@ -495,14 +495,14 @@ export default function WorkerApply({ existing, onCancel }) {
                 type="search"
                 value={zoneQuery}
                 onChange={(event) => setZoneQuery(event.target.value)}
-                placeholder="Search city, area or stateâ€¦"
+                placeholder="Search city, area or state…"
                 autoFocus
               />
             </label>
 
             <div className="wk-zone-list">
               {zoneLoading ? (
-                <p className="wk-zone-state">Loading live service zonesâ€¦</p>
+                <p className="wk-zone-state">Loading live service zones…</p>
               ) : zoneError ? (
                 <p className="wk-zone-state wk-zone-state--error">{zoneError}</p>
               ) : filteredZones.length === 0 ? (
@@ -528,7 +528,7 @@ export default function WorkerApply({ existing, onCancel }) {
                         <strong>{zone.areaName || zone.cityName || zone.label}</strong>
                         <small>
                           {[zone.cityName, zone.state].filter(Boolean).join(", ") || zone.label}
-                          {zone.radiusKm ? ` Â· ${zone.radiusKm} km radius` : ""}
+                          {zone.radiusKm ? ` · ${zone.radiusKm} km radius` : ""}
                         </small>
                       </span>
                       {active ? <BadgeCheck size={16} /> : null}

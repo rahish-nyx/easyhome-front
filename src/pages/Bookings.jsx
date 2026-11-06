@@ -48,7 +48,7 @@ import { ServiceIcon } from "../components/common";
 export default function Bookings() {
   usePageMeta(
     "My bookings",
-    "Track every EasyHome request â€” live status, agreed prices, payments and reviews.",
+    "Track every EasyHome request — live status, agreed prices, payments and reviews.",
   );
 
   const { user, profile, isPremium } = useAuth();
@@ -115,7 +115,7 @@ export default function Bookings() {
           <div>
             <strong style={{ fontSize: 14 }}>Request sent successfully</strong>
             <p className="small" style={{ color: "#0a6b4c" }}>
-              We are matching you with a verified pro. Keep notifications on â€” the first
+              We are matching you with a verified pro. Keep notifications on — the first
               acceptance usually arrives within minutes.
             </p>
           </div>
@@ -537,7 +537,7 @@ function BookingCard({ booking, busy, isPremium, onCancel, onPay, onReview }) {
             </span>
           ) : windowOpen && canCancel ? (
             <span className="booking-card__window">
-              <Timer size={13} /> Free cancellation Â· {minutesLeft ?? 0} min left
+              <Timer size={13} /> Free cancellation · {minutesLeft ?? 0} min left
             </span>
           ) : (
             <span className="booking-card__window is-closed">
@@ -692,7 +692,7 @@ function CancelModal({ booking, onClose, onDone }) {
             value={reason}
             maxLength={300}
             onChange={(event) => setReason(event.target.value)}
-            placeholder="Plans changed, found another pro, timing no longer worksâ€¦"
+            placeholder="Plans changed, found another pro, timing no longer works…"
           />
         </Field>
       )}
@@ -788,7 +788,7 @@ function PaymentModal({ booking, profile, onClose, onDone }) {
 
         {promoDiscount > 0 ? (
           <p className="tiny" style={{ color: "var(--green)", fontWeight: 700 }}>
-            {booking?.promoCode || booking?.pricing?.promoCode || "Promo"} applied â€”
+            {booking?.promoCode || booking?.pricing?.promoCode || "Promo"} applied —
             you save {inr(promoDiscount)}.
           </p>
         ) : null}
@@ -829,7 +829,7 @@ function PaymentModal({ booking, profile, onClose, onDone }) {
         </p>
 
         {profile?.phone ? (
-          <p className="tiny muted">Your contact on file: â€¢â€¢â€¢â€¢â€¢{String(profile.phone).slice(-4)}</p>
+          <p className="tiny muted">Your contact on file: •••••{String(profile.phone).slice(-4)}</p>
         ) : null}
       </div>
     </Modal>
@@ -900,7 +900,7 @@ function ReviewModal({ booking, onClose, onDone }) {
             maxLength={500}
             value={comment}
             onChange={(event) => setComment(event.target.value)}
-            placeholder="Punctual, tidy and fixed it properlyâ€¦"
+            placeholder="Punctual, tidy and fixed it properly…"
           />
         </Field>
         <p className="tiny muted">

@@ -163,7 +163,7 @@ export default function Booking() {
   }, [promoCode]);
 
   // A stale budget from a previous (cheaper/expensive) service is a classic
-  // source of rejected bookings â€” reset it whenever the trade changes.
+  // source of rejected bookings — reset it whenever the trade changes.
   useEffect(() => {
     setBudget(String(minimum));
   }, [minimum]);
@@ -288,7 +288,7 @@ export default function Booking() {
     if (!Number.isFinite(amount) || amount < lockedFloor) {
       next.budget = `The minimum budget for ${service.name} is ${inr(lockedFloor)}.`;
     }
-    if (amount > 100000) next.budget = "The maximum budget is â‚¹1,00,000.";
+    if (amount > 100000) next.budget = "The maximum budget is ₹1,00,000.";
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -361,7 +361,7 @@ export default function Booking() {
     <div className="page">
       <div className="page-head">
         <div>
-          <p className="eyebrow">New request Â· 60 seconds</p>
+          <p className="eyebrow">New request · 60 seconds</p>
           <h1>Tell us what needs fixing.</h1>
           <p>
             A verified pro will accept your request and apply their final price before starting.
@@ -454,7 +454,7 @@ export default function Booking() {
                 >
                   {services.map((item) => (
                     <option key={item.key} value={item.key}>
-                      {item.name} â€” from {inr(item.fromPrice || SERVICE_META[item.key]?.from || 199)}
+                      {item.name} — from {inr(item.fromPrice || SERVICE_META[item.key]?.from || 199)}
                     </option>
                   ))}
                 </Select>
@@ -475,7 +475,7 @@ export default function Booking() {
               <Field
                 label="Describe the job"
                 htmlFor="description"
-                hint={`${description.length}/600 Â· mention size, access and materials`}
+                hint={`${description.length}/600 · mention size, access and materials`}
                 error={errors.description}
                 required
                 className="span-2"
@@ -505,9 +505,9 @@ export default function Booking() {
                 {bookingPoint
                   ? `Pinned${
                       Number.isFinite(Number(bookingPoint.accuracy))
-                        ? ` Â±${Math.round(bookingPoint.accuracy)} m`
+                        ? ` ±${Math.round(bookingPoint.accuracy)} m`
                         : ""
-                    } Â· ${Number(bookingPoint.lat).toFixed(4)}, ${Number(bookingPoint.lng).toFixed(4)}`
+                    } · ${Number(bookingPoint.lat).toFixed(4)}, ${Number(bookingPoint.lng).toFixed(4)}`
                   : city?.name
                     ? `Serving in ${city.name}. Pin your exact location for faster matching.`
                     : "Pin your exact location for faster matching."}
@@ -583,14 +583,14 @@ export default function Booking() {
                 {
                   id: "normal",
                   title: "Normal",
-                  sub: "Within 24 hours Â· standard rate",
+                  sub: "Within 24 hours · standard rate",
                 },
                 {
                   id: "urgent",
                   title: "Urgent",
                   sub: isPremium
-                    ? "ASAP Â· priority dispatch Â· no urgent fee"
-                    : "ASAP Â· priority dispatch + 10% fee",
+                    ? "ASAP · priority dispatch · no urgent fee"
+                    : "ASAP · priority dispatch + 10% fee",
                 },
               ].map((option) => (
                 <button
@@ -644,7 +644,7 @@ export default function Booking() {
                 ) : null}
               </div>
               {promoLoading && promoCode ? (
-                <p className="promo-code-box__status">Checking this codeâ€¦</p>
+                <p className="promo-code-box__status">Checking this code…</p>
               ) : promoStatus === "invalid" ? (
                 <p className="promo-code-box__status is-error">
                   This code is invalid or has expired.
@@ -655,7 +655,7 @@ export default function Booking() {
                 </p>
               ) : servicePromo ? (
                 <p className="promo-code-box__status is-success">
-                  {servicePromo.title || "Promo"} Â· {promoDiscountLabel(servicePromo)} applied.
+                  {servicePromo.title || "Promo"} · {promoDiscountLabel(servicePromo)} applied.
                 </p>
               ) : (
                 <p className="promo-code-box__status">
@@ -705,7 +705,7 @@ export default function Booking() {
                 </div>
               ) : workerState.loading ? (
                 <div className="row small muted" role="status" aria-live="polite">
-                  <Loader2 size={15} className="spin" /> Loading preferred proâ€¦
+                  <Loader2 size={15} className="spin" /> Loading preferred pro…
                 </div>
               ) : (
                 <div className="inline-error" role="status">
@@ -739,11 +739,11 @@ export default function Booking() {
             </div>
             <div className="summary-row">
               <span>City</span>
-              <strong>{city?.name || "â€”"}</strong>
+              <strong>{city?.name || "—"}</strong>
             </div>
             <div className="summary-row">
               <span>Area</span>
-              <strong style={{ maxWidth: "60%", textAlign: "right" }}>{area || "â€”"}</strong>
+              <strong style={{ maxWidth: "60%", textAlign: "right" }}>{area || "—"}</strong>
             </div>
             <div className="summary-row">
               <span>Coverage</span>
@@ -772,7 +772,7 @@ export default function Booking() {
                 <span>
                   {servicePromo.title || "Promo"}{" "}
                   <span className="summary-promo-code">
-                    {servicePromo.couponCode} Â· {promoDiscountShort(servicePromo)}
+                    {servicePromo.couponCode} · {promoDiscountShort(servicePromo)}
                   </span>
                 </span>
                 <strong>-{inr(promoDiscount)}</strong>

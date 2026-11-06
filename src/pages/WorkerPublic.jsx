@@ -54,7 +54,7 @@ export default function WorkerPublic() {
   const profileUrl = worker ? `${window.location.origin}/workers/${worker.id}` : "";
 
   usePageMeta(
-    worker ? `${worker.name} â€” ${worker.service || meta.name}` : "Verified professional",
+    worker ? `${worker.name} — ${worker.service || meta.name}` : "Verified professional",
     worker
       ? `Book ${worker.name}, a verified ${worker.service || meta.name} professional in ${
           worker.area || "your city"
@@ -63,7 +63,7 @@ export default function WorkerPublic() {
   );
 
   useEffect(() => {
-    if (!worker?.id) {
+    if (!worker?.id || !isPro) {
       setQrDataUrl("");
       return undefined;
     }
@@ -81,7 +81,7 @@ export default function WorkerPublic() {
     return () => {
       live = false;
     };
-  }, [worker?.id]);
+  }, [worker?.id, isPro]);
 
   const share = async () => {
     if (!worker) return;
@@ -145,7 +145,7 @@ export default function WorkerPublic() {
   if (loading && !data) {
     return (
       <div className="page">
-        <PageLoader label="Loading professionalâ€¦" />
+        <PageLoader label="Loading professional…" />
       </div>
     );
   }
@@ -182,7 +182,7 @@ export default function WorkerPublic() {
           <Avatar name={worker.name} path={worker.photoPath} size={112} ring={isPro} />
           <h1>{worker.name}</h1>
           <p className="small muted" style={{ marginTop: 4 }}>
-            {worker.service || meta.name} Â· {worker.area || "Local pro"}
+            {worker.service || meta.name} · {worker.area || "Local pro"}
           </p>
 
           <div className="worker-public__meta">
@@ -228,16 +228,18 @@ export default function WorkerPublic() {
             >
               Book {worker.name.split(" ")[0]}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="btn--block"
-              onClick={share}
-              loading={sharing}
-              icon={Share2}
-            >
-              Share profile
-            </Button>
+            {isPro ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="btn--block"
+                onClick={share}
+                loading={sharing}
+                icon={Share2}
+              >
+                Share profile
+              </Button>
+            ) : null}
           </div>
 
           <div className="stack stack--sm" style={{ marginTop: 16, textAlign: "left" }}>
@@ -248,7 +250,7 @@ export default function WorkerPublic() {
               <ShieldCheck size={13} /> Government ID checked by EasyHome
             </span>
             <span className="tiny muted row" style={{ gap: 6 }}>
-              <Wallet size={13} /> Pay after the job â€” cash or UPI
+              <Wallet size={13} /> Pay after the job — cash or UPI
             </span>
           </div>
 
@@ -264,16 +266,15 @@ export default function WorkerPublic() {
         </Card>
 
         <div className="stack">
+          {isPro ? (
           <Card className="card--pad worker-public__share">
             <SectionHeader
               eyebrow="Share"
               title="Share this Pro"
               action={
-                isPro ? (
-                  <Badge tone="yellow">
-                    <Crown size={11} /> Pro
-                  </Badge>
-                ) : null
+                <Badge tone="yellow">
+                  <Crown size={11} /> Pro
+                </Badge>
               }
             />
             <p className="small muted" style={{ marginTop: -8 }}>
@@ -304,6 +305,7 @@ export default function WorkerPublic() {
               </div>
             </div>
           </Card>
+          ) : null}
 
           <Card className="card--pad">
             <SectionHeader
@@ -346,7 +348,7 @@ export default function WorkerPublic() {
               eyebrow="Verified reviews"
               title={
                 reviews.length
-                  ? `${Number(worker.rating || 0).toFixed(1)} Â· ${reviews.length} review${
+                  ? `${Number(worker.rating || 0).toFixed(1)} · ${reviews.length} review${
                       reviews.length === 1 ? "" : "s"
                     }`
                   : "No reviews yet"
@@ -363,7 +365,7 @@ export default function WorkerPublic() {
                       <div className="grow">
                         <strong>{review.customerName || "EasyHome customer"}</strong>
                         <p className="tiny muted">
-                          {review.service} Â· {formatDate(review.createdAt, { year: false })}
+                          {review.service} · {formatDate(review.createdAt, { year: false })}
                         </p>
                       </div>
                       <RatingStars value={review.stars} size={13} />
