@@ -191,7 +191,10 @@ export default function Auth() {
     try {
       const result = await signIn(form.email.trim(), form.password);
       const actualRole = result?.role || role;
-      if (actualRole !== role) {
+      const godAdmin = result?.user?.admin === true;
+      // The EasyHome god-mode admin manages both consoles, so the usual
+      // customer/professional role gate must not block them.
+      if (!godAdmin && actualRole !== role) {
         await logout().catch(() => {});
         setError(
           actualRole === "worker"
@@ -202,12 +205,12 @@ export default function Auth() {
         return;
       }
       toast.success("Welcome back.");
-      if (!result?.user?.emailVerified) {
+      if (!godAdmin && !result?.user?.emailVerified) {
         setJustSignedUp(true);
         toast.info("Verify your email to unlock bookings.");
         return;
       }
-      goNext(actualRole);
+      goNext(godAdmin ? (role === "worker" ? "worker" : "customer") : actualRole);
     } catch (signInError) {
       setError(friendly(signInError));
     } finally {
