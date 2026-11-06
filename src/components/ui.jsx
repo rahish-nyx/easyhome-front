@@ -405,7 +405,17 @@ export class ErrorBoundary extends Component {
             <span className="crash__mark">!</span>
             <h1>Something went wrong</h1>
             <p>Reload the app to continue. Your data is safe.</p>
-            <Button onClick={() => window.location.reload()}>Reload EasyHome</Button>
+            {this.state.error?.message ? (
+              <p style={{ fontSize: 12, color: "#d92d20", marginTop: 8, wordBreak: "break-word" }}>
+                {String(this.state.error.message)}
+              </p>
+            ) : null}
+            <div style={{ display: "flex", gap: 8, marginTop: 12, justifyContent: "center" }}>
+              <Button onClick={() => this.setState({ error: null })}>Try again</Button>
+              <Button variant="outline" onClick={() => (window.location.href = "/")}>
+                Go to Home
+              </Button>
+            </div>
           </div>
         </div>
       );

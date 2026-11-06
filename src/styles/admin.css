@@ -619,7 +619,7 @@ body.adm-mode {
   width: min(300px, 86vw);
   display: flex;
   flex-direction: column;
-  padding: 18px 14px 16px;
+  padding: calc(18px + max(env(safe-area-inset-top, 0px), 14px)) 14px 16px;
   background: var(--adm-sidebar);
   border-right: 1px solid var(--adm-line-strong);
   overflow-y: auto;
@@ -668,7 +668,18 @@ body.adm-mode {
   background: rgba(7, 9, 14, 0.82);
   border-bottom: 1px solid var(--adm-line);
   backdrop-filter: blur(16px) saturate(140%);
-  padding-top: env(safe-area-inset-top);
+  padding-top: max(env(safe-area-inset-top, 0px), 12px);
+}
+
+@media (min-width: 900px) {
+  .adm-topbar {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+.is-native .adm-topbar,
+.is-mobile-app .adm-topbar {
+  padding-top: max(env(safe-area-inset-top, 0px), 14px);
 }
 
 .adm-burger {
@@ -4640,7 +4651,8 @@ body.adm-mode .modal .upload__copy small {
   }
 
   .adm-topbar {
-    padding: 0 20px;
+    padding-left: 20px;
+    padding-right: 20px;
   }
 }
 
@@ -4766,7 +4778,8 @@ body.adm-mode .modal .upload__copy small {
 
   .adm-topbar {
     min-height: 58px;
-    padding: 0 13px;
+    padding-left: 13px;
+    padding-right: 13px;
     gap: 10px;
   }
 
@@ -6448,4 +6461,20 @@ body.adm-mode .modal .upload__copy small {
   margin: 0 0 12px 0;
   font-size: 12.5px;
   color: var(--adm-muted, #64748b);
+}
+
+/* Guarantee admin topbar safe area padding is NEVER overridden on mobile or native */
+.adm-topbar {
+  padding-top: max(env(safe-area-inset-top, 0px), 16px) !important;
+}
+
+.is-native .adm-topbar,
+.is-mobile-app .adm-topbar {
+  padding-top: max(env(safe-area-inset-top, 0px), 24px) !important;
+}
+
+@media (min-width: 1024px) {
+  :not(.is-native):not(.is-mobile-app) .adm-topbar {
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
 }

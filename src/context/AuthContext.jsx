@@ -54,12 +54,12 @@ export function AuthProvider({ children }) {
     if (payload?.token) setToken(payload.token);
     const nextProfile = payload?.profile || null;
     const nextWorker = payload?.worker || null;
+    const nextUser = userFromSession(payload);
     const admin =
       payload?.isAdmin === true ||
       payload?.claims?.admin === true ||
-      isGodAdmin(nextUser.email);
-    const nextUser = userFromSession(payload);
-    if (isGodAdmin(nextUser.email || nextProfile?.email)) {
+      isGodAdmin(nextUser?.email || nextProfile?.email);
+    if (nextUser && isGodAdmin(nextUser.email || nextProfile?.email)) {
       nextUser.admin = true;
     }
     setProfile(nextProfile);
@@ -237,6 +237,14 @@ export function AuthProvider({ children }) {
   const premiumUntil = isWorker ? worker?.premiumUntil : profile?.subscription?.endAt;
   const isPremium =
     isActiveUntil(premiumUntil) || isGodAdmin(user?.email || profile?.email);
+
+  useEffect(() => {
+    if (user && typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission().catch(() => {});
+      }
+    }
+  }, [user]);
 
   const value = useMemo(
     () => ({

@@ -1,10 +1,12 @@
-﻿import { useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import QRCode from "qrcode";
 import {
   ArrowLeft,
   BadgeCheck,
   BriefcaseBusiness,
   CalendarCheck,
+  Crown,
   MapPin,
   MessageSquare,
   Share2,
@@ -36,6 +38,7 @@ export default function WorkerPublic() {
   const { user } = useAuth();
   const toast = useToast();
   const [sharing, setSharing] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState("");
   const { data, loading, error } = useAsync(
     () => api.get(`/public/workers/${id}`),
     [id],
@@ -48,6 +51,8 @@ export default function WorkerPublic() {
     isActiveUntil(worker?.premiumUntil) ||
     (worker?.isPremium === true && !worker?.premiumUntil);
 
+  const profileUrl = worker ? `${window.location.origin}/workers/${worker.id}` : "";
+
   usePageMeta(
     worker ? `${worker.name} â€” ${worker.service || meta.name}` : "Verified professional",
     worker
@@ -57,6 +62,27 @@ export default function WorkerPublic() {
       : "View a verified EasyHome professional.",
   );
 
+  useEffect(() => {
+    if (!worker?.id) {
+      setQrDataUrl("");
+      return undefined;
+    }
+    let live = true;
+    QRCode.toDataURL(`${window.location.origin}/workers/${worker.id}`, {
+      margin: 1,
+      width: 216,
+    })
+      .then((url) => {
+        if (live) setQrDataUrl(url);
+      })
+      .catch(() => {
+        if (live) setQrDataUrl("");
+      });
+    return () => {
+      live = false;
+    };
+  }, [worker?.id]);
+
   const share = async () => {
     if (!worker) return;
     setSharing(true);
@@ -65,7 +91,7 @@ export default function WorkerPublic() {
       if (navigator.share) {
         await navigator.share({
           title: `${worker.name} on EasyHome`,
-          text: `Book ${worker.name} â€” ${worker.service} on EasyHome.`,
+          text: `Book ${worker.name} - ${worker.service} on EasyHome.`,
           url,
         });
       } else {
@@ -77,6 +103,43 @@ export default function WorkerPublic() {
     } finally {
       setSharing(false);
     }
+  };
+
+  const copyProfileLink = async () => {
+    if (!worker) return;
+    const url = profileUrl || window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Profile link copied.");
+      return;
+    } catch {
+      /* fall through to legacy copy */
+    }
+    const done = await new Promise((resolve) => {
+      const helper = document.createElement("textarea");
+      helper.value = url;
+      document.body.appendChild(helper);
+      helper.select();
+      let ok = false;
+      try {
+        ok = document.execCommand("copy");
+      } catch {
+        ok = false;
+      }
+      document.body.removeChild(helper);
+      resolve(ok);
+    });
+    if (done) toast.success("Profile link copied.");
+    else toast.error("Could not copy - copy the link manually.");
+  };
+
+  const shareViaWhatsApp = () => {
+    if (!worker) return;
+    const url = profileUrl || window.location.href;
+    const text = encodeURIComponent(
+      `Book ${worker.name} - verified ${worker.service || "home services"} pro on EasyHome. ${url}`,
+    );
+    window.open(`https://wa.me/?text=${text}`, "_blank");
   };
 
   if (loading && !data) {
@@ -201,6 +264,47 @@ export default function WorkerPublic() {
         </Card>
 
         <div className="stack">
+          <Card className="card--pad worker-public__share">
+            <SectionHeader
+              eyebrow="Share"
+              title="Share this Pro"
+              action={
+                isPro ? (
+                  <Badge tone="yellow">
+                    <Crown size={11} /> Pro
+                  </Badge>
+                ) : null
+              }
+            />
+            <p className="small muted" style={{ marginTop: -8 }}>
+              Scan the QR code or copy the link — anyone can open {worker.name}'s verified
+              EasyHome profile and book them.
+            </p>
+            <div className="worker-public__share">
+              <div className="worker-public__qr">
+                {qrDataUrl ? (
+                  <img src={qrDataUrl} alt={`QR code for ${worker.name}'s EasyHome profile`} />
+                ) : (
+                  <span className="worker-public__qr--loading">Generating QR…</span>
+                )}
+              </div>
+              <div className="worker-public__share-copy">
+                <span className="tiny muted">Shareable profile link</span>
+                <a className="worker-public__share-link" href={profileUrl} target="_blank" rel="noreferrer">
+                  {profileUrl || `/workers/${worker.id}`}
+                </a>
+                <div className="row" style={{ gap: 8, marginTop: 12 }}>
+                  <Button variant="primary" size="sm" onClick={copyProfileLink}>
+                    Copy Link
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={shareViaWhatsApp}>
+                    Share via WhatsApp
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+
           <Card className="card--pad">
             <SectionHeader
               eyebrow="About"

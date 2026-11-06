@@ -3,7 +3,6 @@
   "appName": "EasyHome",
   "webDir": "dist",
   "server": {
-    "url": "https://easyhome-front.vercel.app",
     "cleartext": true,
     "allowNavigation": [
       "easyhome-front.vercel.app",

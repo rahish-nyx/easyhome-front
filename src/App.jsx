@@ -5,6 +5,7 @@ import {
   Route,
   Routes,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { CatalogueProvider } from "./context/CatalogueContext";
@@ -29,6 +30,9 @@ import Auth from "./pages/Auth";
 import Legal from "./pages/Legal";
 import Faq from "./pages/Faq";
 import { NotFound, Offline } from "./pages/Fallback";
+import { Capacitor } from "@capacitor/core";
+import { StatusBar, Style } from "@capacitor/status-bar";
+import { App as CapApp } from "@capacitor/app";
 import AdminReferrals from "./admin/AdminReferrals";
 import { captureReferral } from "./lib/referral";
 const WorkerApp = lazy(() => import("./worker/WorkerApp"));
@@ -69,6 +73,66 @@ function ReferralCapture() {
   return null;
 }
 
+function StatusBarThemeHandler() {
+  const location = useLocation();
+  const pathname = location?.pathname || "";
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !Capacitor?.isNativePlatform?.() || !StatusBar?.setStyle) return;
+
+    const isAdmin = pathname.startsWith("/admin");
+    try {
+      StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
+      if (isAdmin) {
+        StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
+        StatusBar.setBackgroundColor({ color: "#07090e" }).catch(() => {});
+      } else {
+        StatusBar.setStyle({ style: Style.Light }).catch(() => {});
+        StatusBar.setBackgroundColor({ color: "#ffffff" }).catch(() => {});
+      }
+    } catch (e) {
+      /* ignore native status bar error on browser fallback */
+    }
+  }, [pathname]);
+
+  return null;
+}
+
+function NativeBackButtonHandler() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !Capacitor?.isNativePlatform?.() || !CapApp?.addListener) return undefined;
+
+    let sub;
+    try {
+      CapApp.addListener("backButton", () => {
+        const path = location?.pathname || "/";
+        const isRoot = path === "/" || path === "/worker" || path === "/admin";
+
+        if (!isRoot) {
+          navigate(-1);
+        } else {
+          CapApp.minimizeApp().catch(() => {});
+        }
+      })
+        .then((handle) => {
+          sub = handle;
+        })
+        .catch(() => {});
+    } catch (e) {
+      /* ignore back button setup error */
+    }
+
+    return () => {
+      if (sub && typeof sub.remove === "function") sub.remove();
+    };
+  }, [location?.pathname, navigate]);
+
+  return null;
+}
+
 function Protect({ children }) {
   return <ProtectedRoute>{children}</ProtectedRoute>;
 }
@@ -88,6 +152,8 @@ export default function App() {
                 <LocationProvider>
                   <ScrollToTop />
                   <ReferralCapture />
+                  <StatusBarThemeHandler />
+                  <NativeBackButtonHandler />
                   <Routes>
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/login" element={<Navigate to="/auth" replace />} />

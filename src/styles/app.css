@@ -1,6 +1,20 @@
 ﻿/* ==========================================================================
-   EasyHome design system â€” customer (yellow / black / white)
+   EasyHome design system — customer (yellow / black / white)
    ========================================================================== */
+
+html, body {
+  overscroll-behavior-y: contain;
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
+#root, .admin-shell, .worker-app, .page {
+  -webkit-overflow-scrolling: touch;
+}
+
+button, a, input, select, textarea {
+  touch-action: manipulation;
+}
 
 :root {
   --yellow: #ffd60a;
@@ -1279,7 +1293,13 @@ ol {
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   border-bottom: 1px solid var(--line);
-  padding-top: env(safe-area-inset-top);
+  padding-top: max(env(safe-area-inset-top, 0px), 12px);
+}
+
+@media (min-width: 900px) {
+  .site-header {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
 }
 
 .header-inner {
@@ -5207,6 +5227,80 @@ ol {
   color: var(--muted);
 }
 
+.worker-public__share {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px dashed var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.worker-public__share .section-head {
+  margin-bottom: 12px;
+}
+
+.worker-public__share p {
+  margin-top: -4px;
+}
+
+.worker-public__qr {
+  width: 172px;
+  height: 172px;
+  flex: 0 0 auto;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: #fff;
+  display: grid;
+  place-items: center;
+}
+
+.worker-public__qr img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.worker-public__qr--loading {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.worker-public__share-copy {
+  min-width: 0;
+}
+
+.worker-public__share-copy .tiny {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+.worker-public__share-link {
+  display: block;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--blue-soft);
+  color: var(--blue-strong);
+  font-size: 12.5px;
+  font-weight: 700;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.worker-public__share .row {
+  margin-top: 4px;
+}
+
+@media (max-width: 640px) {
+  .worker-public__share {
+    align-items: flex-start;
+  }
+}
+
 .review-card {
   padding: 15px;
   border: 1px solid var(--line);
@@ -7030,7 +7124,7 @@ ol {
 
 .is-native .site-header,
 .is-mobile-app .site-header {
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: max(env(safe-area-inset-top, 0px), 14px);
 }
 
 /* Membership plan promo pricing */
@@ -7050,4 +7144,20 @@ ol {
   font-weight: 800;
   background: var(--green-soft);
   color: var(--green);
+}
+
+/* Guarantee customer site header safe area padding is NEVER overridden on mobile or native */
+.site-header {
+  padding-top: max(env(safe-area-inset-top, 0px), 16px) !important;
+}
+
+.is-native .site-header,
+.is-mobile-app .site-header {
+  padding-top: max(env(safe-area-inset-top, 0px), 24px) !important;
+}
+
+@media (min-width: 1024px) {
+  :not(.is-native):not(.is-mobile-app) .site-header {
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
 }

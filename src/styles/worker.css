@@ -128,7 +128,18 @@
   -webkit-backdrop-filter: blur(18px);
   border-bottom: 1px solid #e3eaf3;
   box-shadow: 0 4px 18px rgba(17, 24, 39, 0.06);
-  padding-top: env(safe-area-inset-top);
+  padding-top: max(env(safe-area-inset-top, 0px), 12px);
+}
+
+@media (min-width: 900px) {
+  .worker-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+.is-native .worker-top,
+.is-mobile-app .worker-top {
+  padding-top: max(env(safe-area-inset-top, 0px), 14px);
 }
 
 .worker-top__inner {
@@ -3659,6 +3670,25 @@
   font-weight: 800;
 }
 
+.wk-plan-option__price--strike {
+  text-decoration: line-through;
+  font-size: 12px;
+  color: var(--wk-muted-2);
+  margin-right: 5px;
+}
+
+.wk-plan-option__promo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  background: var(--wk-green-soft, #e6f7f1);
+  color: var(--wk-green);
+}
+
 .wk-avatar-upload {
   display: grid;
   justify-items: center;
@@ -6680,4 +6710,20 @@
   color: var(--wk-muted);
   font-size: 11.5px;
   line-height: 1.5;
+}
+
+/* Guarantee worker topbar safe area padding is NEVER overridden on mobile or native */
+.worker-top {
+  padding-top: max(env(safe-area-inset-top, 0px), 16px) !important;
+}
+
+.is-native .worker-top,
+.is-mobile-app .worker-top {
+  padding-top: max(env(safe-area-inset-top, 0px), 24px) !important;
+}
+
+@media (min-width: 1024px) {
+  :not(.is-native):not(.is-mobile-app) .worker-top {
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
 }
