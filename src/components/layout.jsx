@@ -759,7 +759,7 @@ export function SiteFooter() {
 export function CustomerLayout() {
   const location = useLocation();
   const standalone = useStandalone();
-  const { isWorker } = useAuth();
+  const { isWorker, isAdmin } = useAuth();
   const {
     pickerOpen,
     closePicker,
@@ -775,11 +775,9 @@ export function CustomerLayout() {
 
   // Customer and professional sessions stay separate. A professional account
   // must always land in the worker console; customer and public routes are for
-  // guests and customer accounts only.
-  if (
-    isWorker &&
-    !location.pathname.startsWith("/worker")
-  ) {
+  // guests and customer accounts only. God-mode admins manage both consoles, so
+  // they must not be bounced off the customer side.
+  if (!isAdmin && isWorker && !location.pathname.startsWith("/worker")) {
     return (
       <Navigate
         to={location.pathname === "/chat" ? "/worker/support" : "/worker"}
