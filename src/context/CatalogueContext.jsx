@@ -142,25 +142,25 @@ function normaliseSettings(data) {
     : [];
   if (benefits.length) {
     const replacements = {
-      "Priority matching": "Active priority worker matching",
-      "Priority worker matching": "Active priority worker matching",
-      "Discounted service visits": "No 10% urgent-job extra charge",
-      "Member pricing": "No 10% urgent-job extra charge",
-      "No 10% extra charge on urgent jobs": "No 10% urgent-job extra charge",
-      "No 10% urgent-job fee": "No 10% urgent-job extra charge",
-      "No urgent-job fee": "No 10% urgent-job extra charge",
+      "Priority matching": "Active Priority Worker Matching",
+      "Priority worker matching": "Active Priority Worker Matching",
+      "Discounted service visits": "No 10% Urgent-Job Extra Charge",
+      "Member pricing": "No 10% Urgent-Job Extra Charge",
+      "No 10% extra charge on urgent jobs": "No 10% Urgent-Job Extra Charge",
+      "No 10% urgent-job fee": "No 10% Urgent-Job Extra Charge",
+      "No urgent-job fee": "No 10% Urgent-Job Extra Charge",
       "Free cancellation up to 1 hour": "Free cancellation within 5 minutes",
       "Free cancellation up to 20 minutes": "Free cancellation within 5 minutes",
       "Free cancellation up to 7 minutes": "Free cancellation within 5 minutes",
       "20-minute free cancellation": "Free cancellation within 5 minutes",
       "24x7 priority support": "Priority customer support",
       "24×7 priority support": "Priority customer support",
-      "Top placement in search": "Local search visibility boost",
-      "Free urgent-job priority": "Priority urgent job alerts",
-      "Verified Pro badge": "Exclusive EasyHome Pro badge",
-      "EasyHome Pro badge": "Exclusive EasyHome Pro badge",
-      "Accidental damage assistance up to ₹500": "Accidental damage assistance up to ₹500",
-      "Replacement professional assistance": "Priority re-assignment & VIP dispatch",
+      "Top placement in search": "Local Search Visibility Boost",
+      "Free urgent-job priority": "Priority Urgent Job Alerts",
+      "Verified Pro badge": "Exclusive EasyHome Pro Badge",
+      "EasyHome Pro badge": "Exclusive EasyHome Pro Badge",
+      "Accidental damage assistance up to ₹500": "Accidental Damage Assistance – Up To ₹500",
+      "Replacement professional assistance": "Priority Re-Assignment & VIP Dispatch",
       "Exclusive 3% continuous renewal reward": "Exclusive 3% continuous renewal reward",
     };
     const normalized = benefits
@@ -180,7 +180,7 @@ function normaliseSettings(data) {
       ...new Set(
         merged.workerBenefits.map((benefit) =>
           /^0% commission on every job$/i.test(benefit)
-            ? "Lower commission rate (7%)"
+            ? "Lower Commission Rate (Only 7%)"
             : benefit,
         ),
       ),

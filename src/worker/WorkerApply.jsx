@@ -26,7 +26,7 @@ function uniqueTrades(list) {
 }
 
 export default function WorkerApply({ existing, onCancel }) {
-  const { profile, refreshClaims } = useAuth();
+  const { profile, refreshClaims, isPremium } = useAuth();
   const { services } = useCatalogue();
   const { city, cities, states, citiesForState } = useLocation();
   const toast = useToast();
@@ -233,7 +233,13 @@ export default function WorkerApply({ existing, onCancel }) {
       return;
     }
 
-    const trades = [form.serviceKey];
+    // EasyHome Pro — the Pro membership unlocks up to two additional optional
+    // service categories. Only Pro members can take on extra trades; everyone
+    // else books the primary trade only.
+    const trades = [form.serviceKey, form.secondaryServiceKey, form.optionalServiceKey]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+      .slice(0, isPremium ? 3 : 1);
 
     setBusy(true);
     try {
@@ -342,6 +348,39 @@ export default function WorkerApply({ existing, onCancel }) {
               ))}
             </Select>
           </Field>
+
+          {isPremium ? (
+            <>
+              <Field label="Secondary trade (Pro unlock)" htmlFor="apply-secondary">
+                <Select
+                  id="apply-secondary"
+                  value={form.secondaryServiceKey}
+                  onChange={set("secondaryServiceKey")}
+                >
+                  <option value="">None</option>
+                  {tradeOptions("secondaryServiceKey").map((service) => (
+                    <option key={service.key} value={service.key}>
+                      {service.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Optional trade (Pro unlock)" htmlFor="apply-optional">
+                <Select
+                  id="apply-optional"
+                  value={form.optionalServiceKey}
+                  onChange={set("optionalServiceKey")}
+                >
+                  <option value="">None</option>
+                  {tradeOptions("optionalServiceKey").map((service) => (
+                    <option key={service.key} value={service.key}>
+                      {service.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </>
+          ) : null}
 
           <Field label="Starting price (₹)" htmlFor="apply-price">
             <Input

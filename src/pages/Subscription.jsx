@@ -109,8 +109,8 @@ export default function Subscription() {
     : [
         {
           icon: ShieldCheck,
-          title: "Accidental damage assistance up to ₹500",
-          body: "Eligible Pro customers receive accidental damage assistance of up to ₹500 subject to eligibility rules.",
+          title: "Accidental Damage Assistance – Up To ₹500",
+          body: "Provide eligible Pro customers with accidental damage assistance of up to ₹500, subject to EasyHome's official eligibility conditions, verification, exclusions, and claim policy.",
         },
         {
           icon: Zap,
@@ -120,7 +120,7 @@ export default function Subscription() {
         {
           icon: Wallet,
           title: "No 10% Urgent-Job Extra Charge",
-          body: "Urgent bookings cost the same as normal — the extra fee is waived for Pro customers.",
+          body: "Waive the additional 10% EasyHome urgent-job surcharge for eligible Pro customers. Do not reduce or deduct the professional's agreed earnings.",
         },
         {
           icon: BadgeCheck,
@@ -134,7 +134,7 @@ export default function Subscription() {
         },
         {
           icon: Ticket,
-          title: "Monthly Pro Promo Codes (Up to 20% Off)",
+          title: "Monthly Pro Promo Codes (Up To 20% Off)",
           body: "Receive 2 exclusive discount promo codes every month offering up to 20% off on your service bookings to save more on home maintenance.",
         },
         {
