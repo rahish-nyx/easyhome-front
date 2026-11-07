@@ -41,7 +41,7 @@ import RazorpayPayment from "../components/RazorpayPayment";
 export default function Subscription() {
   usePageMeta(
     "EasyHome Pro membership",
-    "Accidental damage assistance up to ₹500, priority worker matching, no urgent-job extra charge, exclusive Pro badge, 15-day service warranty, monthly Pro promo codes and priority re-assignment with EasyHome Pro.",
+    "Accidental Damage Assistance – Up To ₹500, Active Priority Worker Matching, No 10% Urgent-Job Extra Charge, Exclusive EasyHome Pro Badge, Extended 15-Day Service Work Warranty, Monthly Pro Promo Codes (Up To 20% Off) and Priority Re-Assignment & VIP Dispatch with EasyHome Pro.",
   );
 
   const { profile, isWorker, premiumUntil, refreshProfile } = useAuth();

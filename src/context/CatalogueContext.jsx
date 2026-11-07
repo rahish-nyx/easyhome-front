@@ -162,6 +162,8 @@ function normaliseSettings(data) {
       "Accidental damage assistance up to ₹500": "Accidental Damage Assistance – Up To ₹500",
       "Replacement professional assistance": "Priority Re-Assignment & VIP Dispatch",
       "Exclusive 3% continuous renewal reward": "Exclusive 3% continuous renewal reward",
+      "Monthly Pro Promo Codes (Up To 20% Off)": "Monthly Pro Promo Codes (Up To 20% Off)",
+      "Monthly Pro promo codes (up to 20% off)": "Monthly Pro Promo Codes (Up To 20% Off)",
     };
     const normalized = benefits
       .map((benefit) => replacements[benefit] || benefit)
