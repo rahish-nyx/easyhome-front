@@ -21,6 +21,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useCatalogue } from "../context/CatalogueContext";
 import { useToast } from "../context/ToastContext";
+import { playNotificationSound } from "../lib/sound";
 import {
   countdownTo,
   daysLeft,
@@ -84,6 +85,16 @@ export default function Subscription() {
     const timer = window.setInterval(() => setMembershipTick((tick) => tick + 1), 1000);
     return () => window.clearInterval(timer);
   }, [active]);
+  useEffect(() => {
+    if (!active || membershipLeft > MEMBERSHIP_EXPIRY_WARNING_DAYS) return undefined;
+    const today = new Date().toDateString();
+    const lastNotified = window.localStorage.getItem("easyhome:membership-expiry-notified");
+    if (lastNotified === today) return undefined;
+    window.localStorage.setItem("easyhome:membership-expiry-notified", today);
+    toast.info("Your Pro benefits are about to end. Reclaim your benefits and enjoy seamless experience.");
+    playNotificationSound();
+    return undefined;
+  }, [active, membershipLeft, toast]);
   const reasons = effectiveIsWorker
     ? [
         {
@@ -186,17 +197,6 @@ export default function Subscription() {
           <Badge tone="outline">Free account</Badge>
         )}
       </div>
-
-      {active && membershipLeft <= MEMBERSHIP_EXPIRY_WARNING_DAYS ? (
-        <div className="sub-card" style={{ marginBottom: 24, borderColor: "var(--yellow)" }}>
-          <p style={{ fontSize: 14, fontWeight: 700 }}>
-            ⏳ Your Pro benefits are about to end. Reclaim your benefits and enjoy seamless experience.
-          </p>
-          <p className="tiny muted" style={{ marginTop: 6 }}>
-            Your EasyHome Pro membership expires in {membershipLeft} day(s). Renew before it ends to keep your benefits.
-          </p>
-        </div>
-      ) : null}
 
       {active ? (
         <div className="sub-card" style={{ marginBottom: 24 }}>

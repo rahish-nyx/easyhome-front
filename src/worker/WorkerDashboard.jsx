@@ -62,6 +62,7 @@ import {
   timeAgo,
   toDate,
 } from "../lib/format";
+import { playNotificationSound } from "../lib/sound";
 import { PLANS, SERVICE_META, TRACKING_PHASES } from "../lib/constants";
 import { planPriceWithPromo, workerFeePct } from "../lib/plans";
 import { usePageMeta } from "../lib/usePageMeta";
@@ -1047,6 +1048,16 @@ function MembershipTab({ worker, settings }) {
     const timer = window.setInterval(() => setMembershipTick((tick) => tick + 1), 1000);
     return () => window.clearInterval(timer);
   }, []);
+  useEffect(() => {
+    if (!membershipWarning) return undefined;
+    const today = new Date().toDateString();
+    const lastNotified = window.localStorage.getItem("easyhome:membership-expiry-notified");
+    if (lastNotified === today) return undefined;
+    window.localStorage.setItem("easyhome:membership-expiry-notified", today);
+    toast.info("Your Pro benefits are about to end. Reclaim your benefits and enjoy seamless experience.");
+    playNotificationSound();
+    return undefined;
+  }, [membershipWarning, toast]);
 
   const onPaid = async () => {
     await Promise.all([refreshProfile(), refreshClaims()]);
@@ -1082,16 +1093,6 @@ function MembershipTab({ worker, settings }) {
         </div>
         {isPremium ? <span className="wk-badge wk-badge--green">Membership active</span> : null}
       </div>
-      {membershipWarning ? (
-        <div className="wk-membership-card" style={{ marginBottom: 16 }}>
-          <p style={{ fontSize: 14, fontWeight: 700 }}>
-            ⏳ Your Pro benefits are about to end. Reclaim your benefits and enjoy seamless experience.
-          </p>
-          <p className="tiny muted" style={{ marginTop: 6 }}>
-            Your EasyHome Pro membership expires in {membershipLeft} day(s).
-          </p>
-        </div>
-      ) : null}
       <section className="wk-membership-card">
         <div>
           <p className="wk-eyebrow">{isPremium ? "Your plan" : "Professional membership"}</p>
