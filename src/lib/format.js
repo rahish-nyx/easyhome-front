@@ -81,6 +81,29 @@ export function isActiveUntil(value) {
   return Boolean(date && date.getTime() > Date.now());
 }
 
+// Days of Pro membership coverage a plan buys (monthly / quarterly / yearly).
+export function planDurationDays(plan) {
+  const months = { monthly: 1, quarterly: 3, yearly: 12 }[plan] || 1;
+  return months * 30;
+}
+
+// Live countdown to the membership expiry timestamp.
+export function countdownTo(value) {
+  const date = toDate(value);
+  const totalSeconds = date ? Math.max(0, Math.ceil((date.getTime() - Date.now()) / 1000)) : 0;
+  return {
+    ended: !date || date.getTime() <= Date.now(),
+    totalSeconds,
+    days: Math.floor(totalSeconds / 86400),
+    hours: Math.floor((totalSeconds % 86400) / 3600),
+    minutes: Math.floor((totalSeconds % 3600) / 60),
+    seconds: Math.floor(totalSeconds % 60),
+  };
+}
+
+// Membership benefits are flagged "about to end" inside this window before expiry.
+export const MEMBERSHIP_EXPIRY_WARNING_DAYS = 7;
+
 export function planLabel(plan) {
   if (plan === "quarterly") return "Quarterly Pro";
   if (plan === "yearly") return "Yearly Pro";

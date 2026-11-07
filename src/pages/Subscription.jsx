@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   BadgeCheck,
@@ -22,10 +22,12 @@ import { useAuth } from "../context/AuthContext";
 import { useCatalogue } from "../context/CatalogueContext";
 import { useToast } from "../context/ToastContext";
 import {
+  countdownTo,
   daysLeft,
   formatDate,
   inr,
   isActiveUntil,
+  MEMBERSHIP_EXPIRY_WARNING_DAYS,
   planLabel,
 } from "../lib/format";
 import { PLANS } from "../lib/constants";
@@ -73,6 +75,15 @@ export default function Subscription() {
     ? settings.workerBenefits || []
     : settings.customerBenefits || [];
   const active = isActiveUntil(premiumUntil || profile?.subscription?.endAt);
+  const membershipExpiry = premiumUntil || profile?.subscription?.endAt;
+  const membershipLeft = daysLeft(membershipExpiry);
+  const membershipCountdown = countdownTo(membershipExpiry);
+  const [membershipTick, setMembershipTick] = useState(0);
+  useEffect(() => {
+    if (!active) return undefined;
+    const timer = window.setInterval(() => setMembershipTick((tick) => tick + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [active]);
   const reasons = effectiveIsWorker
     ? [
         {
@@ -176,6 +187,17 @@ export default function Subscription() {
         )}
       </div>
 
+      {active && membershipLeft <= MEMBERSHIP_EXPIRY_WARNING_DAYS ? (
+        <div className="sub-card" style={{ marginBottom: 24, borderColor: "var(--yellow)" }}>
+          <p style={{ fontSize: 14, fontWeight: 700 }}>
+            ⏳ Your Pro benefits are about to end. Reclaim your benefits and enjoy seamless experience.
+          </p>
+          <p className="tiny muted" style={{ marginTop: 6 }}>
+            Your EasyHome Pro membership expires in {membershipLeft} day(s). Renew before it ends to keep your benefits.
+          </p>
+        </div>
+      ) : null}
+
       {active ? (
         <div className="sub-card" style={{ marginBottom: 24 }}>
           <div className="row row--between row--wrap" style={{ gap: 12 }}>
@@ -194,9 +216,33 @@ export default function Subscription() {
               className="badge"
               style={{ background: "var(--yellow)", color: "var(--ink)", alignSelf: "flex-start" }}
             >
-              <CheckCircle2 size={12} /> {daysLeft(premiumUntil || profile?.subscription?.endAt)} days left
+              <CheckCircle2 size={12} /> {membershipLeft} days left
             </span>
           </div>
+          {!membershipCountdown.ended ? (
+            <div className="row row--between row--wrap" style={{ gap: 12, marginTop: 14 }}>
+              <div>
+                <p className="eyebrow" style={{ color: "rgba(255,255,255,.55)" }}>
+                  Time remaining
+                </p>
+                <h3 style={{ fontSize: 26, fontWeight: 800, margin: "4px 0 0" }}>
+                  {String(membershipCountdown.days).padStart(2, "0")}
+                  <span style={{ fontSize: 18, fontWeight: 700 }}>:</span>
+                  {String(membershipCountdown.hours).padStart(2, "0")}
+                  <span style={{ fontSize: 18, fontWeight: 700 }}>:</span>
+                  {String(membershipCountdown.minutes).padStart(2, "0")}
+                  <span style={{ fontSize: 18, fontWeight: 700 }}>:</span>
+                  {String(membershipCountdown.seconds).padStart(2, "0")}
+                </h3>
+              </div>
+              <span
+                className="badge"
+                style={{ background: "var(--yellow)", color: "var(--ink)", alignSelf: "flex-start" }}
+              >
+                <Timer size={12} /> {membershipCountdown.days}d {membershipCountdown.hours}h {membershipCountdown.minutes}m left
+              </span>
+            </div>
+          ) : null}
           <div className="sub-card__meta">
             <div>
               <strong>{inr(profile?.subscription?.amount || monthly)}</strong>

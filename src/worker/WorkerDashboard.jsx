@@ -54,8 +54,11 @@ import { api } from "../lib/api";
 import { distanceKm, mapsUrl } from "../lib/geo";
 import {
   cx,
+  countdownTo,
+  daysLeft,
   formatDateTime,
   inr,
+  MEMBERSHIP_EXPIRY_WARNING_DAYS,
   timeAgo,
   toDate,
 } from "../lib/format";
@@ -1035,6 +1038,15 @@ function MembershipTab({ worker, settings }) {
     };
   });
   const selected = plans.find((item) => item.id === plan) || plans[0];
+  const membershipExpiry = worker?.premiumUntil || null;
+  const membershipLeft = daysLeft(membershipExpiry);
+  const membershipCountdown = countdownTo(membershipExpiry);
+  const membershipWarning = Boolean(isPremium) && membershipLeft <= MEMBERSHIP_EXPIRY_WARNING_DAYS;
+  const [membershipTick, setMembershipTick] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setMembershipTick((tick) => tick + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const onPaid = async () => {
     await Promise.all([refreshProfile(), refreshClaims()]);
@@ -1070,15 +1082,39 @@ function MembershipTab({ worker, settings }) {
         </div>
         {isPremium ? <span className="wk-badge wk-badge--green">Membership active</span> : null}
       </div>
+      {membershipWarning ? (
+        <div className="wk-membership-card" style={{ marginBottom: 16 }}>
+          <p style={{ fontSize: 14, fontWeight: 700 }}>
+            ⏳ Your Pro benefits are about to end. Reclaim your benefits and enjoy seamless experience.
+          </p>
+          <p className="tiny muted" style={{ marginTop: 6 }}>
+            Your EasyHome Pro membership expires in {membershipLeft} day(s).
+          </p>
+        </div>
+      ) : null}
       <section className="wk-membership-card">
         <div>
           <p className="wk-eyebrow">{isPremium ? "Your plan" : "Professional membership"}</p>
           <h2>{isPremium ? "You’re on EasyHome Pro" : "Keep more of every job"}</h2>
           <p>
             {isPremium
-              ? `Your current membership is active until ${formatDateTime(worker.premiumUntil)}.`
+              ? `Your current membership is active until ${formatDateTime(worker.premiumUntil)} — ${membershipLeft} days of Pro left.`
               : "Pro includes a lower 7% commission rate, priority job placement and a verified Pro badge."}
           </p>
+          {isPremium ? (
+            <div className="row row--between row--wrap" style={{ gap: 12, marginTop: 12 }}>
+              <div>
+                <p className="wk-eyebrow">Time remaining</p>
+                <h3 style={{ fontSize: 24, fontWeight: 800 }}>
+                  {String(membershipCountdown.days).padStart(2, "0")}:
+                  {String(membershipCountdown.hours).padStart(2, "0")}:
+                  {String(membershipCountdown.minutes).padStart(2, "0")}:
+                  {String(membershipCountdown.seconds).padStart(2, "0")}
+                </h3>
+              </div>
+              <span className="wk-badge wk-badge--yellow">{membershipLeft} days left</span>
+            </div>
+          ) : null}
           <ul className="wk-benefits">
             {(settings.workerBenefits || []).map((benefit) => (
               <li className="wk-benefit" key={benefit}>
@@ -1098,10 +1134,9 @@ function MembershipTab({ worker, settings }) {
             </button>
           ) : null}
         </div>
-        {!isPremium ? (
-          <div className="wk-membership-card__checkout">
-            <fieldset className="wk-plan-picker">
-              <legend>Choose a plan</legend>
+        <div className="wk-membership-card__checkout">
+          <fieldset className="wk-plan-picker">
+            <legend>Choose a plan</legend>
               <div className="wk-plan-picker__grid">
                 {plans.map((item) => (
                   <button
@@ -1132,6 +1167,7 @@ function MembershipTab({ worker, settings }) {
                 ))}
               </div>
             </fieldset>
+          {!isPremium ? (
             <RazorpayPayment
               amount={selected.amount}
               description={`EasyHome Pro · ${selected.label}`}
@@ -1141,8 +1177,8 @@ function MembershipTab({ worker, settings }) {
               onSuccess={onPaid}
               buttonLabel={`Pay ${inr(selected.amount)} & activate`}
             />
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </section>
     </>
   );
