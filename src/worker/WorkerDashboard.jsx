@@ -1095,16 +1095,14 @@ function MembershipTab({ worker, settings }) {
         </div>
         {isPremium ? <span className="wk-badge wk-badge--green">Membership active</span> : null}
       </div>
-      <section className="wk-membership-card">
-        <div>
-          <p className="wk-eyebrow">{isPremium ? "Current plan" : "Professional membership"}</p>
-          <h2 style={{ fontSize: 26, fontWeight: 800, margin: "6px 0 8px" }}>{isPremium ? planLabel(selected.id) : "Keep more of every job"}</h2>
-          <p style={{ fontSize: 13, lineHeight: 1.55, margin: 0 }}>
-            {isPremium
-              ? `Your EasyHome Pro membership is active until ${formatDateTime(worker.premiumUntil)} — ${membershipLeft} days of Pro benefits remaining.`
-              : "Pro includes a lower 7% commission rate, priority job placement and a verified Pro badge."}
-          </p>
-          {isPremium ? (
+      {isPremium ? (
+        <section className="wk-panel-card" style={{ marginTop: 16 }}>
+          <div>
+            <p className="wk-eyebrow">Current plan</p>
+            <h2 style={{ fontSize: 26, fontWeight: 800, margin: "6px 0 8px" }}>{planLabel(selected.id)}</h2>
+            <p style={{ fontSize: 13, lineHeight: 1.55, margin: 0 }}>
+              Your EasyHome Pro membership is active until {formatDateTime(worker.premiumUntil)} — {membershipLeft} days of Pro benefits remaining.
+            </p>
             <div className="row row--between row--wrap" style={{ gap: 12, marginTop: 16, alignItems: "flex-start" }}>
               <div>
                 <p className="wk-eyebrow">Time remaining</p>
@@ -1117,8 +1115,6 @@ function MembershipTab({ worker, settings }) {
               </div>
               <span className="wk-badge wk-badge--yellow">{membershipLeft} days left</span>
             </div>
-          ) : null}
-          {isPremium ? (
             <div className="row row--between row--wrap" style={{ gap: 12, marginTop: 16 }}>
               <div>
                 <strong style={{ fontSize: 20, fontWeight: 800 }}>{inr(worker.subscription?.amount || selected.amount)}</strong>
@@ -1137,7 +1133,6 @@ function MembershipTab({ worker, settings }) {
                 <small>Commission</small>
               </div>
             </div>
-          ) : null}
           <ul className="wk-benefits">
             {(settings.workerBenefits || []).map((benefit) => (
               <li className="wk-benefit" key={benefit}>
@@ -1155,9 +1150,19 @@ function MembershipTab({ worker, settings }) {
             <button type="button" className="wk-chip-btn" style={{ marginTop: 16 }} onClick={shareMyProfile}>
               <Share2 size={14} /> Share my Pro profile
             </button>
-          ) : null}
-        </div>
-        <div className="wk-membership-card__checkout">
+            ) : null}
+          </div>
+        </section>
+      ) : (
+        <section className="wk-membership-card">
+          <div>
+            <p className="wk-eyebrow">Professional membership</p>
+            <h2 style={{ fontSize: 26, fontWeight: 800, margin: "6px 0 8px" }}>Keep more of every job</h2>
+            <p style={{ fontSize: 13, lineHeight: 1.55, margin: 0 }}>
+              Pro includes a lower 7% commission rate, priority job placement and a verified Pro badge.
+            </p>
+          </div>
+          <div className="wk-membership-card__checkout">
           <fieldset className="wk-plan-picker">
             <legend>Choose a plan</legend>
               <div className="wk-plan-picker__grid">
@@ -1199,10 +1204,59 @@ function MembershipTab({ worker, settings }) {
               orderBody={{ plan: selected.id }}
               onSuccess={onPaid}
               buttonLabel={`Pay ${inr(selected.amount)} & activate`}
+              />
+            ) : null}
+          </div>
+        </section>
+      )}
+
+      {isPremium ? (
+        <div className="wk-membership-card__checkout" style={{ marginTop: 16 }}>
+          <fieldset className="wk-plan-picker">
+            <legend>Choose a plan</legend>
+            <div className="wk-plan-picker__grid">
+              {plans.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`wk-plan-option${plan === item.id ? " is-active" : ""}`}
+                  aria-pressed={plan === item.id}
+                  onClick={() => setPlan(item.id)}
+                >
+                  {item.badge ? <span className="wk-plan-option__badge">{item.badge}</span> : null}
+                  <strong>{item.label}</strong>
+                  {item.promo ? (
+                    <>
+                      <span className="wk-plan-option__price--strike">{inr(item.baseAmount)}</span>
+                      <span className="wk-plan-option__price">{inr(item.amount)}</span>
+                      <span className="wk-plan-option__promo-badge">
+                        {item.promo.type === "percentage"
+                          ? `${item.promo.value}% off`
+                          : `Promo ${inr(item.amount)}`}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="wk-plan-option__price">{inr(item.amount)}</span>
+                  )}
+                  <small>{item.id === "monthly" ? "per month" : `${inr(item.perMonth)} / month`}</small>
+                  <span className="wk-plan-option__blurb">{item.blurb}</span>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          {!isPremium || worker?.subscription?.status !== "active" ? (
+            <RazorpayPayment
+              amount={selected.amount}
+              description={`EasyHome Pro · ${selected.label}`}
+              orderEndpoint="/payment/subscription/order"
+              verifyEndpoint="/payment/subscription/verify"
+              orderBody={{ plan: selected.id }}
+              onSuccess={onPaid}
+              buttonLabel={`Pay ${inr(selected.amount)} & activate`}
             />
           ) : null}
         </div>
-      </section>
+      ) : null}
     </>
   );
 }
