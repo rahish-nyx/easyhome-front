@@ -75,7 +75,7 @@ export default function Subscription() {
   const benefits = effectiveIsWorker
     ? settings.workerBenefits || []
     : settings.customerBenefits || [];
-  const active = isActiveUntil(premiumUntil || profile?.subscription?.endAt);
+  const active = Boolean(isAdmin) ? true : isActiveUntil(premiumUntil || profile?.subscription?.endAt);
   const membershipExpiry = premiumUntil || profile?.subscription?.endAt;
   const membershipLeft = daysLeft(membershipExpiry);
   const membershipCountdown = countdownTo(membershipExpiry);
