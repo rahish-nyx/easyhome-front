@@ -56,9 +56,11 @@ import {
   cx,
   countdownTo,
   daysLeft,
+  formatDate,
   formatDateTime,
   inr,
   MEMBERSHIP_EXPIRY_WARNING_DAYS,
+  planLabel,
   timeAgo,
   toDate,
 } from "../lib/format";
@@ -1095,8 +1097,8 @@ function MembershipTab({ worker, settings }) {
       </div>
       <section className="wk-membership-card">
         <div>
-          <p className="wk-eyebrow">{isPremium ? "Your plan" : "Professional membership"}</p>
-          <h2>{isPremium ? "You’re on EasyHome Pro" : "Keep more of every job"}</h2>
+          <p className="wk-eyebrow">{isPremium ? "Current plan" : "Professional membership"}</p>
+          <h2>{isPremium ? planLabel(selected.id) : "Keep more of every job"}</h2>
           <p>
             {isPremium
               ? `Your current membership is active until ${formatDateTime(worker.premiumUntil)} — ${membershipLeft} days of Pro left.`
@@ -1114,6 +1116,26 @@ function MembershipTab({ worker, settings }) {
                 </h3>
               </div>
               <span className="wk-badge wk-badge--yellow">{membershipLeft} days left</span>
+            </div>
+          ) : null}
+          {isPremium ? (
+            <div className="row row--between row--wrap" style={{ gap: 12, marginTop: 12 }}>
+              <div>
+                <strong>{inr(worker.subscription?.amount || selected.amount)}</strong>
+                <small>Paid amount</small>
+              </div>
+              <div>
+                <strong>{formatDate(worker.subscription?.startAt)}</strong>
+                <small>Started</small>
+              </div>
+              <div>
+                <strong>{formatDate(worker.subscription?.endAt || worker.premiumUntil)}</strong>
+                <small>Ends</small>
+              </div>
+              <div>
+                <strong>7%</strong>
+                <small>Commission</small>
+              </div>
             </div>
           ) : null}
           <ul className="wk-benefits">

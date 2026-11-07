@@ -268,19 +268,12 @@ export default function Subscription() {
           >
             <div>
               <p className="eyebrow" style={{ color: "rgba(255,255,255,.55)" }}>
-                Exclusive renewal reward
+                Accidental Damage Assistance
               </p>
-              <h3>3% off your next Pro purchase</h3>
+              <h3>Accidental Damage Assistance – Up To ₹500</h3>
               <p className="tiny muted" style={{ marginTop: 4 }}>
-                {Number(profile?.subscription?.renewalStreak || 0) > 0
-                  ? "Renew uninterrupted to keep the exclusive 3% continuous renewal reward on your next membership purchase."
-                  : "Complete your first renewal to unlock the exclusive 3% continuous renewal reward."}
+                Provide eligible Pro customers with accidental damage assistance of up to ₹500, subject to EasyHome's official eligibility conditions, verification, exclusions, and claim policy.
               </p>
-              {profile?.subscription?.endAt ? (
-                <p className="tiny muted" style={{ marginTop: 4 }}>
-                  Grace period until {formatDate(new Date(new Date(profile.subscription.endAt).getTime() + (settings.renewalGraceDays || 5) * 86400000))}
-                </p>
-              ) : null}
             </div>
             <span
               className="badge"
@@ -363,28 +356,26 @@ export default function Subscription() {
         </Card>
 
         <div className="stack">
-          {!active ? (
-            <Card className="card--pad">
-              <SectionHeader
-                eyebrow="Secure checkout"
-                title="Activate Pro instantly"
-                subtitle={`${selected.label} · ${selected.months} month${selected.months > 1 ? "s" : ""} · ${inr(selected.amount)}`}
-              />
-              <RazorpayPayment
-                amount={selected.amount}
-                description={`EasyHome Pro · ${selected.label}`}
-                orderEndpoint="/payment/subscription/order"
-                verifyEndpoint="/payment/subscription/verify"
-                orderBody={{ plan: selected.id }}
-                onSuccess={onPaid}
-                buttonLabel={`Pay ${inr(selected.amount)} & activate`}
-              />
-              <p className="tiny muted" style={{ marginTop: 10 }}>
-                No auto-renewal. Your plan simply ends on the date shown. We never charge your
-                card automatically.
-              </p>
-            </Card>
-          ) : null}
+          <Card className="card--pad">
+            <SectionHeader
+              eyebrow="Secure checkout"
+              title="Activate Pro instantly"
+              subtitle={`${selected.label} · ${selected.months} month${selected.months > 1 ? "s" : ""} · ${inr(selected.amount)}`}
+            />
+            <RazorpayPayment
+              amount={selected.amount}
+              description={`EasyHome Pro · ${selected.label}`}
+              orderEndpoint="/payment/subscription/order"
+              verifyEndpoint="/payment/subscription/verify"
+              orderBody={{ plan: selected.id }}
+              onSuccess={onPaid}
+              buttonLabel={`Pay ${inr(selected.amount)} & activate`}
+            />
+            <p className="tiny muted" style={{ marginTop: 10 }}>
+              No auto-renewal. Your plan simply ends on the date shown. We never charge your
+              card automatically.
+            </p>
+          </Card>
 
           <Card className="card--pad">
             <h3 style={{ fontSize: 15, marginBottom: 10 }}>Why members stay</h3>
