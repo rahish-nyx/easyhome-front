@@ -1167,7 +1167,7 @@ function MembershipTab({ worker, settings }) {
                 ))}
               </div>
             </fieldset>
-          {!isPremium ? (
+          {!isPremium || worker?.subscription?.status !== "active" ? (
             <RazorpayPayment
               amount={selected.amount}
               description={`EasyHome Pro · ${selected.label}`}
