@@ -1098,17 +1098,17 @@ function MembershipTab({ worker, settings }) {
       <section className="wk-membership-card">
         <div>
           <p className="wk-eyebrow">{isPremium ? "Current plan" : "Professional membership"}</p>
-          <h2>{isPremium ? planLabel(selected.id) : "Keep more of every job"}</h2>
-          <p>
+          <h2 style={{ fontSize: 26, fontWeight: 800, margin: "6px 0 8px" }}>{isPremium ? planLabel(selected.id) : "Keep more of every job"}</h2>
+          <p style={{ fontSize: 13, lineHeight: 1.55, margin: 0 }}>
             {isPremium
-              ? `Your current membership is active until ${formatDateTime(worker.premiumUntil)} — ${membershipLeft} days of Pro left.`
+              ? `Your EasyHome Pro membership is active until ${formatDateTime(worker.premiumUntil)} — ${membershipLeft} days of Pro benefits remaining.`
               : "Pro includes a lower 7% commission rate, priority job placement and a verified Pro badge."}
           </p>
           {isPremium ? (
-            <div className="row row--between row--wrap" style={{ gap: 12, marginTop: 12 }}>
+            <div className="row row--between row--wrap" style={{ gap: 12, marginTop: 16, alignItems: "flex-start" }}>
               <div>
                 <p className="wk-eyebrow">Time remaining</p>
-                <h3 style={{ fontSize: 24, fontWeight: 800 }}>
+                <h3 style={{ fontSize: 22, fontWeight: 800 }}>
                   {String(membershipCountdown.days).padStart(2, "0")}:
                   {String(membershipCountdown.hours).padStart(2, "0")}:
                   {String(membershipCountdown.minutes).padStart(2, "0")}:
@@ -1119,21 +1119,21 @@ function MembershipTab({ worker, settings }) {
             </div>
           ) : null}
           {isPremium ? (
-            <div className="row row--between row--wrap" style={{ gap: 12, marginTop: 12 }}>
+            <div className="row row--between row--wrap" style={{ gap: 12, marginTop: 16 }}>
               <div>
-                <strong>{inr(worker.subscription?.amount || selected.amount)}</strong>
+                <strong style={{ fontSize: 20, fontWeight: 800 }}>{inr(worker.subscription?.amount || selected.amount)}</strong>
                 <small>Paid amount</small>
               </div>
               <div>
-                <strong>{formatDate(worker.subscription?.startAt)}</strong>
+                <strong style={{ fontSize: 20, fontWeight: 800 }}>{formatDate(worker.subscription?.startAt)}</strong>
                 <small>Started</small>
               </div>
               <div>
-                <strong>{formatDate(worker.subscription?.endAt || worker.premiumUntil)}</strong>
+                <strong style={{ fontSize: 20, fontWeight: 800 }}>{formatDate(worker.subscription?.endAt || worker.premiumUntil)}</strong>
                 <small>Ends</small>
               </div>
               <div>
-                <strong>7%</strong>
+                <strong style={{ fontSize: 20, fontWeight: 800 }}>7%</strong>
                 <small>Commission</small>
               </div>
             </div>
