@@ -44,12 +44,17 @@ export default function Subscription() {
     "Accidental Damage Assistance – Up To ₹500, Active Priority Worker Matching, No 10% Urgent-Job Extra Charge, Exclusive EasyHome Pro Badge, Extended 15-Day Service Work Warranty, Monthly Pro Promo Codes (Up To 20% Off) and Priority Re-Assignment & VIP Dispatch with EasyHome Pro.",
   );
 
-  const { profile, isWorker, premiumUntil, refreshProfile } = useAuth();
+  const { profile, isWorker, isAdmin, premiumUntil, refreshProfile } = useAuth();
   const { settings } = useCatalogue();
   const toast = useToast();
   const [plan, setPlan] = useState("monthly");
 
-  const role = isWorker ? "worker" : "customer";
+  // Customer membership page: the EasyHome god-mode admin manages both the
+  // customer and worker memberships from their own consoles, so on the customer
+  // interface an admin always sees the customer plan & benefits — never the
+  // worker membership view.
+  const effectiveIsWorker = Boolean(isAdmin) ? false : Boolean(isWorker);
+  const role = effectiveIsWorker ? "worker" : "customer";
   const prices = rolePlans(settings, role);
   const monthly = prices.monthly;
   const plans = PLANS.map((item) => {
@@ -64,11 +69,11 @@ export default function Subscription() {
     };
   });
   const selected = plans.find((item) => item.id === plan) || plans[0];
-  const benefits = isWorker
+  const benefits = effectiveIsWorker
     ? settings.workerBenefits || []
     : settings.customerBenefits || [];
   const active = isActiveUntil(premiumUntil || profile?.subscription?.endAt);
-  const reasons = isWorker
+  const reasons = effectiveIsWorker
     ? [
         {
           icon: ShieldCheck,
@@ -153,10 +158,10 @@ export default function Subscription() {
     <div className="page">
       <div className="page-head">
         <div>
-          <p className="eyebrow">{isWorker ? "EasyHome Pro · workers" : "EasyHome Pro"}</p>
+          <p className="eyebrow">{effectiveIsWorker ? "EasyHome Pro · workers" : "EasyHome Pro"}</p>
           <h1>{active ? "Your membership" : "A little more peace of mind."}</h1>
           <p>
-            {isWorker
+            {effectiveIsWorker
               ? "Zero dues penalty, lower 7% commission rate and priority access to jobs."
               : "Accidental damage assistance, priority matching, no urgent-job extra charge and exclusive Pro benefits."}
           </p>
@@ -180,7 +185,7 @@ export default function Subscription() {
               </p>
               <h3>{planLabel(profile?.subscription?.plan)}</h3>
               <p>
-                {isWorker
+                {effectiveIsWorker
                   ? "You keep a larger share of every job — the discounted 7% Pro commission rate — while Pro is active."
                   : "Accidental damage assistance, priority worker matching, no urgent-job extra charge, exclusive Pro badge and VIP dispatch are live on your account."}
               </p>
@@ -206,8 +211,8 @@ export default function Subscription() {
               <small>Ends</small>
             </div>
             <div>
-              <strong>{isWorker ? "7%" : "Priority"}</strong>
-              <small>{isWorker ? "Commission" : "Support"}</small>
+              <strong>{effectiveIsWorker ? "7%" : "Priority"}</strong>
+              <small>{effectiveIsWorker ? "Commission" : "Support"}</small>
             </div>
           </div>
 
