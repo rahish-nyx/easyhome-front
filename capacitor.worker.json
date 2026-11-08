@@ -1,0 +1,24 @@
+{
+  "appId": "com.easyhome.worker",
+  "appName": "EasyHome Pro Worker",
+  "webDir": "dist",
+  "android": {
+    "path": "android-worker"
+  },
+  "server": {
+    "cleartext": true,
+    "allowNavigation": [
+      "easyhome-front.vercel.app",
+      "easyhome-back.vercel.app",
+      "accounts.google.com",
+      "*.google.com"
+    ]
+  },
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": false,
+      "style": "LIGHT",
+      "backgroundColor": "#ffffff"
+    }
+  }
+}

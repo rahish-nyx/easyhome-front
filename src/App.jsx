@@ -133,6 +133,19 @@ function NativeBackButtonHandler() {
   return null;
 }
 
+function WorkerAppLauncher() {
+  const { pathname } = useLocation();
+  const isWorkerMode =
+    typeof window !== "undefined" &&
+    (import.meta.env.VITE_APP_MODE === "worker" ||
+      document.documentElement.classList.contains("app-worker"));
+
+  if (isWorkerMode && pathname === "/") {
+    return <Navigate to="/worker" replace />;
+  }
+  return null;
+}
+
 function Protect({ children }) {
   return <ProtectedRoute>{children}</ProtectedRoute>;
 }
@@ -154,6 +167,7 @@ export default function App() {
                   <ReferralCapture />
                   <StatusBarThemeHandler />
                   <NativeBackButtonHandler />
+                  <WorkerAppLauncher />
                   <Routes>
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/login" element={<Navigate to="/auth" replace />} />

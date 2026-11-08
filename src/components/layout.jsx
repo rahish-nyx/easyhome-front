@@ -32,7 +32,7 @@ import {
   WifiOff,
   X,
 } from "lucide-react";
-import logo from "../assets/logo.png";
+import customerLogo from "../assets/customer.png";
 import { useAuth } from "../context/AuthContext";
 import { useLocation as useCity } from "../context/LocationContext";
 import { useCatalogue } from "../context/CatalogueContext";
@@ -50,7 +50,7 @@ export function Logo({ compact = false, dark = false }) {
   return (
     <Link to="/" className={cx("brand", dark && "brand--dark")} aria-label="EasyHome home">
       <span className="brand__badge">
-        <img src={logo} alt="" width="38" height="38" />
+        <img src={customerLogo} alt="" width="38" height="38" />
       </span>
       {compact ? null : (
         <span className="brand__name" style={dark ? { color: "#fff" } : undefined}>

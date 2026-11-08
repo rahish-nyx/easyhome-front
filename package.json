@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:customer": "vite build && npx cap copy android",
+    "build:worker": "vite build && node -e \"require('fs').cpSync('dist', 'android-worker/app/src/main/assets/public', {recursive: true})\"",
     "lint": "eslint .",
     "preview": "vite preview"
   },
