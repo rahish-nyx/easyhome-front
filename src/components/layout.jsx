@@ -33,6 +33,7 @@ import {
   X,
 } from "lucide-react";
 import customerLogo from "../assets/customer.png";
+import workerLogo from "../assets/worker.png";
 import { useAuth } from "../context/AuthContext";
 import { useLocation as useCity } from "../context/LocationContext";
 import { useCatalogue } from "../context/CatalogueContext";
@@ -46,11 +47,18 @@ import { activeZones, cityZone, zoneForArea } from "../lib/zones";
 
 /* --------------------------------- Brand --------------------------------- */
 
-export function Logo({ compact = false, dark = false }) {
+export function Logo({ compact = false, dark = false, src }) {
+  const workerContext =
+    typeof window !== "undefined" &&
+    (import.meta.env.VITE_APP_MODE === "worker" ||
+      document.documentElement.classList.contains("app-worker") ||
+      (typeof window.location !== "undefined" &&
+        String(window.location.pathname || "").startsWith("/worker")));
+  const brandLogo = src || (workerContext ? workerLogo : customerLogo);
   return (
     <Link to="/" className={cx("brand", dark && "brand--dark")} aria-label="EasyHome home">
       <span className="brand__badge">
-        <img src={customerLogo} alt="" width="38" height="38" />
+        <img src={brandLogo} alt="" width="38" height="38" />
       </span>
       {compact ? null : (
         <span className="brand__name" style={dark ? { color: "#fff" } : undefined}>

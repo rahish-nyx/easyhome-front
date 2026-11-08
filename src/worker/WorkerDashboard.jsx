@@ -79,6 +79,7 @@ import {
   Textarea,
 } from "../components/ui";
 import { Logo } from "../components/layout";
+import workerLogo from "../assets/worker.png";
 import RazorpayPayment from "../components/RazorpayPayment";
 import { compressImage } from "../lib/image";
 import { mediaUrl } from "../lib/media";
@@ -1624,6 +1625,11 @@ function WorkerFooter() {
     <footer className="wk-footer wk-footer--compact desktop-only hide-on-mobile">
       <div className="wk-footer__main">
         <div className="wk-footer__brand">
+          <img
+            src={workerLogo}
+            alt="EasyHome Pro"
+            style={{ width: 46, height: 46, borderRadius: 12, objectFit: "contain", display: "block" }}
+          />
           <div className="wk-footer__logo">
             Easy<span>Home</span>
             <em>PRO</em>

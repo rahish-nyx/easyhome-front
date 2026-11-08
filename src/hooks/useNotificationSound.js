@@ -55,14 +55,24 @@ export function useNotificationSound(items, { loading = false, userId = "", enab
                 })
                 .catch(() => {
                   try {
-                    new Notification(title, { body, icon, tag: `easyhome-notif-${item.id || Date.now()}` });
+                    new Notification(title, {
+                      body,
+                      icon,
+                      tag: `easyhome-notif-${item.id || Date.now()}`,
+                      vibrate: [200, 100, 200, 100, 200],
+                    });
                   } catch (e) {
                     /* system notification blocked */
                   }
                 });
             } else {
               try {
-                new Notification(title, { body, icon, tag: `easyhome-notif-${item.id || Date.now()}` });
+                new Notification(title, {
+                  body,
+                  icon,
+                  tag: `easyhome-notif-${item.id || Date.now()}`,
+                  vibrate: [200, 100, 200, 100, 200],
+                });
               } catch (e) {
                 /* system notification blocked */
               }

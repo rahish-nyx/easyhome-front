@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
 import {
   ArrowLeft,
   ArrowRight,
@@ -30,6 +31,7 @@ import { usePageMeta } from "../lib/usePageMeta";
 import { Button, Field, Input, PageLoader, Select } from "../components/ui";
 import { CityModal } from "../components/layout";
 import logo from "../assets/logo.png";
+import workerLogo from "../assets/worker.png";
 
 const AUTH_ERRORS = {
   AUTH_INVALID: "Incorrect email or password.",
@@ -63,7 +65,11 @@ export default function Auth() {
   const next = nextParam.startsWith("/") ? nextParam : "";
   const rawRole = params.get("role");
   const roleParam = rawRole === "worker" ? "worker" : rawRole === "customer" ? "customer" : "";
-  const role = roleParam || "customer";
+  const isWorkerApp =
+    import.meta.env.VITE_APP_MODE === "worker" ||
+    (typeof document !== "undefined" && document.documentElement.classList.contains("app-worker"));
+  const isCustomerApp = Boolean(Capacitor?.isNativePlatform?.()) && !isWorkerApp;
+  const role = isWorkerApp ? "worker" : isCustomerApp ? "customer" : roleParam || "customer";
   const verifyToken = params.get("verify") || "";
   const resetToken = params.get("reset") || "";
   const requestedMode = resetToken ? "new-password" : params.get("mode");
@@ -420,6 +426,10 @@ export default function Auth() {
   if (loading) return <PageLoader label="Preparing sign in…" />;
 
   if (user && !justSignedUp && !resetToken) {
+    // Worker app context: an already signed-in professional always lands on the worker dashboard.
+    if (isWorkerApp && profile?.role === "worker") {
+      return <Navigate to="/worker" replace />;
+    }
     return (
       <AuthShell role={profile?.role === "worker" ? "worker" : role}>
         <div className="auth-card">
@@ -534,7 +544,9 @@ export default function Auth() {
     );
   }
 
-  if (!roleParam) {
+  const showRoleSelection = !isWorkerApp && !isCustomerApp && !roleParam;
+
+  if (showRoleSelection) {
     return (
       <AuthShell>
         <RoleSelectionScreen onPick={pickRole} next={next} />
@@ -1044,7 +1056,7 @@ function AuthShell({ children, role = "customer" }) {
       <aside className="auth-brand">
         <Link to="/" className="auth-brand__logo">
           <span>
-            <img src={logo} alt="" />
+            <img src={worker ? workerLogo : logo} alt="" />
           </span>
           EasyHome
         </Link>
