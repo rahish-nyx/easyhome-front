@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">EasyHome</string>
-    <string name="title_activity_main">EasyHome</string>
-    <string name="package_name">com.easyhome.app</string>
-    <string name="custom_url_scheme">com.easyhome.app</string>
+    <string name="app_name">EasyHome Customer</string>
+    <string name="title_activity_main">EasyHome Customer</string>
+    <string name="package_name">com.easyhome.customer</string>
+    <string name="custom_url_scheme">com.easyhome.customer</string>
 </resources>

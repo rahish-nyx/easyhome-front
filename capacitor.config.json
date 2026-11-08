@@ -1,6 +1,6 @@
 {
-  "appId": "com.easyhome.app",
-  "appName": "EasyHome",
+  "appId": "com.easyhome.customer",
+  "appName": "EasyHome Customer",
   "webDir": "dist",
   "server": {
     "cleartext": true,

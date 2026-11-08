@@ -1,0 +1,22 @@
+{
+  "appId": "com.easyhome.worker",
+  "appName": "EasyHome Pro Worker",
+  "webDir": "../../dist",
+  "server": {
+    "url": "https://easyhome-front.vercel.app/worker",
+    "cleartext": true,
+    "allowNavigation": [
+      "easyhome-front.vercel.app",
+      "easyhome-back.vercel.app",
+      "accounts.google.com",
+      "*.google.com"
+    ]
+  },
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": false,
+      "style": "LIGHT",
+      "backgroundColor": "#ffffff"
+    }
+  }
+}

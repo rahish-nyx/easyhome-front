@@ -1,4 +1,4 @@
-package com.easyhome.app;
+package com.easyhome.customer.app;
 
 import android.graphics.Color;
 import android.os.Bundle;
