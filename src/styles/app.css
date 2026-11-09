@@ -5484,6 +5484,32 @@ ol {
   font-weight: 600;
 }
 
+/* Pull-to-refresh spinner */
+.pull-refresh {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  display: flex;
+  justify-content: center;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
+  pointer-events: none;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pull-refresh__icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(10, 10, 10, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--blue, #2563eb);
+}
+
 .offline-page {
   min-height: 80dvh;
   display: grid;

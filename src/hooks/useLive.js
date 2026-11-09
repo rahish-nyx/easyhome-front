@@ -1,5 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
+
+/**
+ * Real-time booking events bridged from the Socket.io server. The backend
+ * emits `newBooking`, `jobAccepted`, `bookingStatusUpdate`, `updateWorkerDashboard`
+ * and `updateCustomerDashboard`; we simply refetch the active query.
+ */
+const REALTIME_EVENTS = [
+  "easyhome:newBooking",
+  "easyhome:jobAccepted",
+  "easyhome:bookingStatusUpdate",
+  "easyhome:updateWorkerDashboard",
+  "easyhome:updateCustomerDashboard",
+];
 
 /**
  * Cached API polling keeps every dashboard in sync without open sockets.
@@ -34,6 +47,7 @@ export function useLiveQuery(queryRef) {
   }));
   const inFlight = useRef(false);
   const stoppedOn404 = useRef(false);
+  const refetchRef = useRef(null);
 
   useEffect(() => {
     if (!queryRef?.path) {
@@ -75,6 +89,16 @@ export function useLiveQuery(queryRef) {
     };
 
     load();
+    refetchRef.current = load;
+
+    // Real-time sync: socket events emitted by the backend (booking created,
+    // job accepted, status changed) trigger an instant refetch of this query
+    // so dashboards update without waiting for the next poll.
+    const handleRealtime = () => {
+      load();
+    };
+    REALTIME_EVENTS.forEach((evt) => window.addEventListener(evt, handleRealtime));
+
     let timer = window.setInterval(
       load,
       typeof document !== "undefined" && document.visibilityState === "hidden"
@@ -100,10 +124,13 @@ export function useLiveQuery(queryRef) {
       active = false;
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisibility);
+      REALTIME_EVENTS.forEach((evt) => window.removeEventListener(evt, handleRealtime));
     };
   }, [queryRef?.key, queryRef?.path, queryRef?.select]);
 
-  return state;
+  const refetch = useCallback(() => refetchRef.current?.(), []);
+
+  return { ...state, refetch };
 }
 
 export function useLiveDoc(docRef) {

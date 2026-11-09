@@ -47,6 +47,7 @@ import { useCatalogue } from "../context/CatalogueContext";
 import { useToast } from "../context/ToastContext";
 import { useAsync } from "../hooks/useAsync";
 import { useLiveQuery } from "../hooks/useLive";
+import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useStandalone } from "../hooks/useDevice";
 import { Capacitor } from "@capacitor/core";
 import { qBookingsForWorker, qJobFeed } from "../lib/queries";
@@ -184,8 +185,12 @@ export default function WorkerDashboard() {
     () => (serviceKey && user?.uid ? qJobFeed(serviceKey, user.uid, 40) : null),
     [serviceKey, user?.uid],
   );
-  const { data: myBookings, loading: myLoading } = useLiveQuery(myQuery);
-  const { data: feed, loading: feedLoading } = useLiveQuery(feedQuery);
+  const myBookingsState = useLiveQuery(myQuery);
+  const feedState = useLiveQuery(feedQuery);
+  const myBookings = myBookingsState.data;
+  const myLoading = myBookingsState.loading;
+  const feed = feedState.data;
+  const feedLoading = feedState.loading;
 
   const previousFeedCount = useRef(0);
   useEffect(() => {
@@ -247,6 +252,17 @@ export default function WorkerDashboard() {
   const gps = useGpsBroadcast(activeJobs);
   const trackingAlert = useTrackingAlert(activeJobs);
   const supportPhone = settings?.supportPhone || "";
+
+  const handlePullRefresh = useCallback(async () => {
+    await Promise.allSettled([
+      earningsState.run(),
+      commissionsState.run(),
+      myBookingsState.refetch(),
+      feedState.refetch(),
+    ]);
+  }, [earningsState, commissionsState, myBookingsState, feedState]);
+
+  const { pullDistance, refreshing: isPullRefreshing } = usePullToRefresh(handlePullRefresh);
 
   const activeZoneIds = useMemo(
     () =>
@@ -547,6 +563,8 @@ export default function WorkerDashboard() {
     await Promise.allSettled([refreshMoney(), refreshProfile()]);
   };
 
+  const pullRefreshOffset = isPullRefreshing ? 70 : Math.max(0, pullDistance - 70);
+
   if (!worker) {
     return (
       <div className="worker-app">
@@ -557,6 +575,11 @@ export default function WorkerDashboard() {
 
   return (
     <div className="worker-app">
+      {(pullDistance > 0 || isPullRefreshing) ? (
+        <div className="pull-refresh" style={{ transform: `translateY(${pullRefreshOffset}px)` }}>
+          <Spinner size={26} />
+        </div>
+      ) : null}
       <header className="worker-top">
         <div className="worker-top__inner">
           <Logo />

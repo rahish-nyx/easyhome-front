@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -22,6 +22,7 @@ import { useCatalogue } from "../context/CatalogueContext";
 import { useLocation } from "../context/LocationContext";
 import { usePromo } from "../context/PromoContext";
 import { useLiveQuery } from "../hooks/useLive";
+import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { qUrgent } from "../lib/queries";
 import { api } from "../lib/api";
 import { usePageMeta } from "../lib/usePageMeta";
@@ -38,7 +39,7 @@ import {
   isFolderOnHome,
   servicesInFolder,
 } from "../lib/serviceGroups";
-import { SectionHeader } from "../components/ui";
+import { SectionHeader, Spinner } from "../components/ui";
 import {
   PromoCarousel,
   SearchBar,
@@ -97,7 +98,8 @@ export default function Home() {
     [city, point, zoneCheck.configured, zoneCheck.allowed],
   );
   const urgentQuery = useMemo(() => qUrgent(10), []);
-  const urgent = useLiveQuery(urgentQuery);
+  const urgentState = useLiveQuery(urgentQuery);
+  const urgent = urgentState.data;
   const [nearbyResult, setNearbyResult] = useState({
     key: "",
     workers: [],
@@ -112,6 +114,8 @@ export default function Home() {
       error: "",
     };
   });
+  const [topRatedReloadKey, setTopRatedReloadKey] = useState(0);
+  const loadNearbyRef = useRef(null);
   const nearbyLocationKey = location
     ? [
         location.name,
@@ -189,6 +193,7 @@ export default function Home() {
     };
 
     loadNearby();
+    loadNearbyRef.current = loadNearby;
     // A one-minute cadence keeps the nearby list current without turning every
     // open home page into a continuous stream of API requests.
     const timer = window.setInterval(loadNearby, 60_000);
@@ -240,9 +245,19 @@ export default function Home() {
     return () => {
       active = false;
     };
-  }, [authLoading, user]);
+  }, [authLoading, user, topRatedReloadKey]);
 
   const showingTopRated = !authLoading && !user;
+
+  const handlePullRefresh = useCallback(async () => {
+    await Promise.allSettled([
+      urgentState.refetch(),
+      loadNearbyRef.current?.(),
+      authLoading || user ? setTopRatedReloadKey((key) => key + 1) : undefined,
+    ]);
+  }, [authLoading, user, urgentState.refetch]);
+
+  const { pullDistance, refreshing: isPullRefreshing } = usePullToRefresh(handlePullRefresh);
 
   const nearbyWithDistance = useMemo(
     () =>
@@ -296,6 +311,15 @@ export default function Home() {
 
   return (
     <>
+      {(pullDistance > 0 || isPullRefreshing) ? (
+        <div
+          className="pull-refresh"
+          style={{ transform: `translateY(${isPullRefreshing || pullDistance > 0 ? Math.max(isPullRefreshing ? 70 : 0, pullDistance) - 70 : 0}px)` }}
+        >
+          <Spinner size={26} />
+        </div>
+      ) : null}
+
       <PromoCarousel promos={promos.filter((promo) => promo.placement !== "worker_dashboard")} />
 
       <div className="page" style={{ paddingTop: 0 }}>
