@@ -66,6 +66,7 @@ import {
   toDate,
 } from "../lib/format";
 import { playNotificationSound } from "../lib/sound";
+import { joinRealtime } from "../lib/socket";
 import { PLANS, SERVICE_META, TRACKING_PHASES } from "../lib/constants";
 import { planPriceWithPromo, workerFeePct } from "../lib/plans";
 import { usePageMeta } from "../lib/usePageMeta";
@@ -148,6 +149,11 @@ export default function WorkerDashboard() {
   const promos = Array.isArray(cataloguePromos) ? cataloguePromos : [];
   const zones = Array.isArray(catalogueZones) ? catalogueZones : [];
   const toast = useToast();
+
+  // Realtime room subscription: this device joins the worker pool + personal room.
+  useEffect(() => {
+    if (user?.uid) joinRealtime(user.uid, "worker");
+  }, [user?.uid]);
   const [params, setParams] = useSearchParams();
   const requestedTab = params.get("tab") || "home";
   const tab = TABS.some((item) => item.id === requestedTab) ? requestedTab : "home";

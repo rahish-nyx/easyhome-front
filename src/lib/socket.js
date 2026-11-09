@@ -47,3 +47,20 @@ export function closeSocket() {
     socket = null;
   }
 }
+
+/**
+ * Join the realtime rooms for the signed-in account (`user_<uid>`) and the
+ * worker pool (`workers`) so booking events reach this device instantly.
+ * Safe to call repeatedly — the server keeps room membership idempotent.
+ */
+export function joinRealtime(userId, role) {
+  const socket = getSocket();
+  if (!socket) return;
+  const join = (id, r) =>
+    socket.emit("join", { userId: id, role: r });
+  if (socket.connected) {
+    join(userId, role);
+    return;
+  }
+  socket.once("connect", () => join(userId, role));
+}

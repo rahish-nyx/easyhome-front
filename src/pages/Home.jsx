@@ -27,6 +27,7 @@ import { qUrgent } from "../lib/queries";
 import { api } from "../lib/api";
 import { usePageMeta } from "../lib/usePageMeta";
 import { inr, timeAgo } from "../lib/format";
+import { joinRealtime } from "../lib/socket";
 import {
   distanceKm,
   distanceLabel,
@@ -86,6 +87,12 @@ export default function Home() {
   const { services, folders, settings } = useCatalogue();
   const { promos } = usePromo();
   const { city, point, zoneCheck } = useLocation();
+
+  // Realtime room subscription: this device joins the customer room so booking
+  // lifecycle events reach the dashboard instantly.
+  useEffect(() => {
+    if (user?.uid) joinRealtime(user.uid, "customer");
+  }, [user?.uid]);
   const location = useMemo(
     () =>
       city &&
