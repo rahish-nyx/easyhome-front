@@ -142,10 +142,10 @@ export default function Home() {
 
   const localUrgent = useMemo(
     () =>
-      urgent.data.filter((job) =>
+      urgent.filter((job) =>
         jobInServiceArea(job, location, zoneCheck.zone),
       ),
-    [urgent.data, location, zoneCheck.zone],
+    [urgent, location, zoneCheck.zone],
   );
 
   useEffect(() => {

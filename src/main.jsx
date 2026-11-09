@@ -7,11 +7,21 @@ import "./styles/app.css";
 
 // Configure mobile APK native shell
 if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
-  document.documentElement.classList.add(
-    "is-native",
-    "is-mobile-app",
-    `platform-${Capacitor.getPlatform()}`,
-  );
+  const appMode =
+    import.meta.env?.VITE_APP_MODE ||
+    (document.documentElement.classList.contains("app-worker")
+      ? "worker"
+      : document.documentElement.classList.contains("app-customer")
+        ? "customer"
+        : "customer");
+  document.documentElement.classList.add("is-native", "is-mobile-app", `platform-${Capacitor.getPlatform()}`);
+  if (appMode === "worker") {
+    // Pro Worker APK: force the professional console context.
+    document.documentElement.classList.add("app-worker");
+  } else if (appMode === "customer") {
+    // Customer APK: force the customer context (hides worker login paths).
+    document.documentElement.classList.add("app-customer");
+  }
   try {
     StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
     StatusBar.setStyle({ style: Style.Light }).catch(() => {});
