@@ -1,6 +1,7 @@
 import { io } from "socket.io-client";
 
 const SOCKET_URL = String(import.meta.env.VITE_SOCKET_URL || "https://easyhome-back.vercel.app");
+const SOCKET_PATH = String(import.meta.env.VITE_SOCKET_PATH || "/socket.io");
 
 let socket = null;
 
@@ -12,7 +13,8 @@ let socket = null;
 export function getSocket() {
   if (!socket) {
     socket = io(SOCKET_URL, {
-      transports: ["websocket", "polling"],
+      path: SOCKET_PATH,
+      transports: ["websocket"],
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
