@@ -73,6 +73,24 @@ function ReferralCapture() {
   return null;
 }
 
+function NotificationClickHandler() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const onMessage = (event) => {
+      const data = event?.data;
+      if (!data || data.type !== "easyhome:notification-click") return;
+      const url = typeof data.url === "string" ? data.url : "/";
+      if (!url || !url.startsWith("/")) return;
+      navigate(url, { replace: true });
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [navigate]);
+
+  return null;
+}
+
 function StatusBarThemeHandler() {
   const location = useLocation();
   const pathname = location?.pathname || "";
@@ -165,6 +183,7 @@ export default function App() {
                 <LocationProvider>
                   <ScrollToTop />
                   <ReferralCapture />
+                  <NotificationClickHandler />
                   <StatusBarThemeHandler />
                   <NativeBackButtonHandler />
                   <WorkerAppLauncher />

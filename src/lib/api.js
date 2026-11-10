@@ -161,7 +161,7 @@ async function refreshAccessToken() {
   }
 }
 
-async function request(
+async function requestOnce(
   path,
   { method = "GET", body, form, timeout = 20000, retry = true } = {},
 ) {
@@ -223,6 +223,24 @@ async function request(
     );
   } finally {
     clearTimeout(timer);
+  }
+}
+
+const RETRYABLE_CODES = new Set(["NETWORK", "TIMEOUT", "FETCH_FAILED"]);
+
+/**
+ * Public API entry. Retries once on transient network/timeout failures for
+ * idempotent requests so flaky mobile connections do not surface as hard errors.
+ */
+export async function request(path, options = {}) {
+  const { retry = true, ...rest } = options;
+  if (!retry) return requestOnce(path, rest);
+  try {
+    return await requestOnce(path, { ...rest, retry });
+  } catch (error) {
+    const retryable = RETRYABLE_CODES.has(error?.code) && rest.method === "GET";
+    if (!retryable) throw error;
+    return requestOnce(path, { ...rest, retry: false });
   }
 }
 

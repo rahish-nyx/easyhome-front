@@ -97,6 +97,8 @@ export default function AdminCatalog() {
   const [editingFolder, setEditingFolder] = useState(null);
   const [editFolderName, setEditFolderName] = useState("");
   const [editFolderDesc, setEditFolderDesc] = useState("");
+  const [editFolderIcon, setEditFolderIcon] = useState("layers");
+  const [addFolderIcon, setAddFolderIcon] = useState("layers");
   const [folderServices, setFolderServices] = useState([]);
   const [folderDrawer, setFolderDrawer] = useState(null);
   const [folderData, setFolderData] = useState([]);
@@ -517,7 +519,7 @@ export default function AdminCatalog() {
                   <span style={{ fontSize: 13, color: "#b0b0c0", marginTop: -6 }}>{count} service{count === 1 ? "" : "s"} · click to manage</span>
                   <p style={{ fontSize: 12, color: "#77778a", margin: 0 }}>{folder.description || "No description yet."}</p>
                   <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }} onClick={e => e.stopPropagation()}>
-                    <Button size="sm" variant="outline" icon={Pencil} style={{ borderColor: "#f0c000", color: "#f0c000" }} onClick={() => { setEditingFolder({ id: folder.id, name: folder.name, description: folder.description || "" }); setEditFolderName(folder.name); setEditFolderDesc(folder.description || ""); }}>Edit</Button>
+                    <Button size="sm" variant="outline" icon={Pencil} style={{ borderColor: "#f0c000", color: "#f0c000" }} onClick={() => { setEditingFolder({ id: folder.id, name: folder.name, description: folder.description || "", icon: folder.icon || "layers" }); setEditFolderName(folder.name); setEditFolderDesc(folder.description || ""); setEditFolderIcon(folder.icon || "layers"); }}>Edit</Button>
                     <Button size="sm" variant={isLive ? "outline" : "secondary"} disabled={busyFolder === folder.id} style={{ borderColor: isLive ? "#1a1b20" : "#f0c000", color: isLive ? "#b0b0c0" : "#f0c000" }} onClick={async () => { setBusyFolder(folder.id); try { await api.patch(`/admin/folders/${encodeURIComponent(folder.id)}/toggle`); const list = await refreshFolders(); const next = list.find(f => f.id === folder.id); if (next && folderDrawer?.id === folder.id) setFolderDrawer(next); toast.success(isLive ? "Folder hidden from customers." : "Folder is live."); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); } }}>{isLive ? "Hide" : "Unhide"}</Button>
                     <Button size="sm" variant="danger" icon={Trash2} disabled={busyFolder === folder.id} onClick={async () => { if (!window.confirm(`Delete "${folder.name}"? Its ${count} service${count === 1 ? "" : "s"} will be unassigned.`)) return; setBusyFolder(folder.id); try { await api.del(`/admin/folders/${encodeURIComponent(folder.id)}`); if (folderDrawer?.id === folder.id) setFolderDrawer(null); await refreshFolders(); await refresh(); toast.success("Folder deleted."); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); } }}>Delete</Button>
                   </div>
@@ -533,8 +535,26 @@ export default function AdminCatalog() {
             <Modal open title="Add Folder" onClose={() => setIsAddModalOpen(false)}>
               <Field label="Folder name"><Input value={folderName} onChange={e => setFolderName(e.target.value)} placeholder="Cleaning, Plumbing..." /></Field>
               <Field label="Description"><Textarea value={folderDesc} onChange={e => setFolderDesc(e.target.value)} rows={2} /></Field>
+              <Field label="Folder icon" htmlFor="cat-folder-add-icon" hint="Choose any icon. The lucide logo is used for the folder tile on the home page." className="adm-span-2">
+                <div className="adm-icon-picker" id="cat-folder-add-icon" role="listbox" aria-label="Folder icon">
+                  {SERVICE_ICON_OPTIONS.map((icon) => (
+                    <button
+                      key={icon.id}
+                      type="button"
+                      role="option"
+                      aria-selected={addFolderIcon === icon.id}
+                      className={`adm-icon-picker__item ${addFolderIcon === icon.id ? "is-active" : ""}`}
+                      title={icon.label}
+                      onClick={() => setAddFolderIcon(icon.id)}
+                    >
+                      <ServiceIcon icon={icon.id} size={34} iconSize={17} />
+                      <span>{icon.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </Field>
               <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-                <Button onClick={async () => { if (!folderName.trim()) return toast.error("Name required"); setBusyFolder("new"); try { await api.post("/admin/folders", { name: folderName, description: folderDesc }); await refreshFolders(); setIsAddModalOpen(false); toast.success("Folder added."); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); } }} disabled={busyFolder === "new"}>Create</Button>
+                <Button onClick={async () => { if (!folderName.trim()) return toast.error("Name required"); setBusyFolder("new"); try { await api.post("/admin/folders", { name: folderName, description: folderDesc, icon: addFolderIcon }); await refreshFolders(); setIsAddModalOpen(false); toast.success("Folder added."); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); } }} disabled={busyFolder === "new"}>Create</Button>
                 <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
               </div>
             </Modal>
@@ -544,8 +564,26 @@ export default function AdminCatalog() {
             <Modal open title="Edit Folder" onClose={() => setEditingFolder(null)}>
               <Field label="Folder name"><Input value={editFolderName} onChange={e => setEditFolderName(e.target.value)} /></Field>
               <Field label="Description"><Textarea value={editFolderDesc} onChange={e => setEditFolderDesc(e.target.value)} rows={2} /></Field>
+              <Field label="Folder icon" htmlFor="cat-folder-icon" hint="Choose any icon. The lucide logo is used for the folder tile on the home page." className="adm-span-2">
+                <div className="adm-icon-picker" id="cat-folder-icon" role="listbox" aria-label="Folder icon">
+                  {SERVICE_ICON_OPTIONS.map((icon) => (
+                    <button
+                      key={icon.id}
+                      type="button"
+                      role="option"
+                      aria-selected={editFolderIcon === icon.id}
+                      className={`adm-icon-picker__item ${editFolderIcon === icon.id ? "is-active" : ""}`}
+                      title={icon.label}
+                      onClick={() => setEditFolderIcon(icon.id)}
+                    >
+                      <ServiceIcon icon={icon.id} size={34} iconSize={17} />
+                      <span>{icon.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </Field>
               <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-                <Button onClick={async () => { if (!editFolderName.trim()) return toast.error("Name required"); setBusyFolder(editingFolder.id); try { await api.put(`/admin/folders/${encodeURIComponent(editingFolder.id)}`, { name: editFolderName, description: editFolderDesc }); await refreshFolders(); setEditingFolder(null); toast.success("Folder updated."); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); } }} disabled={busyFolder === editingFolder.id}>Save</Button>
+                <Button onClick={async () => { if (!editFolderName.trim()) return toast.error("Name required"); setBusyFolder(editingFolder.id); try { await api.put(`/admin/folders/${encodeURIComponent(editingFolder.id)}`, { name: editFolderName, description: editFolderDesc, icon: editFolderIcon }); await refreshFolders(); setEditingFolder(null); toast.success("Folder updated."); } catch (e) { toast.error(e.message); } finally { setBusyFolder(""); } }} disabled={busyFolder === editingFolder.id}>Save</Button>
                 <Button variant="outline" onClick={() => setEditingFolder(null)}>Cancel</Button>
               </div>
             </Modal>

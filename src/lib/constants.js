@@ -188,6 +188,17 @@ export const TRACKING_PHASES = [
   { id: "completed", label: "Completed", short: "Completed" },
 ];
 
+// Phase identifiers used for API payloads / state comparisons. Keep in sync with
+// the backend TRACKING_PHASES object in backend/src/lib/tracking.js.
+export const TRACKING_PHASE_IDS = Object.freeze({
+  ASSIGNED: "assigned",
+  EN_ROUTE: "en_route",
+  ARRIVED: "arrived",
+  WORKING: "working",
+  COMPLETED: "completed",
+  CANCELLED: "cancelled",
+});
+
 export const TRACKING_META = {
   requested: { label: "Requested", tone: "amber", hint: "Waiting for a professional to accept." },
   assigned: { label: "Assigned", tone: "blue", hint: "A professional has accepted your job." },

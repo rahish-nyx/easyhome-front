@@ -64,9 +64,11 @@ export function useLiveQuery(queryRef) {
       error: null,
     }));
 
-    const load = async () => {
+    const load = async (options = {}) => {
       if (!active || stoppedOn404.current || inFlight.current) return;
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      // Realtime-driven refreshes are allowed while the app is backgrounded so
+      // booking alerts still fire OS notifications + sounds even when minimised.
+      if (!options.force && typeof document !== "undefined" && document.visibilityState === "hidden") {
         return;
       }
       inFlight.current = true;
@@ -89,13 +91,15 @@ export function useLiveQuery(queryRef) {
     };
 
     load();
-    refetchRef.current = load;
+    refetchRef.current = () => load({ force: true });
 
     // Real-time sync: socket events emitted by the backend (booking created,
     // job accepted, status changed) trigger an instant refetch of this query
     // so dashboards update without waiting for the next poll.
     const handleRealtime = () => {
-      load();
+      // Realtime alerts must reach the user even when the app is backgrounded
+      // (OS notification + sound), so force a refetch that ignores the hidden-tab pause.
+      load({ force: true });
     };
     REALTIME_EVENTS.forEach((evt) => window.addEventListener(evt, handleRealtime));
 

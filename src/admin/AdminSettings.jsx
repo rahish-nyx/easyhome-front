@@ -92,6 +92,14 @@ function PromoPlanEditor({ role, label, value, basePrices, onChange }) {
       },
     });
 
+  const toDateTimeLocal = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
   return (
     <Panel title={label} subtitle="Set an active promotional discount for this membership tier.">
       <div className="adm-form-grid adm-form-grid--4">
@@ -108,6 +116,8 @@ function PromoPlanEditor({ role, label, value, basePrices, onChange }) {
                 ? Math.round((base * (100 - Math.min(100, promoValue))) / 100)
                 : Math.max(0, Math.round(promoValue));
           }
+          const startsAt = current.startsAt ? toDateTimeLocal(current.startsAt) : "";
+          const endsAt = current.endsAt ? toDateTimeLocal(current.endsAt) : "";
           return (
             <div key={plan} className="adm-promo-tile">
               <Field label={planLabel(plan)} htmlFor={`set-${prefix}-promo-${plan}`}>
@@ -139,12 +149,35 @@ function PromoPlanEditor({ role, label, value, basePrices, onChange }) {
                   />
                 </div>
               </Field>
+              <div className="adm-promo-window">
+                <Field label="Offer starts" htmlFor={`set-${prefix}-promo-${plan}-start`}>
+                  <Input
+                    id={`set-${prefix}-promo-${plan}-start`}
+                    type="datetime-local"
+                    value={startsAt}
+                    onChange={(event) =>
+                      mutate(plan, { startsAt: event.target.value ? event.target.value : null })
+                    }
+                  />
+                </Field>
+                <Field label="Offer ends" htmlFor={`set-${prefix}-promo-${plan}-end`}>
+                  <Input
+                    id={`set-${prefix}-promo-${plan}-end`}
+                    type="datetime-local"
+                    value={endsAt}
+                    onChange={(event) =>
+                      mutate(plan, { endsAt: event.target.value ? event.target.value : null })
+                    }
+                  />
+                </Field>
+              </div>
               {active ? (
                 <p className="adm-promo-preview">
                   {type === "percentage"
                     ? `${promoValue}% off → ${inr(displayPrice)}`
                     : `Promo price ${inr(displayPrice)}`}
                   {base > displayPrice ? ` (save ${inr(base - displayPrice)})` : null}
+                  {endsAt ? ` · Offer until ${endsAt.replace("T", " ")}.` : ""}
                 </p>
               ) : null}
             </div>

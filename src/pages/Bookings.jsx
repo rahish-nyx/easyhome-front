@@ -59,12 +59,13 @@ export default function Bookings() {
     () => (user ? qBookingsForCustomer(user.uid) : null),
     [user],
   );
-  const { data: bookings, loading, error } = useLiveQuery(query);
+  const { data: bookings, loading, error, refetch } = useLiveQuery(query);
   const [tab, setTab] = useState("active");
   const [cancelTarget, setCancelTarget] = useState(null);
   const [payTarget, setPayTarget] = useState(null);
   const [reviewTarget, setReviewTarget] = useState(null);
-  const [busyId] = useState("");
+  const [busyId, setBusyId] = useState("");
+  const [removingId, setRemovingId] = useState("");
 
   const groups = useMemo(() => {
     const active = bookings.filter((item) =>
@@ -80,6 +81,19 @@ export default function Bookings() {
   }, [bookings]);
 
   const shown = groups[tab] || [];
+
+  const removeBooking = async (booking) => {
+    if (!booking?.id || removingId) return;
+    setRemovingId(booking.id);
+    try {
+      await api.del(`/bookings/${booking.id}`);
+      toast.success("Completed booking removed from your history.");
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setRemovingId("");
+    }
+  };
 
   const tabs = STATUS_TABS.map((item) => ({
     ...item,
@@ -123,11 +137,25 @@ export default function Bookings() {
       ) : null}
 
       {error ? (
-        <div className="inline-error" style={{ marginBottom: 16 }}>
-          <CircleAlert size={18} />
-          <div>
-            <strong>Could not load bookings</strong>
-            <p>{error.message}</p>
+        <div className="card card--pad" style={{ marginBottom: 16, borderColor: "var(--red-soft)" }}>
+          <div className="row row--between row--wrap" style={{ gap: 12 }}>
+            <div className="row" style={{ gap: 12, flex: 1, minWidth: 240 }}>
+              <span
+                className="stat__icon"
+                style={{ background: "var(--red-soft)", color: "var(--red)", flexShrink: 0 }}
+              >
+                <CircleAlert size={19} />
+              </span>
+              <div>
+                <strong style={{ fontSize: 14 }}>Could not load bookings</strong>
+                <p className="small" style={{ color: "var(--red)" }}>
+                  {error.message}
+                </p>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => refetch()}>
+              Retry now
+            </Button>
           </div>
         </div>
       ) : null}
@@ -159,6 +187,8 @@ export default function Bookings() {
               onCancel={() => setCancelTarget(booking)}
               onPay={() => setPayTarget(booking)}
               onReview={() => setReviewTarget(booking)}
+              onRemove={removeBooking}
+              removing={removingId === booking.id}
             />
           ))
         ) : (
@@ -313,7 +343,7 @@ function MilestoneRail({ phaseIndex, cancelled, timer }) {
   );
 }
 
-function BookingCard({ booking, busy, isPremium, onCancel, onPay, onReview }) {
+function BookingCard({ booking, busy, isPremium, onCancel, onPay, onReview, onRemove, removing }) {
   const [preview, setPreview] = useState(-1);
   const worker = booking.workerName;
   const isPro = Boolean(isPremium || booking.customerPremium);
@@ -551,6 +581,18 @@ function BookingCard({ booking, busy, isPremium, onCancel, onPay, onReview }) {
           ) : null}
         </div>
         <div className="booking-card__actions-right">
+          {booking.status === "completed" ? (
+            <button
+              type="button"
+              className="booking-card__remove"
+              disabled={removing}
+              onClick={() => onRemove?.(booking)}
+              aria-label={`Remove completed booking for ${booking.service}`}
+              title="Remove completed service"
+            >
+              <X size={13} />
+            </button>
+          ) : null}
           <Link to={`/chat${booking.workerId ? `?booking=${booking.id}` : ""}`} className="booking-card__chat">
             <Headphones size={15} /> Chat Support
           </Link>

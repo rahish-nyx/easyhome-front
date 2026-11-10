@@ -81,6 +81,33 @@ self.addEventListener("message", (event) => {
   if (event.data === "SKIP_WAITING") self.skipWaiting();
 });
 
+// Local notification tap-through: forward the click target to the open clients.
+self.addEventListener("notification", (event) => {
+  const notification = event.notification;
+  const data = notification.data || {};
+  const url =
+    typeof data === "string"
+      ? data
+      : typeof data.url === "string"
+        ? data.url
+        : "/";
+  try {
+    notification.close();
+  } catch {
+    /* already closed */
+  }
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({ type: "easyhome:notification-click", url });
+        });
+      })
+      .catch(() => {}),
+  );
+});
+
 function isSameOrigin(url) {
   return url.origin === self.location.origin;
 }

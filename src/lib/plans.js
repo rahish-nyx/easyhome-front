@@ -55,9 +55,17 @@ export function subscriptionAmount(settings, role, plan) {
   return plans[plan] ?? plans.monthly;
 }
 
+function planPromoWindowOpen(promo, now = Date.now()) {
+  const starts = promo?.startsAt ? new Date(promo.startsAt).getTime() : 0;
+  const ends = promo?.endsAt ? new Date(promo.endsAt).getTime() : 0;
+  if (Number.isFinite(starts) && starts > now) return false;
+  if (Number.isFinite(ends) && ends > 0 && ends < now) return false;
+  return true;
+}
+
 /**
  * Resolves an active admin-configured promotional discount for a membership plan.
- * Returns null when no promo is active for the plan.
+ * Returns null when no promo is active for the plan or when it is outside its offer window.
  */
 export function planPromo(settings, role, plan) {
   const promos =
@@ -65,7 +73,13 @@ export function planPromo(settings, role, plan) {
       ? settings?.workerPlanPromos
       : settings?.customerPlanPromos;
   const promo = promos?.[plan];
-  if (!promo || !promo.active) return null;
+  if (
+    !promo ||
+    promo.active !== true ||
+    !planPromoWindowOpen(promo)
+  ) {
+    return null;
+  }
   return { type: promo.type, value: Number(promo.value) || 0 };
 }
 
@@ -76,7 +90,12 @@ export function planPromo(settings, role, plan) {
 export function planPriceWithPromo(settings, role, plan) {
   const plans = rolePlans(settings, role);
   const base = Number(plans[plan] ?? plans.monthly) || 0;
+  const promos =
+    role === "worker"
+      ? settings?.workerPlanPromos
+      : settings?.customerPlanPromos;
   const promo = planPromo(settings, role, plan);
+  const rawPromo = promos?.[plan];
   if (!promo) return { base, price: base, promo: null };
   let price = base;
   if (promo.type === "percentage") {
@@ -88,7 +107,14 @@ export function planPriceWithPromo(settings, role, plan) {
   return {
     base,
     price,
-    promo: { ...promo, saved: Math.max(0, base - price) },
+    promo: rawPromo
+      ? {
+          ...rawPromo,
+          type: promo.type,
+          value: promo.value,
+          saved: Math.max(0, base - price),
+        }
+      : { ...promo, saved: Math.max(0, base - price) },
   };
 }
 

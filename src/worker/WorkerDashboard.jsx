@@ -67,7 +67,7 @@ import {
 } from "../lib/format";
 import { playNotificationSound } from "../lib/sound";
 import { joinRealtime } from "../lib/socket";
-import { PLANS, SERVICE_META, TRACKING_PHASES } from "../lib/constants";
+import { PLANS, SERVICE_META, TRACKING_PHASES, TRACKING_PHASE_IDS } from "../lib/constants";
 import { planPriceWithPromo, workerFeePct } from "../lib/plans";
 import { usePageMeta } from "../lib/usePageMeta";
 import {
@@ -110,9 +110,9 @@ const PRIMARY_TABS = TABS.filter((item) => PRIMARY_TAB_IDS.includes(item.id));
 const HEADER_TABS = TABS.filter((item) => item.id !== "profile");
 
 const PHASE_TOAST = {
-  [TRACKING_PHASES.EN_ROUTE]: "Customer notified — you are on the way.",
-  [TRACKING_PHASES.ARRIVED]: "Arrival recorded. The customer can see you are on site.",
-  [TRACKING_PHASES.WORKING]: "Work started. Keep your status and GPS fresh.",
+  [TRACKING_PHASE_IDS.EN_ROUTE]: "Customer notified — you are on the way.",
+  [TRACKING_PHASE_IDS.ARRIVED]: "Arrival recorded. The customer can see you are on site.",
+  [TRACKING_PHASE_IDS.WORKING]: "Work started. Keep your status and GPS fresh.",
 };
 
 const EMPTY_EARNINGS = {
@@ -436,7 +436,7 @@ export default function WorkerDashboard() {
   const submitPhase = async (job, phase) => {
     setBusy(`phase:${job.id}:${phase}`);
     try {
-      const endpoint = phase === TRACKING_PHASES.WORKING
+      const endpoint = phase === TRACKING_PHASE_IDS.WORKING
         ? `/worker/jobs/${job.id}/start`
         : `/worker/jobs/${job.id}/phase`;
       await api.patch(endpoint, { phase });
@@ -457,7 +457,7 @@ export default function WorkerDashboard() {
         ...previous,
         [job.id]: {
           status: "ongoing",
-          trackingPhase: TRACKING_PHASES.WORKING,
+          trackingPhase: TRACKING_PHASE_IDS.WORKING,
           startedAt: new Date().toISOString(),
         },
       }));
@@ -472,17 +472,17 @@ export default function WorkerDashboard() {
 
   const manuallyUpdateJob = async (job) => {
     const phase = job.trackingPhase ||
-      (job.status === "ongoing" ? TRACKING_PHASES.WORKING : TRACKING_PHASES.ASSIGNED);
-    if (phase !== TRACKING_PHASES.WORKING) {
+      (job.status === "ongoing" ? TRACKING_PHASE_IDS.WORKING : TRACKING_PHASE_IDS.ASSIGNED);
+    if (phase !== TRACKING_PHASE_IDS.WORKING) {
       await startJob(job);
       return;
     }
     setBusy(`update:${job.id}`);
     try {
-      await api.patch(`/worker/jobs/${job.id}/phase`, { phase: TRACKING_PHASES.WORKING });
+      await api.patch(`/worker/jobs/${job.id}/phase`, { phase: TRACKING_PHASE_IDS.WORKING });
       setJobOverrides((previous) => ({
         ...previous,
-        [job.id]: { status: "ongoing", trackingPhase: TRACKING_PHASES.WORKING },
+        [job.id]: { status: "ongoing", trackingPhase: TRACKING_PHASE_IDS.WORKING },
       }));
       toast.success("Job status updated. Work is still in progress.");
     } catch (error) {
@@ -494,7 +494,7 @@ export default function WorkerDashboard() {
   };
 
   const advanceJob = (job, phase) => {
-    if (phase === TRACKING_PHASES.COMPLETED) {
+    if (phase === TRACKING_PHASE_IDS.COMPLETED) {
       submitComplete(job).catch(() => {});
       return;
     }
@@ -510,7 +510,7 @@ export default function WorkerDashboard() {
         delete next[job.id];
         return next;
       });
-      setPaymentTarget({ ...job, status: "completed", trackingPhase: TRACKING_PHASES.COMPLETED });
+      setPaymentTarget({ ...job, status: "completed", trackingPhase: TRACKING_PHASE_IDS.COMPLETED });
       toast.success("Job completed. Choose how you will accept payment.");
       await refreshMoney();
     } catch (error) {
@@ -2186,31 +2186,31 @@ function ActiveJobCard({
   const isCompleted = job.status === "completed";
   const rawPhase =
     job.trackingPhase ||
-    (job.status === "ongoing" ? TRACKING_PHASES.WORKING : TRACKING_PHASES.ASSIGNED);
+    (job.status === "ongoing" ? TRACKING_PHASE_IDS.WORKING : TRACKING_PHASE_IDS.ASSIGNED);
   const started =
     !isCompleted &&
     (job.status === "ongoing" ||
       Boolean(job.startedAt) ||
-      [TRACKING_PHASES.EN_ROUTE, TRACKING_PHASES.ARRIVED, TRACKING_PHASES.WORKING].includes(rawPhase));
+      [TRACKING_PHASE_IDS.EN_ROUTE, TRACKING_PHASE_IDS.ARRIVED, TRACKING_PHASE_IDS.WORKING].includes(rawPhase));
   const phase = isCompleted
-    ? TRACKING_PHASES.COMPLETED
+    ? TRACKING_PHASE_IDS.COMPLETED
     : started
-      ? TRACKING_PHASES.WORKING
-      : TRACKING_PHASES.ASSIGNED;
+      ? TRACKING_PHASE_IDS.WORKING
+      : TRACKING_PHASE_IDS.ASSIGNED;
   const milestoneIndex =
     phase === "completed" ? 3 : phase === "working" ? 2 : phase === "arrived" ? 1 : 0;
   const gpsLive = gps?.status === "sharing";
   const [clock, setClock] = useState(Date.now());
 
   useEffect(() => {
-    if (phase !== TRACKING_PHASES.WORKING) return undefined;
+    if (phase !== TRACKING_PHASE_IDS.WORKING) return undefined;
     const timer = setInterval(() => setClock(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [phase]);
 
   const startedAt =
     toDate(job.startedAt) ||
-    (phase === TRACKING_PHASES.WORKING ? toDate(job.trackingStatusUpdatedAt) : null);
+    (phase === TRACKING_PHASE_IDS.WORKING ? toDate(job.trackingStatusUpdatedAt) : null);
   const elapsedSeconds = startedAt
     ? Math.max(0, Math.floor((clock - startedAt.getTime()) / 1000))
     : 0;
@@ -2243,7 +2243,7 @@ function ActiveJobCard({
     <span className="wk-ticket__state is-done">
       <CheckCircle2 size={12} /> Complete
     </span>
-  ) : phase === TRACKING_PHASES.WORKING ? (
+  ) : phase === TRACKING_PHASE_IDS.WORKING ? (
     <span className="wk-ticket__state is-live">
       <span className="wk-ticket__live-dot" /> Working
     </span>
@@ -2313,10 +2313,10 @@ function ActiveJobCard({
 
         <div className="wk-ticket__body">
           <div className="wk-ticket__main">
-            <div className={cx("wk-ticket__timerbox", phase === TRACKING_PHASES.WORKING && "is-running")}>
+            <div className={cx("wk-ticket__timerbox", phase === TRACKING_PHASE_IDS.WORKING && "is-running")}>
               <div className="wk-ticket__timer-copy">
                 <span className="wk-ticket__timer-label">
-                  <Timer size={14} /> {isCompleted ? "Completed in" : phase === TRACKING_PHASES.WORKING ? "Live job timer" : "Job timer"}
+                  <Timer size={14} /> {isCompleted ? "Completed in" : phase === TRACKING_PHASE_IDS.WORKING ? "Live job timer" : "Job timer"}
                 </span>
                 <strong>{formatClock(elapsedSeconds)}</strong>
               </div>
@@ -2324,7 +2324,7 @@ function ActiveJobCard({
                 <button type="button" className="wk-btn wk-btn--primary wk-ticket__cta" onClick={onReceivePayment} disabled={busy}>
                   <Wallet size={17} /> Receive payment
                 </button>
-              ) : phase === TRACKING_PHASES.WORKING ? (
+              ) : phase === TRACKING_PHASE_IDS.WORKING ? (
                 <button type="button" className="wk-btn wk-btn--primary wk-ticket__cta" onClick={onComplete} disabled={busy}>
                   <CheckCircle2 size={17} /> Complete
                 </button>
