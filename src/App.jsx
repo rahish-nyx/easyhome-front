@@ -158,8 +158,15 @@ function WorkerAppLauncher() {
     (import.meta.env.VITE_APP_MODE === "worker" ||
       document.documentElement.classList.contains("app-worker"));
 
-  if (isWorkerMode && pathname === "/") {
-    return <Navigate to="/worker" replace />;
+  // Worker APK: keep the professional console context. Anything outside the
+  // worker console (and the worker auth/login surface) is redirected to the
+  // worker home so the customer app never flashes before the worker login.
+  if (isWorkerMode) {
+    const isWorkerRoute = pathname === "/worker" || pathname.startsWith("/worker/");
+    const isAuthRoute = pathname === "/auth";
+    if (!isWorkerRoute && !isAuthRoute) {
+      return <Navigate to="/worker" replace />;
+    }
   }
   return null;
 }
