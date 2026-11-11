@@ -88,6 +88,10 @@ export default function Home() {
   const { promos } = usePromo();
   const { city, point, zoneCheck } = useLocation();
 
+  // Customer APK shell marker (set by src/main.jsx before first render).
+  const isCustomerAppShell =
+    typeof document !== "undefined" && document.documentElement.classList.contains("app-customer");
+
   // Realtime room subscription: this device joins the customer room so booking
   // lifecycle events reach the dashboard instantly.
   useEffect(() => {
@@ -384,7 +388,12 @@ export default function Home() {
           </div>
         </section>
 
-        {!user ? (
+        {/*
+          Guest entry: hidden inside the Customer APK shell — the customer app is
+          strictly for customers, so the "One platform. Two ways in." split entry
+          (customer + professional) must not render here.
+        */}
+        {!user && !isCustomerAppShell ? (
           <section className="section">
             <div className="guest-role">
               <div className="guest-role__intro">
