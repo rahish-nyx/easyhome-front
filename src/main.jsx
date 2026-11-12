@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from "@capacitor/status-bar";
+import { LocalNotifications } from "@capacitor/local-notifications";
 import App from "./App.jsx";
 import "./styles/app.css";
 
@@ -29,6 +30,11 @@ if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
   } catch (err) {
     console.warn("[EasyHome] StatusBar init error:", err);
   }
+
+  // Ask for the OS notification permission immediately on startup so that
+  // realtime Socket.io booking alerts can later be posted to the Android
+  // system tray / iOS notification center without a second opt-in.
+  LocalNotifications.requestPermissions().catch(() => {});
 }
 
 createRoot(document.getElementById("root")).render(

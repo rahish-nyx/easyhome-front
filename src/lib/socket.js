@@ -1,4 +1,5 @@
 import { io } from "socket.io-client";
+import { notifyRealtimeEvent } from "./notifications";
 
 const SOCKET_URL = String(import.meta.env.VITE_SOCKET_URL || "https://easyhome-back.vercel.app");
 const SOCKET_PATH = String(import.meta.env.VITE_SOCKET_PATH || "/socket.io");
@@ -24,18 +25,23 @@ export function getSocket() {
 
     socket.on("newBooking", (payload) => {
       window.dispatchEvent(new CustomEvent("easyhome:newBooking", { detail: payload }));
+      notifyRealtimeEvent("newBooking", payload);
     });
     socket.on("jobAccepted", (payload) => {
       window.dispatchEvent(new CustomEvent("easyhome:jobAccepted", { detail: payload }));
+      notifyRealtimeEvent("jobAccepted", payload);
     });
     socket.on("bookingStatusUpdate", (payload) => {
       window.dispatchEvent(new CustomEvent("easyhome:bookingStatusUpdate", { detail: payload }));
+      notifyRealtimeEvent("bookingStatusUpdate", payload);
     });
     socket.on("updateWorkerDashboard", (payload) => {
       window.dispatchEvent(new CustomEvent("easyhome:updateWorkerDashboard", { detail: payload }));
+      notifyRealtimeEvent("updateWorkerDashboard", payload);
     });
     socket.on("updateCustomerDashboard", (payload) => {
       window.dispatchEvent(new CustomEvent("easyhome:updateCustomerDashboard", { detail: payload }));
+      notifyRealtimeEvent("updateCustomerDashboard", payload);
     });
   }
   return socket;
